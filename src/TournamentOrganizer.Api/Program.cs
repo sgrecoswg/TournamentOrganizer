@@ -85,6 +85,7 @@ builder.Services.AddScoped<IStoresService, StoresService>();
 builder.Services.AddScoped<IThemeService, ThemeService>();
 builder.Services.AddScoped<ISuggestedTradeService, SuggestedTradeService>();
 builder.Services.AddScoped<ICommanderMetaService, CommanderMetaService>();
+builder.Services.AddScoped<IDiscordWebhookService, DiscordWebhookService>();
 builder.Services.AddScoped<IAppUserRepository, AppUserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
@@ -94,6 +95,12 @@ builder.Services.AddHttpClient<ICardPriceService, CardPriceService>(client =>
 {
     client.BaseAddress = new Uri("https://api.scryfall.com/");
     client.DefaultRequestHeaders.UserAgent.ParseAdd("TournamentOrganizer/1.0");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
+
+// Discord webhook — named HttpClient (fire-and-forget, 10s timeout)
+builder.Services.AddHttpClient("Discord", client =>
+{
     client.Timeout = TimeSpan.FromSeconds(10);
 });
 

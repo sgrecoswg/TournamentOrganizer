@@ -100,6 +100,22 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
                         }
                       </mat-select>
                     </mat-form-field>
+                    <mat-form-field>
+                      <mat-label>Discord Webhook URL</mat-label>
+                      <input matInput
+                             type="password"
+                             placeholder="https://discord.com/api/webhooks/..."
+                             [(ngModel)]="editDiscordWebhookUrl"
+                             autocomplete="off"
+                             aria-label="Discord Webhook URL" />
+                      <mat-hint>
+                        @if (store.hasDiscordWebhook) {
+                          <span class="discord-connected"><mat-icon>check_circle</mat-icon> Connected</span>
+                        } @else {
+                          Not connected
+                        }
+                      </mat-hint>
+                    </mat-form-field>
                   }
                 </div>
               </mat-card-content>
@@ -108,6 +124,11 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
                   <button mat-raised-button color="primary" (click)="save()" [disabled]="!editStoreName.trim()">
                     <mat-icon>save</mat-icon> Save
                   </button>
+                  @if (store.hasDiscordWebhook) {
+                    <button mat-stroked-button (click)="testWebhook()">
+                      <mat-icon>send</mat-icon> Test Webhook
+                    </button>
+                  }
                   <button mat-button [routerLink]="['/stores']">Cancel</button>
                 </mat-card-actions>
               }
@@ -371,6 +392,8 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
     .action-row { display: flex; align-items: center; gap: 16px; padding: 16px 0; }
     .action-desc { color: #666; font-size: 13px; flex: 1; }
     mat-divider { margin: 0; }
+    .discord-connected { display: flex; align-items: center; gap: 4px; color: #1976d2; }
+    .discord-connected mat-icon { font-size: 14px; width: 14px; height: 14px; }
   `]
 })
 export class StoreDetailComponent implements OnInit {
@@ -389,6 +412,9 @@ export class StoreDetailComponent implements OnInit {
   // Theme
   themes: ThemeDto[] = [];
   selectedThemeId: number | null = null;
+
+  // Discord
+  editDiscordWebhookUrl = '';
 
   // License
   license: LicenseDto | null = null;
@@ -495,7 +521,8 @@ export class StoreDetailComponent implements OnInit {
     this.apiService.updateStore(this.storeId, {
       storeName: this.editStoreName.trim(),
       allowableTradeDifferential: this.editDifferential,
-      themeId: this.selectedThemeId
+      themeId: this.selectedThemeId,
+      discordWebhookUrl: this.editDiscordWebhookUrl || null
     }).subscribe({
       next: updated => {
         this.store = updated.logoUrl
@@ -526,6 +553,13 @@ export class StoreDetailComponent implements OnInit {
       this.ctx.stores.markClean(this.storeId);
     }
     this.storeContext.storesChanged$.next();
+  }
+
+  testWebhook() {
+    this.apiService.testDiscordWebhook(this.storeId).subscribe({
+      next: () => this.snackBar.open('Test message sent to Discord!', 'OK', { duration: 3000 }),
+      error: () => this.snackBar.open('Failed to send test message', 'OK', { duration: 3000 })
+    });
   }
 
   // ── Employees ─────────────────────────────────────────────────────────────

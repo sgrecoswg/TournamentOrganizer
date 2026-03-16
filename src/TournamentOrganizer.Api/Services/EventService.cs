@@ -13,6 +13,7 @@ public class EventService : IEventService
     private readonly IPodService _podService;
     private readonly ITrueSkillService _trueSkillService;
     private readonly IStoreEventRepository _storeEventRepo;
+    private readonly IDiscordWebhookService _discordService;
 
     public EventService(
         IEventRepository eventRepo,
@@ -20,7 +21,8 @@ public class EventService : IEventService
         IGameRepository gameRepo,
         IPodService podService,
         ITrueSkillService trueSkillService,
-        IStoreEventRepository storeEventRepo)
+        IStoreEventRepository storeEventRepo,
+        IDiscordWebhookService discordService)
     {
         _eventRepo = eventRepo;
         _playerRepo = playerRepo;
@@ -28,6 +30,7 @@ public class EventService : IEventService
         _podService = podService;
         _trueSkillService = trueSkillService;
         _storeEventRepo = storeEventRepo;
+        _discordService = discordService;
     }
 
     public async Task<EventDto> CreateAsync(CreateEventDto dto)
@@ -347,6 +350,14 @@ public class EventService : IEventService
         var eventPointSystem = game!.Pod.Round.Event.PointSystem;
         if (eventPointSystem == PointSystem.ScoreBased)
             await _trueSkillService.UpdateRatingsAsync(game);
+
+        // Fire Discord notification if all games in this round are now complete
+        var eventId = game.Pod.Round.EventId;
+        var roundNumber = game.Pod.Round.RoundNumber;
+        var rounds = await _eventRepo.GetRoundsForEventAsync(eventId);
+        var currentRound = rounds.FirstOrDefault(r => r.RoundNumber == roundNumber);
+        if (currentRound != null && currentRound.Pods.All(p => p.Game?.Status == GameStatus.Completed))
+            await _discordService.PostRoundResultsAsync(eventId, roundNumber);
     }
 
     public async Task RevertGameResultAsync(int gameId)
@@ -581,6 +592,9 @@ public class EventService : IEventService
                 .ToList();
             await _trueSkillService.UpdateRatingsFromEventStandingsAsync(rankings);
         }
+
+        if (newStatus == EventStatus.Completed)
+            await _discordService.PostEventCompletedAsync(eventId);
 
         var players = await _eventRepo.GetRegisteredPlayersAsync(eventId);
         var (storeId, storeName) = await _storeEventRepo.GetStoreInfoForEventAsync(eventId);

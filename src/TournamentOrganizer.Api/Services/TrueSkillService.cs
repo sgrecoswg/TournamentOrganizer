@@ -7,8 +7,13 @@ namespace TournamentOrganizer.Api.Services;
 public class TrueSkillService : ITrueSkillService
 {
     private readonly IPlayerRepository _playerRepo;
+    private readonly IDiscordWebhookService _discordService;
 
-    public TrueSkillService(IPlayerRepository playerRepo) => _playerRepo = playerRepo;
+    public TrueSkillService(IPlayerRepository playerRepo, IDiscordWebhookService discordService)
+    {
+        _playerRepo = playerRepo;
+        _discordService = discordService;
+    }
 
     public async Task UpdateRatingsAsync(Game game)
     {
@@ -26,17 +31,27 @@ public class TrueSkillService : ITrueSkillService
         var newRatings = TrueSkillCalculator.CalculateNewRatings(playerRatings, finishPositions);
 
         var playersToUpdate = new List<Player>();
+        var newlyRanked = new List<(int PlayerId, int EventId)>();
+        var eventId = game.Pod.Round.EventId;
+
         for (int i = 0; i < results.Count; i++)
         {
             var player = results[i].Player;
             player.Mu = newRatings[i].NewMu;
             player.Sigma = newRatings[i].NewSigma;
             if (player.PlacementGamesLeft > 0)
+            {
                 player.PlacementGamesLeft--;
+                if (player.PlacementGamesLeft == 0)
+                    newlyRanked.Add((player.Id, eventId));
+            }
             playersToUpdate.Add(player);
         }
 
         await _playerRepo.UpdateRangeAsync(playersToUpdate);
+
+        foreach (var (playerId, evtId) in newlyRanked)
+            await _discordService.PostPlayerRankedAsync(playerId, evtId);
     }
 
     public async Task UpdateRatingsFromEventStandingsAsync(List<(int PlayerId, int Rank, int GamesPlayed)> rankings)

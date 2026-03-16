@@ -35,15 +35,16 @@ describe('StoreDetailComponent', () => {
   const empStub: AppUserDto = { id: 1, name: 'Alice', email: 'alice@test.com', role: 'StoreEmployee' };
 
   let mockApi: {
-    getThemes:           jest.Mock;
-    getStore:            jest.Mock;
-    updateStore:         jest.Mock;
-    getStoreEmployees:   jest.Mock;
-    addStoreEmployee:    jest.Mock;
-    removeStoreEmployee: jest.Mock;
-    updateLicense:       jest.Mock;
-    createLicense:       jest.Mock;
-    uploadStoreLogo:     jest.Mock;
+    getThemes:            jest.Mock;
+    getStore:             jest.Mock;
+    updateStore:          jest.Mock;
+    getStoreEmployees:    jest.Mock;
+    addStoreEmployee:     jest.Mock;
+    removeStoreEmployee:  jest.Mock;
+    updateLicense:        jest.Mock;
+    createLicense:        jest.Mock;
+    uploadStoreLogo:      jest.Mock;
+    testDiscordWebhook:   jest.Mock;
   };
 
   let mockCtx: {
@@ -118,6 +119,7 @@ describe('StoreDetailComponent', () => {
       updateLicense:       jest.fn().mockReturnValue(of(null)),
       createLicense:       jest.fn().mockReturnValue(of(null)),
       uploadStoreLogo:     jest.fn().mockReturnValue(of({ id: STORE_ID, storeName: 'Test Store', isActive: true, logoUrl: '/logos/5.png' })),
+      testDiscordWebhook:  jest.fn().mockReturnValue(of(undefined)),
     };
 
     mockCtx = {
@@ -672,5 +674,68 @@ describe('StoreDetailComponent', () => {
     const event = { target: { files: [file] } } as unknown as Event;
     comp.onLogoSelected(event);
     expect(mockStoreContext.storesChanged$.next).toHaveBeenCalled();
+  });
+
+  // ── Discord Webhook ────────────────────────────────────────────────────────
+
+  describe('Discord Webhook', () => {
+    it('Discord webhook URL input is visible for StoreManager', async () => {
+      await setup();
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      const input = fixture.nativeElement.querySelector('input[aria-label="Discord Webhook URL"]');
+      expect(input).not.toBeNull();
+    });
+
+    it('Discord webhook URL input is NOT visible for Player role', async () => {
+      await setup({ isStoreManager: false, isStoreEmployee: false });
+      mockApi.getStore.mockReturnValue(of(storeStub));
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      const input = fixture.nativeElement.querySelector('input[aria-label="Discord Webhook URL"]');
+      expect(input).toBeNull();
+    });
+
+    it('shows "Connected" indicator when hasDiscordWebhook is true', async () => {
+      mockApi.getStore.mockReturnValue(of({ ...storeStub, hasDiscordWebhook: true }));
+      await setup();
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Connected');
+    });
+
+    it('shows "Not connected" when hasDiscordWebhook is false', async () => {
+      mockApi.getStore.mockReturnValue(of({ ...storeStub, hasDiscordWebhook: false }));
+      await setup();
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Not connected');
+    });
+
+    it('save() passes discordWebhookUrl in UpdateStoreDto', async () => {
+      await setup();
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      comp.editDiscordWebhookUrl = 'https://discord.com/api/webhooks/123/abc';
+      comp.save();
+      expect(mockApi.updateStore).toHaveBeenCalledWith(
+        STORE_ID,
+        expect.objectContaining({ discordWebhookUrl: 'https://discord.com/api/webhooks/123/abc' })
+      );
+    });
+
+    it('save() sends null for discordWebhookUrl when field is empty', async () => {
+      await setup();
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      comp.editDiscordWebhookUrl = '';
+      comp.save();
+      expect(mockApi.updateStore).toHaveBeenCalledWith(
+        STORE_ID,
+        expect.objectContaining({ discordWebhookUrl: null })
+      );
+    });
   });
 });

@@ -370,6 +370,17 @@ export async function mockGetCommanderMeta(
   });
 }
 
+/** Intercept POST /api/stores/:id/discord/test → 204 */
+export async function mockTestDiscordWebhook(page: Page, storeId: number): Promise<void> {
+  await page.route(`**/api/stores/${storeId}/discord/test`, route => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({ status: 204 });
+    } else {
+      route.continue();
+    }
+  });
+}
+
 export function makePairingsDto(overrides: Partial<PairingsDto> = {}): PairingsDto {
   return {
     eventId:      1,

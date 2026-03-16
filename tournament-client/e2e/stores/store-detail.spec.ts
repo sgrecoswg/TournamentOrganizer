@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../helpers/auth';
-import { mockGetStore, mockGetEmployees, mockGetThemes, mockUploadStoreLogo, stubUnmatchedApi, makeStoreDetailDto, makeStoreDto, makeThemeDto } from '../helpers/api-mock';
+import { mockGetStore, mockGetEmployees, mockGetThemes, mockUploadStoreLogo, mockTestDiscordWebhook, stubUnmatchedApi, makeStoreDetailDto, makeStoreDto, makeThemeDto } from '../helpers/api-mock';
 
 // ─── Store Detail (/stores/:id) ───────────────────────────────────────────────
 //
@@ -358,5 +358,127 @@ test.describe('Store Detail — logo: upload updates the image', () => {
     await loginAs(page, 'Player');
     await page.goto('/stores/1');
     await expect(page.getByRole('button', { name: /Change Logo/i })).not.toBeVisible();
+  });
+});
+
+// ── Discord Webhook ────────────────────────────────────────────────────────────
+
+test.describe('Store Detail — Discord: connected', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', hasDiscordWebhook: true }));
+    await mockGetEmployees(page, 1, []);
+    await page.goto('/stores/1');
+  });
+
+  test('Discord webhook URL input is visible', async ({ page }) => {
+    await expect(page.getByLabel('Discord Webhook URL')).toBeVisible();
+  });
+
+  test('"Connected" indicator shown when hasDiscordWebhook is true', async ({ page }) => {
+    await expect(page.getByText('Connected')).toBeVisible();
+  });
+
+  test('Test Webhook button is visible when connected', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /Test Webhook/ })).toBeVisible();
+  });
+});
+
+test.describe('Store Detail — Discord: not connected', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', hasDiscordWebhook: false }));
+    await mockGetEmployees(page, 1, []);
+    await page.goto('/stores/1');
+  });
+
+  test('"Not connected" text is shown when hasDiscordWebhook is false', async ({ page }) => {
+    await expect(page.getByText('Not connected')).toBeVisible();
+  });
+
+  test('Test Webhook button is NOT visible when not connected', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /Test Webhook/ })).not.toBeVisible();
+  });
+});
+
+test.describe('Store Detail — Discord: URL masked', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', hasDiscordWebhook: false }));
+    await mockGetEmployees(page, 1, []);
+    await page.goto('/stores/1');
+  });
+
+  test('Discord webhook input has type="password"', async ({ page }) => {
+    const input = page.getByLabel('Discord Webhook URL');
+    await expect(input).toHaveAttribute('type', 'password');
+  });
+});
+
+test.describe('Store Detail — Discord: save webhook', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', hasDiscordWebhook: false }));
+    await mockGetEmployees(page, 1, []);
+    await page.goto('/stores/1');
+  });
+
+  test('saving form includes discordWebhookUrl in PUT request body', async ({ page }) => {
+    let putBody: Record<string, unknown> | null = null;
+    await page.route('**/api/stores/1', route => {
+      if (route.request().method() === 'PUT') {
+        putBody = route.request().postDataJSON();
+        route.fulfill({ json: makeStoreDetailDto({ id: 1, hasDiscordWebhook: true }) });
+      } else {
+        route.continue();
+      }
+    });
+
+    await page.getByLabel('Discord Webhook URL').fill('https://discord.com/api/webhooks/123/abc');
+    await page.getByRole('button', { name: /^Save$/ }).click();
+
+    expect(putBody).toMatchObject({ discordWebhookUrl: 'https://discord.com/api/webhooks/123/abc' });
+  });
+});
+
+test.describe('Store Detail — Discord: test button', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', hasDiscordWebhook: true }));
+    await mockGetEmployees(page, 1, []);
+    await mockTestDiscordWebhook(page, 1);
+    await page.goto('/stores/1');
+  });
+
+  test('clicking Test Webhook fires POST .../discord/test and shows snackbar', async ({ page }) => {
+    const request = page.waitForRequest(req =>
+      req.url().includes('/api/stores/1/discord/test') && req.method() === 'POST'
+    );
+    await page.getByRole('button', { name: /Test Webhook/ }).click();
+    await request;
+    await expect(page.getByText(/Test message sent to Discord/)).toBeVisible();
+  });
+});
+
+test.describe('Store Detail — Discord: hidden for Player', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player');
+    await stubUnmatchedApi(page);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', hasDiscordWebhook: true }));
+    await page.goto('/stores/1');
+  });
+
+  test('Discord webhook input is NOT visible for Player role', async ({ page }) => {
+    await expect(page.getByLabel('Discord Webhook URL')).not.toBeVisible();
   });
 });

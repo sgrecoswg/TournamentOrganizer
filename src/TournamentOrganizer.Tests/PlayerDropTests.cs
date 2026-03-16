@@ -82,7 +82,8 @@ public class PlayerDropTests
         public Task DeleteResultsAsync(int gameId)                                         => Task.CompletedTask;
         public Task<List<GameResult>> GetPlayerResultsAsync(int pid)                       => Task.FromResult(new List<GameResult>());
         public Task<List<GameResult>> GetPlayerGamesWithOpponentsAsync(int pid)            => Task.FromResult(new List<GameResult>());
-        public Task<List<int>> GetPreviousOpponentIdsAsync(int eid, int pid)               => Task.FromResult(new List<int>());
+        public Task<List<int>> GetPreviousOpponentIdsAsync(int eid, int pid) => Task.FromResult(new List<int>());
+        public Task<List<GameResult>> GetStoreGameResultsAsync(int storeId, DateTime? since) => Task.FromResult(new List<GameResult>());
     }
 
     private sealed class StubPodService : IPodService
@@ -97,6 +98,14 @@ public class PlayerDropTests
         public Task UpdateRatingsFromEventStandingsAsync(List<(int PlayerId, int Rank, int GamesPlayed)> rankings) => Task.CompletedTask;
     }
 
+    private sealed class StubDiscordWebhookService : IDiscordWebhookService
+    {
+        public Task PostRoundResultsAsync(int eventId, int roundNumber) => Task.CompletedTask;
+        public Task PostEventCompletedAsync(int eventId) => Task.CompletedTask;
+        public Task PostPlayerRankedAsync(int playerId, int eventId) => Task.CompletedTask;
+        public Task PostTestMessageAsync(int storeId) => Task.CompletedTask;
+    }
+
     private sealed class StubStoreEventRepo : IStoreEventRepository
     {
         public Task AddAsync(StoreEvent se) => Task.CompletedTask;
@@ -106,7 +115,7 @@ public class PlayerDropTests
     }
 
     private static EventService BuildService(FakeEventRepository repo) =>
-        new(repo, new StubPlayerRepo(), new StubGameRepo(), new StubPodService(), new StubTrueSkillService(), new StubStoreEventRepo());
+        new(repo, new StubPlayerRepo(), new StubGameRepo(), new StubPodService(), new StubTrueSkillService(), new StubStoreEventRepo(), new StubDiscordWebhookService());
 
     // ── Tests ─────────────────────────────────────────────────────────────
 

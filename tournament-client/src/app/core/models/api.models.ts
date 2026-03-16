@@ -245,6 +245,7 @@ export interface StoreDetailDto {
   themeId?: number | null;
   themeCssClass?: string | null;
   logoUrl?: string | null;
+  hasDiscordWebhook?: boolean;
 }
 
 export interface CreateStoreDto {
@@ -255,6 +256,7 @@ export interface UpdateStoreDto {
   storeName: string;
   allowableTradeDifferential: number;
   themeId?: number | null;
+  discordWebhookUrl?: string | null;
 }
 
 // Suggested Trades

@@ -213,6 +213,10 @@ export class ApiService {
     return this.http.put<StoreDetailDto>(`${this.base}/stores/${id}`, dto);
   }
 
+  testDiscordWebhook(storeId: number): Observable<void> {
+    return this.http.post<void>(`${this.base}/stores/${storeId}/discord/test`, {});
+  }
+
   uploadStoreLogo(storeId: number, file: File): Observable<StoreDto> {
     const form = new FormData();
     form.append('logo', file);

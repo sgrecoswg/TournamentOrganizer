@@ -29,7 +29,7 @@ public class StoresService : IStoresService
         var differential = store.Settings?.AllowableTradeDifferential ?? 10m;
         var themeId = store.Settings?.ThemeId;
         var themeCssClass = store.Settings?.Theme?.CssClass;
-        return new StoreDetailDto(store.Id, store.StoreName, store.IsActive, differential, BuildEventSummaries(store), MapLicense(store), themeId, themeCssClass, store.LogoUrl);
+        return new StoreDetailDto(store.Id, store.StoreName, store.IsActive, differential, BuildEventSummaries(store), MapLicense(store), themeId, themeCssClass, store.LogoUrl, store.DiscordWebhookUrl != null);
     }
 
     public async Task<StoreDto> CreateAsync(CreateStoreDto dto)
@@ -51,6 +51,9 @@ public class StoresService : IStoresService
 
         store.StoreName = dto.StoreName.Trim();
         store.UpdatedOn = DateTime.UtcNow;
+        // null = no change; empty string = clear the webhook URL
+        if (dto.DiscordWebhookUrl != null)
+            store.DiscordWebhookUrl = dto.DiscordWebhookUrl == string.Empty ? null : dto.DiscordWebhookUrl;
         await _storeRepo.UpdateAsync(store);
 
         await _settingsRepo.UpsertAsync(new StoreSettings
@@ -64,7 +67,7 @@ public class StoresService : IStoresService
         var differential = updatedStore?.Settings?.AllowableTradeDifferential ?? dto.AllowableTradeDifferential;
         var themeId = updatedStore?.Settings?.ThemeId;
         var themeCssClass = updatedStore?.Settings?.Theme?.CssClass;
-        return new StoreDetailDto(store.Id, store.StoreName, store.IsActive, differential, BuildEventSummaries(updatedStore), MapLicense(updatedStore), themeId, themeCssClass, store.LogoUrl);
+        return new StoreDetailDto(store.Id, store.StoreName, store.IsActive, differential, BuildEventSummaries(updatedStore), MapLicense(updatedStore), themeId, themeCssClass, store.LogoUrl, store.DiscordWebhookUrl != null);
     }
 
     public async Task<StoreDto> UpdateLogoUrlAsync(int storeId, string? logoUrl)

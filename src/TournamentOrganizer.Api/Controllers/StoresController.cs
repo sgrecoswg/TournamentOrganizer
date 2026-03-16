@@ -17,12 +17,14 @@ public class StoresController : ControllerBase
     private readonly IStoresService _service;
     private readonly IWebHostEnvironment _env;
     private readonly ICommanderMetaService _commanderMetaService;
+    private readonly IDiscordWebhookService _discordService;
 
-    public StoresController(IStoresService service, IWebHostEnvironment env, ICommanderMetaService commanderMetaService)
+    public StoresController(IStoresService service, IWebHostEnvironment env, ICommanderMetaService commanderMetaService, IDiscordWebhookService discordService)
     {
         _service = service;
         _env = env;
         _commanderMetaService = commanderMetaService;
+        _discordService = discordService;
     }
 
     [HttpGet]
@@ -87,6 +89,19 @@ public class StoresController : ControllerBase
         var logoUrl = $"/logos/{id}{ext}";
         var updated = await _service.UpdateLogoUrlAsync(id, logoUrl);
         return Ok(updated);
+    }
+
+    [HttpPost("{id}/discord/test")]
+    [Authorize(Policy = "StoreManager")]
+    public async Task<IActionResult> TestDiscordWebhook(int id)
+    {
+        if (!User.HasClaim("role", "Administrator"))
+        {
+            var jwtStoreId = int.TryParse(User.FindFirstValue("storeId"), out var s) ? s : 0;
+            if (jwtStoreId != id) return Forbid();
+        }
+        await _discordService.PostTestMessageAsync(id);
+        return NoContent();
     }
 
     [HttpGet("{id}/meta")]

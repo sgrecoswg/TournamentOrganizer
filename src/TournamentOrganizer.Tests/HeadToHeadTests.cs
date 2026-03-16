@@ -32,6 +32,7 @@ public class HeadToHeadTests
         public Task DeleteResultsAsync(int gameId) => throw new NotImplementedException();
         public Task<List<GameResult>> GetPlayerResultsAsync(int playerId) => throw new NotImplementedException();
         public Task<List<int>> GetPreviousOpponentIdsAsync(int eventId, int playerId) => throw new NotImplementedException();
+        public Task<List<GameResult>> GetStoreGameResultsAsync(int storeId, DateTime? since) => Task.FromResult(new List<GameResult>());
     }
 
     private sealed class FakePlayerRepository : IPlayerRepository

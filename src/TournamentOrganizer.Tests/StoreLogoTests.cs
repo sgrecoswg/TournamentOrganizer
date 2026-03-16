@@ -39,6 +39,20 @@ public class StoreLogoTests
         public Task<StoreDetailDto?> UpdateAsync(int id, UpdateStoreDto dto) => throw new NotImplementedException();
     }
 
+    private sealed class StubCommanderMetaService : ICommanderMetaService
+    {
+        public Task<CommanderMetaReportDto> GetStoreMetaAsync(int storeId, string period) =>
+            Task.FromResult(new CommanderMetaReportDto(storeId, period, [], new Dictionary<string, int>()));
+    }
+
+    private sealed class StubDiscordWebhookService : IDiscordWebhookService
+    {
+        public Task PostRoundResultsAsync(int eventId, int roundNumber) => Task.CompletedTask;
+        public Task PostEventCompletedAsync(int eventId) => Task.CompletedTask;
+        public Task PostPlayerRankedAsync(int playerId, int eventId) => Task.CompletedTask;
+        public Task PostTestMessageAsync(int storeId) => Task.CompletedTask;
+    }
+
     // ── Fake IWebHostEnvironment ─────────────────────────────────────────
 
     private sealed class FakeWebHostEnvironment : IWebHostEnvironment
@@ -73,7 +87,7 @@ public class StoreLogoTests
         bool isAdmin = false,
         int jwtStoreId = 1)
     {
-        var controller = new StoresController(service, env);
+        var controller = new StoresController(service, env, new StubCommanderMetaService(), new StubDiscordWebhookService());
         var claims = new List<Claim>
         {
             new("sub", "user-1"),
