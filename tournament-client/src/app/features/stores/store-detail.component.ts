@@ -43,6 +43,11 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
         <mat-icon>arrow_back</mat-icon>
       </button>
       <h2>{{ store?.storeName ?? 'Store Settings' }}</h2>
+      @if (authService.isStoreEmployee) {
+        <button mat-stroked-button [routerLink]="['/stores', storeId, 'meta']" style="margin-left:auto">
+          <mat-icon>bar_chart</mat-icon> Meta Report
+        </button>
+      }
     </div>
 
     @if (store) {
