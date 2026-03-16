@@ -16,11 +16,13 @@ public class StoresController : ControllerBase
 
     private readonly IStoresService _service;
     private readonly IWebHostEnvironment _env;
+    private readonly ICommanderMetaService _commanderMetaService;
 
-    public StoresController(IStoresService service, IWebHostEnvironment env)
+    public StoresController(IStoresService service, IWebHostEnvironment env, ICommanderMetaService commanderMetaService)
     {
         _service = service;
         _env = env;
+        _commanderMetaService = commanderMetaService;
     }
 
     [HttpGet]
@@ -85,5 +87,17 @@ public class StoresController : ControllerBase
         var logoUrl = $"/logos/{id}{ext}";
         var updated = await _service.UpdateLogoUrlAsync(id, logoUrl);
         return Ok(updated);
+    }
+
+    [HttpGet("{id}/meta")]
+    [Authorize(Policy = "StoreEmployee")]
+    public async Task<ActionResult<CommanderMetaReportDto>> GetMeta(int id, [FromQuery] string period = "30d")
+    {
+        if (!User.HasClaim("role", "Administrator"))
+        {
+            var jwtStoreId = int.TryParse(User.FindFirstValue("storeId"), out var s) ? s : 0;
+            if (jwtStoreId != id) return Forbid();
+        }
+        return Ok(await _commanderMetaService.GetStoreMetaAsync(id, period));
     }
 }

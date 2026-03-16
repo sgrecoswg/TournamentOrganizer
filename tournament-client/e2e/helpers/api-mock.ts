@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { CheckInResponseDto, CommanderStatDto, EventDto, EventPlayerDto, LeaderboardEntry, PairingsDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, StoreDto, StoreDetailDto, ThemeDto } from '../../src/app/core/models/api.models';
+import { CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, LeaderboardEntry, PairingsDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, StoreDto, StoreDetailDto, ThemeDto } from '../../src/app/core/models/api.models';
 
 /** Intercept GET /api/events and return the given list. */
 export async function mockGetEvents(page: Page, events: EventDto[]): Promise<void> {
@@ -342,6 +342,26 @@ export async function mockGetCommanderStats(
   page: Page, playerId: number, response: PlayerCommanderStatsDto
 ): Promise<void> {
   await page.route(`**/api/players/${playerId}/commanderstats`, route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export function makeCommanderMetaEntryDto(overrides: Partial<CommanderMetaEntryDto> = {}): CommanderMetaEntryDto {
+  return { commanderName: 'Atraxa', timesPlayed: 8, wins: 4, winRate: 50, avgFinish: 2.1, ...overrides };
+}
+
+export function makeCommanderMetaReportDto(overrides: Partial<CommanderMetaReportDto> = {}): CommanderMetaReportDto {
+  return { storeId: 1, period: '30d', topCommanders: [], colorBreakdown: {}, ...overrides };
+}
+
+export async function mockGetCommanderMeta(
+  page: Page, storeId: number, period: string, response: CommanderMetaReportDto
+): Promise<void> {
+  await page.route(`**/api/stores/${storeId}/meta?period=${period}`, route => {
     if (route.request().method() === 'GET') {
       route.fulfill({ json: response });
     } else {

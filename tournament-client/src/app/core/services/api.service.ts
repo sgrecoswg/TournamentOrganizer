@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   CreatePlayerDto, UpdatePlayerDto, PlayerDto, PlayerProfile, PlayerCommanderStatsDto, LeaderboardEntry,
+  CommanderMetaReportDto,
   CreateEventDto, EventDto, RegisterPlayerDto, EventPlayerDto, CheckInResponseDto,
   GameResultSubmit, RoundDto, StandingsEntry, PairingsDto,
   WishlistEntryDto, TradeEntryDto, CreateCardEntryDto, BulkUploadResultDto,
@@ -259,5 +260,9 @@ export class ApiService {
 
   updateLicense(storeId: number, licenseId: number, dto: UpdateLicenseDto): Observable<LicenseDto> {
     return this.http.put<LicenseDto>(`${this.base}/stores/${storeId}/license/${licenseId}`, dto);
+  }
+
+  getCommanderMeta(storeId: number, period: string = '30d'): Observable<CommanderMetaReportDto> {
+    return this.http.get<CommanderMetaReportDto>(`${this.base}/stores/${storeId}/meta`, { params: { period } });
   }
 }

@@ -84,6 +84,7 @@ builder.Services.AddScoped<ITradeService, TradeService>();
 builder.Services.AddScoped<IStoresService, StoresService>();
 builder.Services.AddScoped<IThemeService, ThemeService>();
 builder.Services.AddScoped<ISuggestedTradeService, SuggestedTradeService>();
+builder.Services.AddScoped<ICommanderMetaService, CommanderMetaService>();
 builder.Services.AddScoped<IAppUserRepository, AppUserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 

@@ -51,6 +51,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/stores/store-detail.component').then(m => m.StoreDetailComponent)
   },
   {
+    path: 'stores/:id/meta',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/stores/commander-meta.component').then(m => m.CommanderMetaComponent)
+  },
+  {
     path: 'auth/callback',
     loadComponent: () => import('./features/auth/oauth-callback.component').then(m => m.OAuthCallbackComponent)
   }
