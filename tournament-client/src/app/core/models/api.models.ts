@@ -327,6 +327,22 @@ export interface UpdateLicenseDto {
   expiresDate: string;
 }
 
+// Commander Meta Report
+export interface CommanderMetaEntryDto {
+  commanderName: string;
+  timesPlayed: number;
+  wins: number;
+  winRate: number;
+  avgFinish: number;
+}
+
+export interface CommanderMetaReportDto {
+  storeId: number;
+  period: string;
+  topCommanders: CommanderMetaEntryDto[];
+  colorBreakdown: Record<string, number>;
+}
+
 // LocalStorage / Sync types
 
 /** Change state tracked per record by LocalTable<T>. */

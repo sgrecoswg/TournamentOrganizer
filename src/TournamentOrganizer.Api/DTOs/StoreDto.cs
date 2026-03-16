@@ -6,3 +6,18 @@ public record StoreDetailDto(int Id, string StoreName, bool IsActive, decimal Al
 public record CreateStoreDto(string StoreName);
 public record UpdateStoreDto(string StoreName, decimal AllowableTradeDifferential, int? ThemeId = null);
 public record ThemeDto(int Id, string Name, string CssClass, bool IsActive);
+
+public record CommanderMetaEntryDto(
+    string CommanderName,
+    int TimesPlayed,
+    int Wins,
+    double WinRate,
+    double AvgFinish
+);
+
+public record CommanderMetaReportDto(
+    int StoreId,
+    string Period,
+    List<CommanderMetaEntryDto> TopCommanders,
+    Dictionary<string, int> ColorBreakdown
+);
