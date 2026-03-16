@@ -1,5 +1,6 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -10,12 +11,15 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { AuthService } from './core/services/auth.service';
 import { ApiService } from './core/services/api.service';
 import { StoreContextService } from './core/services/store-context.service';
 import { LocalStorageContext } from './core/services/local-storage-context.service';
 import { ThemeService } from './core/services/theme.service';
 import { CurrentUser, StoreDto } from './core/models/api.models';
+import { PwaInstallPromptComponent } from './shared/components/pwa-install-prompt.component';
 
 @Component({
   selector: 'app-root',
@@ -23,7 +27,8 @@ import { CurrentUser, StoreDto } from './core/models/api.models';
     FormsModule,
     RouterOutlet, RouterLink, RouterLinkActive,
     MatToolbarModule, MatSidenavModule, MatListModule, MatIconModule, MatButtonModule, MatMenuModule,
-    MatSelectModule, MatFormFieldModule
+    MatSelectModule, MatFormFieldModule, MatSnackBarModule,
+    PwaInstallPromptComponent
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
@@ -35,6 +40,8 @@ export class App implements OnInit, OnDestroy {
   private ctx = inject(LocalStorageContext);
   private themeService = inject(ThemeService);
   private cdr = inject(ChangeDetectorRef);
+  private swUpdate = inject(SwUpdate);
+  private snackBar = inject(MatSnackBar);
   private userSub!: Subscription;
   private storeNameSub!: Subscription;
 
@@ -53,6 +60,15 @@ export class App implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Apply any saved localStorage theme immediately (before API responds)
     this.themeService.resolveAndApply(null);
+
+    if (this.swUpdate.isEnabled) {
+      this.swUpdate.versionUpdates
+        .pipe(filter((e): e is VersionReadyEvent => e.type === 'VERSION_READY'))
+        .subscribe(() => {
+          const snack = this.snackBar.open('New version available', 'Reload', { duration: 0 });
+          snack.onAction().subscribe(() => window.location.reload());
+        });
+    }
 
     this.storeNameSub = this.storeContext.storesChanged$.subscribe(() => {
       this.stores = this.ctx.stores.getAll();
