@@ -1,0 +1,68 @@
+.app-container {
+  height: 100vh;
+}
+
+.sidenav {
+  width: 250px;
+  background: #fafafa;
+}
+
+.sidenav-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.page-content {
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.active {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+.toolbar-username {
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+.store-logo-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  object-fit: cover;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.store-logo-placeholder {
+  color: white;
+  opacity: 0.8;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.store-selector {
+  font-size: 16px;
+  font-weight: 500;
+  .mat-mdc-text-field-wrapper { background: rgba(255,255,255,0.15); }
+  .mat-mdc-select-value, .mat-mdc-select-arrow, .mat-mdc-form-field-label { color: white; }
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing { border-color: rgba(255,255,255,0.5) !important; }
+}

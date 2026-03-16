@@ -1,0 +1,55 @@
+@use '@angular/material' as mat;
+
+html {
+  @include mat.theme((
+    color: (
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  --theme-bg:      #fafafa;
+  --theme-surface: #ffffff;
+  --theme-link:    #1976d2;
+  background-color: var(--theme-bg);
+}
+
+/* ── Themes ─────────────────────────────────────── */
+body.theme-dark {
+  --theme-bg:      #121212;
+  --theme-surface: #1e1e1e;
+  --theme-link:    #90caf9;
+  color-scheme: dark;
+  background-color: var(--theme-bg);
+  color: #e0e0e0;
+}
+
+body.theme-forest {
+  --theme-bg:      #f0f7f0;
+  --theme-surface: #ffffff;
+  --theme-link:    #2d6a4f;
+  background-color: var(--theme-bg);
+}
+
+body.theme-ocean {
+  --theme-bg:      #e8f4f8;
+  --theme-surface: #ffffff;
+  --theme-link:    #0077b6;
+  background-color: var(--theme-bg);
+}
+
+/* ── Shared utility classes ─────────────────────── */
+.tab-content { padding: 16px 0; }
+.full-width { width: 100%; }
+.form-row { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; margin-bottom: 16px; }
+.action-btn { margin-bottom: 16px; }
+
+a { color: var(--theme-link); text-decoration: none; }
+a:hover { text-decoration: underline; }

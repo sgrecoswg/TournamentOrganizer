@@ -1,0 +1,759 @@
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatTableModule } from '@angular/material/table';
+import { MatSelectModule } from '@angular/material/select';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDividerModule } from '@angular/material/divider';
+import { firstValueFrom } from 'rxjs';
+import { ApiService } from '../../core/services/api.service';
+import { AuthService } from '../../core/services/auth.service';
+import { SyncService } from '../../core/services/sync.service';
+import { LocalStorageContext } from '../../core/services/local-storage-context.service';
+import { StorageAdapter } from '../../core/services/storage-adapter.service';
+import { ThemeService } from '../../core/services/theme.service';
+import { StoreDetailDto, AppUserDto, LicenseDto, ThemeDto } from '../../core/models/api.models';
+import { StoreContextService } from '../../core/services/store-context.service';
+import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
+
+@Component({
+  selector: 'app-store-detail',
+  imports: [
+    CommonModule, FormsModule, RouterLink,
+    MatCardModule, MatButtonModule, MatIconModule,
+    MatFormFieldModule, MatInputModule, MatSnackBarModule,
+    MatTabsModule, MatTableModule, MatSelectModule,
+    MatDatepickerModule, MatNativeDateModule, MatSlideToggleModule,
+    MatDialogModule, MatDividerModule
+  ],
+  template: `
+    <div class="page-header">
+      <button mat-icon-button [routerLink]="['/stores']">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <h2>{{ store?.storeName ?? 'Store Settings' }}</h2>
+    </div>
+
+    @if (store) {
+      <!-- ── Logo ──────────────────────────────────────────────── -->
+      <div class="logo-section">
+        @if (store.logoUrl) {
+          <img class="store-logo" [src]="store.logoUrl" [alt]="store.storeName">
+        } @else {
+          <mat-icon class="store-logo-placeholder">store</mat-icon>
+        }
+        @if (authService.isStoreEmployee) {
+          <button mat-stroked-button (click)="logoInput.click()">
+            <mat-icon>upload</mat-icon> Change Logo
+          </button>
+          <input #logoInput type="file" accept=".png,.jpg,.jpeg,.gif"
+                 style="display:none"
+                 (change)="onLogoSelected($event)">
+        }
+      </div>
+
+      <mat-tab-group>
+
+        <!-- ── Tab 1: Settings ───────────────────────────────── -->
+        <mat-tab label="Settings">
+          <div class="tab-content">
+            <mat-card class="settings-card">
+              <mat-card-header>
+                <mat-card-title>Store Details</mat-card-title>
+                <mat-card-subtitle>{{ store.isActive ? 'Active' : 'Inactive' }}</mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="form-column">
+                  <mat-form-field>
+                    <mat-label>Store Name</mat-label>
+                    <input matInput [(ngModel)]="editStoreName" [readonly]="!authService.isStoreManager">
+                  </mat-form-field>
+                  <mat-form-field>
+                    <mat-label>Allowable Trade Differential (%)</mat-label>
+                    <input matInput type="number" [(ngModel)]="editDifferential"
+                           min="0" max="100" step="1" [readonly]="!authService.isStoreManager">
+                    <span matSuffix>%</span>
+                  </mat-form-field>
+                  @if (authService.isStoreManager) {
+                    <mat-form-field>
+                      <mat-label>Theme</mat-label>
+                      <mat-select [(ngModel)]="selectedThemeId" (ngModelChange)="previewTheme($event)"
+                                  data-testid="theme-select">
+                        @for (t of themes; track t.id) {
+                          <mat-option [value]="t.id">{{ t.name }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  }
+                </div>
+              </mat-card-content>
+              @if (authService.isStoreManager) {
+                <mat-card-actions>
+                  <button mat-raised-button color="primary" (click)="save()" [disabled]="!editStoreName.trim()">
+                    <mat-icon>save</mat-icon> Save
+                  </button>
+                  <button mat-button [routerLink]="['/stores']">Cancel</button>
+                </mat-card-actions>
+              }
+            </mat-card>
+          </div>
+        </mat-tab>
+
+        <!-- ── Tab 2: Employees (StoreManager+) ─────────────── -->
+        @if (authService.isStoreManager) {
+          <mat-tab label="Employees">
+            <div class="tab-content">
+
+              <!-- Add Employee form -->
+              <mat-card class="add-card">
+                <mat-card-header><mat-card-title>Add Employee</mat-card-title></mat-card-header>
+                <mat-card-content>
+                  <div class="form-row">
+                    <mat-form-field class="name-field">
+                      <mat-label>Name</mat-label>
+                      <input matInput [(ngModel)]="newEmployeeName" placeholder="Jane Smith">
+                    </mat-form-field>
+                    <mat-form-field class="email-field">
+                      <mat-label>Email</mat-label>
+                      <input matInput [(ngModel)]="newEmployeeEmail" placeholder="user@example.com">
+                    </mat-form-field>
+                    <mat-form-field>
+                      <mat-label>Role</mat-label>
+                      <mat-select [(ngModel)]="newEmployeeRole">
+                        <mat-option value="StoreEmployee">Store Employee</mat-option>
+                        <mat-option value="StoreManager">Store Manager</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                    <button mat-raised-button color="primary"
+                            (click)="addEmployee()"
+                            [disabled]="!newEmployeeEmail.trim()">
+                      <mat-icon>person_add</mat-icon> Add
+                    </button>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+
+              <!-- Employee table -->
+              @if (employees.length > 0) {
+                <mat-card class="table-card">
+                  <mat-card-content>
+                    <table mat-table [dataSource]="employees" class="full-width">
+                      <ng-container matColumnDef="name">
+                        <th mat-header-cell *matHeaderCellDef>Name</th>
+                        <td mat-cell *matCellDef="let row">{{ row.name }}</td>
+                      </ng-container>
+                      <ng-container matColumnDef="email">
+                        <th mat-header-cell *matHeaderCellDef>Email</th>
+                        <td mat-cell *matCellDef="let row">{{ row.email }}</td>
+                      </ng-container>
+                      <ng-container matColumnDef="role">
+                        <th mat-header-cell *matHeaderCellDef>Role</th>
+                        <td mat-cell *matCellDef="let row">{{ row.role }}</td>
+                      </ng-container>
+                      <ng-container matColumnDef="actions">
+                        <th mat-header-cell *matHeaderCellDef></th>
+                        <td mat-cell *matCellDef="let row">
+                          <button mat-icon-button color="warn" (click)="removeEmployee(row.id)"
+                                  [disabled]="row.id === authService.currentUser?.playerId">
+                            <mat-icon>person_remove</mat-icon>
+                          </button>
+                        </td>
+                      </ng-container>
+                      <tr mat-header-row *matHeaderRowDef="employeeCols"></tr>
+                      <tr mat-row *matRowDef="let row; columns: employeeCols;"></tr>
+                    </table>
+                  </mat-card-content>
+                </mat-card>
+              } @else {
+                <p class="empty-state">No employees assigned to this store.</p>
+              }
+            </div>
+          </mat-tab>
+        }
+
+        <!-- ── Tab 3: License (StoreManager+) ───────────────── -->
+        @if (authService.isStoreManager) {
+          <mat-tab label="License">
+            <div class="tab-content">
+              @if (license) {
+                <mat-card class="settings-card">
+                  <mat-card-header>
+                    <mat-card-title>License Details</mat-card-title>
+                    <mat-card-subtitle>
+                      {{ license.isActive ? 'Active' : 'Inactive' }}
+                    </mat-card-subtitle>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <div class="form-column">
+                      <mat-form-field>
+                        <mat-label>App Key</mat-label>
+                        <input matInput [(ngModel)]="editLicenseKey" [readonly]="!authService.isStoreManager">
+                      </mat-form-field>
+                      <mat-form-field>
+                        <mat-label>Available Date</mat-label>
+                        <input matInput [matDatepicker]="availPicker" [(ngModel)]="editAvailableDate"
+                               [readonly]="!authService.isStoreManager">
+                        @if (authService.isStoreManager) {
+                          <mat-datepicker-toggle matIconSuffix [for]="availPicker"></mat-datepicker-toggle>
+                        }
+                        <mat-datepicker #availPicker></mat-datepicker>
+                      </mat-form-field>
+                      <mat-form-field>
+                        <mat-label>Expires Date</mat-label>
+                        <input matInput [matDatepicker]="expPicker" [(ngModel)]="editExpiresDate"
+                               [readonly]="!authService.isStoreManager">
+                        @if (authService.isStoreManager) {
+                          <mat-datepicker-toggle matIconSuffix [for]="expPicker"></mat-datepicker-toggle>
+                        }
+                        <mat-datepicker #expPicker></mat-datepicker>
+                      </mat-form-field>
+                      @if (authService.isStoreManager) {
+                        <mat-slide-toggle [(ngModel)]="editLicenseActive">Active</mat-slide-toggle>
+                      }
+                    </div>
+                  </mat-card-content>
+                  @if (authService.isStoreManager) {
+                    <mat-card-actions>
+                      <button mat-raised-button color="primary" (click)="saveLicense()">
+                        <mat-icon>save</mat-icon> Save License
+                      </button>
+                    </mat-card-actions>
+                  }
+                </mat-card>
+              } @else if (authService.isAdmin) {
+                <!-- Create license form (Admin only) -->
+                <mat-card class="settings-card">
+                  <mat-card-header><mat-card-title>Create License</mat-card-title></mat-card-header>
+                  <mat-card-content>
+                    <div class="form-column">
+                      <mat-form-field>
+                        <mat-label>App Key</mat-label>
+                        <input matInput [(ngModel)]="editLicenseKey" placeholder="e.g. XXXX-XXXX-XXXX">
+                      </mat-form-field>
+                      <mat-form-field>
+                        <mat-label>Available Date</mat-label>
+                        <input matInput [matDatepicker]="createAvailPicker" [(ngModel)]="editAvailableDate">
+                        <mat-datepicker-toggle matIconSuffix [for]="createAvailPicker"></mat-datepicker-toggle>
+                        <mat-datepicker #createAvailPicker></mat-datepicker>
+                      </mat-form-field>
+                      <mat-form-field>
+                        <mat-label>Expires Date</mat-label>
+                        <input matInput [matDatepicker]="createExpPicker" [(ngModel)]="editExpiresDate">
+                        <mat-datepicker-toggle matIconSuffix [for]="createExpPicker"></mat-datepicker-toggle>
+                        <mat-datepicker #createExpPicker></mat-datepicker>
+                      </mat-form-field>
+                    </div>
+                  </mat-card-content>
+                  <mat-card-actions>
+                    <button mat-raised-button color="primary" (click)="createLicense()"
+                            [disabled]="!editLicenseKey.trim() || !editAvailableDate || !editExpiresDate">
+                      <mat-icon>add</mat-icon> Create License
+                    </button>
+                  </mat-card-actions>
+                </mat-card>
+              } @else {
+                <p class="empty-state">No license found for this store.</p>
+              }
+            </div>
+          </mat-tab>
+        }
+
+        <!-- ── Tab 4: Data Management (Employee+) ────────────── -->
+        @if (authService.isStoreEmployee) {
+          <mat-tab label="Data Management">
+            <div class="tab-content">
+              <mat-card class="settings-card data-mgmt-card">
+                <mat-card-header>
+                  <mat-card-title>Data Management</mat-card-title>
+                  <mat-card-subtitle>
+                    @if (pendingCount > 0) {
+                      {{ pendingCount }} unsync'd local change(s)
+                    } @else {
+                      All local changes are in sync
+                    }
+                  </mat-card-subtitle>
+                </mat-card-header>
+
+                <mat-card-content>
+                  <!-- Sync to Server -->
+                  <div class="action-row">
+                    <button mat-raised-button color="primary"
+                            (click)="syncToServer()"
+                            [disabled]="!apiOnline || syncing || pulling || pendingCount === 0">
+                      <mat-icon>sync</mat-icon>
+                      Sync to Server{{ pendingCount > 0 ? ' (' + pendingCount + ')' : '' }}
+                    </button>
+                    <span class="action-desc">Push pending local changes to the backend.</span>
+                  </div>
+
+                  <mat-divider></mat-divider>
+
+                  <!-- Pull from Server -->
+                  <div class="action-row">
+                    <button mat-stroked-button
+                            (click)="pullFromServer()"
+                            [disabled]="!apiOnline || syncing || pulling">
+                      <mat-icon>cloud_download</mat-icon>
+                      Pull from Server
+                    </button>
+                    <span class="action-desc">Overwrite local data with the latest from the server.</span>
+                  </div>
+
+                  <mat-divider></mat-divider>
+
+                  <!-- Download (Export) -->
+                  <div class="action-row">
+                    <button mat-stroked-button (click)="downloadData()">
+                      <mat-icon>save_alt</mat-icon>
+                      Download (Export)
+                    </button>
+                    <span class="action-desc">
+                      Save all local data to
+                      <code>to_store_{{ storeId }}_&lt;date&gt;.json</code>.
+                    </span>
+                  </div>
+
+                  <mat-divider></mat-divider>
+
+                  <!-- Upload (Import) -->
+                  <div class="action-row">
+                    <button mat-stroked-button (click)="fileInput.click()">
+                      <mat-icon>upload_file</mat-icon>
+                      Upload (Import)
+                    </button>
+                    <input #fileInput type="file" accept=".json"
+                           style="display:none"
+                           (change)="uploadData($event)">
+                    <span class="action-desc">Load data from a previously exported JSON file.</span>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            </div>
+          </mat-tab>
+        }
+
+      </mat-tab-group>
+    } @else {
+      <p class="empty-state">Loading...</p>
+    }
+  `,
+  styles: [`
+    .page-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .logo-section { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+    .store-logo { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; }
+    .store-logo-placeholder { font-size: 80px; width: 80px; height: 80px; color: #999; }
+    .tab-content { padding: 24px 0; }
+    .settings-card { max-width: 520px; }
+    .add-card { margin-bottom: 16px; }
+    .table-card { margin-top: 8px; }
+    .form-column { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
+    .form-row { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+    .name-field { min-width: 180px; }
+    .email-field { min-width: 260px; }
+    .empty-state { color: #666; font-style: italic; margin-top: 16px; }
+    .data-mgmt-card { max-width: 600px; }
+    .action-row { display: flex; align-items: center; gap: 16px; padding: 16px 0; }
+    .action-desc { color: #666; font-size: 13px; flex: 1; }
+    mat-divider { margin: 0; }
+  `]
+})
+export class StoreDetailComponent implements OnInit {
+  store: StoreDetailDto | null = null;
+  editStoreName = '';
+  editDifferential = 10;
+  storeId = 0;
+
+  // Employees
+  employees: AppUserDto[] = [];
+  newEmployeeName = '';
+  newEmployeeEmail = '';
+  newEmployeeRole: 'StoreEmployee' | 'StoreManager' = 'StoreEmployee';
+  readonly employeeCols = ['name', 'email', 'role', 'actions'];
+
+  // Theme
+  themes: ThemeDto[] = [];
+  selectedThemeId: number | null = null;
+
+  // License
+  license: LicenseDto | null = null;
+  editLicenseKey = '';
+  editAvailableDate: Date | null = null;
+  editExpiresDate: Date | null = null;
+  editLicenseActive = true;
+
+  // Data Management
+  private get storeSettingsPendingKey(): string {
+    return `to_store_settings_pending_${this.storeId}`;
+  }
+
+  get pendingCount(): number {
+    const base = this.syncService.pendingCount;
+    if (!this.storeId) return base;
+    const empKey = `${this.ctx.activeStorePrefix}_employees_${this.storeId}`;
+    const employees: AppUserDto[] = JSON.parse(this.storage.getItem(empKey) ?? '[]');
+    const deletions: number[] = JSON.parse(this.storage.getItem(`${empKey}_deletions`) ?? '[]');
+    const pendingSettings = this.storage.getItem(this.storeSettingsPendingKey) ? 1 : 0;
+    return base + employees.filter(e => (e.id as unknown as number) < 0).length + deletions.length + pendingSettings;
+  }
+  syncing = false;
+  pulling = false;
+  apiOnline = true;
+
+  constructor(
+    private route:        ActivatedRoute,
+    private apiService:   ApiService,
+    private snackBar:     MatSnackBar,
+    private cdr:          ChangeDetectorRef,
+    private dialog:       MatDialog,
+    private syncService:  SyncService,
+    private ctx:          LocalStorageContext,
+    private storage:      StorageAdapter,
+    private storeContext: StoreContextService,
+    private themeService: ThemeService,
+    public  authService:  AuthService
+  ) {}
+
+  ngOnInit() {
+    this.storeId = Number(this.route.snapshot.paramMap.get('id'));
+
+    // Scope the local storage context to this store
+    this.ctx.setActiveStore(this.storeId);
+
+    this.apiService.getThemes().subscribe(themes => {
+      this.themes = themes;
+      this.cdr.detectChanges();
+    });
+
+    this.apiService.getStore(this.storeId).subscribe({
+      next: store => {
+        this.apiOnline = true;
+        // Cache-bust the logo URL so the browser always fetches the latest image,
+        // not a stale copy from a previous upload at the same path.
+        this.store = store.logoUrl
+          ? { ...store, logoUrl: `${store.logoUrl}?t=${Date.now()}` }
+          : store;
+        this.editStoreName = store.storeName;
+        this.editDifferential = store.allowableTradeDifferential;
+        this.selectedThemeId = store.themeId ?? null;
+        if (store.license) {
+          this.license = store.license;
+          this.editLicenseKey = store.license.appKey;
+          this.editAvailableDate = new Date(store.license.availableDate);
+          this.editExpiresDate = new Date(store.license.expiresDate);
+          this.editLicenseActive = store.license.isActive;
+        }
+        this.cdr.detectChanges();
+        // Only load employees after confirming the API is reachable.
+        if (this.authService.isStoreManager) {
+          this.loadEmployees();
+        }
+      },
+      error: () => {
+        this.apiOnline = false;
+        // Fall back to the locally-cached store so the page renders offline
+        const cached = this.ctx.stores.getById(this.storeId);
+        if (cached) {
+          this.store = { ...cached, allowableTradeDifferential: 10, license: null };
+          this.editStoreName = cached.storeName;
+          this.cdr.detectChanges();
+        } else {
+          this.snackBar.open('Store unavailable offline', 'OK', { duration: 3000 });
+        }
+        if (this.authService.isStoreManager) {
+          this.loadEmployeesFromCache();
+        }
+      }
+    });
+  }
+
+  // ── Settings ──────────────────────────────────────────────────────────────
+
+  previewTheme(themeId: number) {
+    const t = this.themes.find(x => x.id === themeId);
+    if (t) this.themeService.applyTheme(t.cssClass);
+    this.cdr.detectChanges();
+  }
+
+  save() {
+    if (!this.editStoreName.trim()) return;
+    this.apiService.updateStore(this.storeId, {
+      storeName: this.editStoreName.trim(),
+      allowableTradeDifferential: this.editDifferential,
+      themeId: this.selectedThemeId
+    }).subscribe({
+      next: updated => {
+        this.store = updated.logoUrl
+          ? { ...updated, logoUrl: `${updated.logoUrl}?t=${Date.now()}` }
+          : updated;
+        this._updateStoreName(updated.storeName);
+        this.snackBar.open('Store settings saved!', 'OK', { duration: 3000 });
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        // Queue settings update for sync when API is unavailable
+        const pending = { storeName: this.editStoreName.trim(), allowableTradeDifferential: this.editDifferential };
+        this.storage.setItem(this.storeSettingsPendingKey, JSON.stringify(pending));
+        this._updateStoreName(pending.storeName);
+        this.snackBar.open('Settings saved locally (will sync when online)', 'OK', { duration: 3000 });
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private _updateStoreName(name: string): void {
+    const cached = this.ctx.stores.getById(this.storeId);
+    if (cached) {
+      this.ctx.stores.update({ ...cached, storeName: name });
+      // Mark clean immediately — store settings sync uses the raw pending key,
+      // not the ctx.stores change queue. Without this, pendingCount stays at 1
+      // forever after any store name save (online or offline).
+      this.ctx.stores.markClean(this.storeId);
+    }
+    this.storeContext.storesChanged$.next();
+  }
+
+  // ── Employees ─────────────────────────────────────────────────────────────
+
+  private get employeeCacheKey(): string {
+    return `${this.ctx.activeStorePrefix}_employees_${this.storeId}`;
+  }
+
+  private loadEmployees() {
+    this.apiService.getStoreEmployees(this.storeId).subscribe({
+      next: employees => {
+        // Preserve locally-added (unsynced) employees not yet pushed to the server
+        const cached: AppUserDto[] = JSON.parse(this.storage.getItem(this.employeeCacheKey) ?? '[]');
+        const localPending = cached.filter(e => (e.id as unknown as number) < 0);
+        const merged = [...employees, ...localPending];
+        this.storage.setItem(this.employeeCacheKey, JSON.stringify(merged));
+        this.employees = merged;
+        this.cdr.detectChanges();
+      },
+      error: () => this.snackBar.open('Failed to load employees', 'OK', { duration: 3000 })
+    });
+  }
+
+  private loadEmployeesFromCache(): void {
+    const raw = this.storage.getItem(this.employeeCacheKey);
+    if (raw) {
+      this.employees = JSON.parse(raw) as AppUserDto[];
+      this.cdr.detectChanges();
+    }
+  }
+
+  addEmployee() {
+    if (!this.newEmployeeEmail.trim()) return;
+    this.apiService.addStoreEmployee(this.storeId, {
+      name:  this.newEmployeeName.trim(),
+      email: this.newEmployeeEmail.trim(),
+      role:  this.newEmployeeRole
+    }).subscribe({
+      next: employee => {
+        this.employees = [...this.employees, employee];
+        this.storage.setItem(this.employeeCacheKey, JSON.stringify(this.employees));
+        this.newEmployeeName = '';
+        this.newEmployeeEmail = '';
+        this.snackBar.open(`${employee.name} added as ${employee.role}`, 'OK', { duration: 3000 });
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        // Queue locally on any failure (API offline or unreachable)
+        const tempId = Math.min(0, ...this.employees.map(e => e.id)) - 1;
+        const provisional: AppUserDto = {
+          id:    tempId,
+          name:  this.newEmployeeName.trim(),
+          email: this.newEmployeeEmail.trim(),
+          role:  this.newEmployeeRole,
+        };
+        this.employees = [...this.employees, provisional];
+        this.storage.setItem(this.employeeCacheKey, JSON.stringify(this.employees));
+        this.newEmployeeName = '';
+        this.newEmployeeEmail = '';
+        this.snackBar.open(`${provisional.name} added (will sync when online)`, 'OK', { duration: 3000 });
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private get employeeDeletionsCacheKey(): string {
+    return `${this.employeeCacheKey}_deletions`;
+  }
+
+  removeEmployee(userId: number) {
+    this.apiService.removeStoreEmployee(this.storeId, userId).subscribe({
+      next: () => {
+        this.employees = this.employees.filter(e => e.id !== userId);
+        this.storage.setItem(this.employeeCacheKey, JSON.stringify(this.employees));
+        // Clear this userId from any pending deletions queue (in case it was queued previously)
+        const pending: number[] = JSON.parse(this.storage.getItem(this.employeeDeletionsCacheKey) ?? '[]');
+        const cleaned = pending.filter(id => id !== userId);
+        this.storage.setItem(this.employeeDeletionsCacheKey, JSON.stringify(cleaned));
+        this.snackBar.open('Employee removed', 'OK', { duration: 3000 });
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        // Queue the deletion for sync regardless of apiOnline flag state
+        this.employees = this.employees.filter(e => e.id !== userId);
+        this.storage.setItem(this.employeeCacheKey, JSON.stringify(this.employees));
+        const pending: number[] = JSON.parse(this.storage.getItem(this.employeeDeletionsCacheKey) ?? '[]');
+        if (!pending.includes(userId)) {
+          pending.push(userId);
+          this.storage.setItem(this.employeeDeletionsCacheKey, JSON.stringify(pending));
+        }
+        this.snackBar.open('Employee removed (will sync when online)', 'OK', { duration: 3000 });
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  // ── License ───────────────────────────────────────────────────────────────
+
+  saveLicense() {
+    if (!this.license || !this.editAvailableDate || !this.editExpiresDate) return;
+    this.apiService.updateLicense(this.storeId, this.license.id, {
+      appKey:        this.editLicenseKey.trim(),
+      isActive:      this.editLicenseActive,
+      availableDate: this.editAvailableDate.toISOString(),
+      expiresDate:   this.editExpiresDate.toISOString()
+    }).subscribe({
+      next: updated => {
+        this.license = updated;
+        this.snackBar.open('License updated!', 'OK', { duration: 3000 });
+        this.cdr.detectChanges();
+      },
+      error: (err) => this.snackBar.open(err.error?.error || 'Failed to update license', 'OK', { duration: 3000 })
+    });
+  }
+
+  createLicense() {
+    if (!this.editLicenseKey.trim() || !this.editAvailableDate || !this.editExpiresDate) return;
+    this.apiService.createLicense(this.storeId, {
+      appKey:        this.editLicenseKey.trim(),
+      availableDate: this.editAvailableDate.toISOString(),
+      expiresDate:   this.editExpiresDate.toISOString()
+    }).subscribe({
+      next: created => {
+        this.license = created;
+        this.editLicenseActive = created.isActive;
+        this.snackBar.open('License created!', 'OK', { duration: 3000 });
+        this.cdr.detectChanges();
+      },
+      error: (err) => this.snackBar.open(err.error?.error || 'Failed to create license', 'OK', { duration: 3000 })
+    });
+  }
+
+  // ── Data Management ───────────────────────────────────────────────────────
+
+  async syncToServer() {
+    this.syncing = true;
+    this.cdr.detectChanges();
+    try {
+      const result = await this.syncService.push();
+      let msg = `Sync complete: ${result.pushed} pushed`;
+      if (result.conflicts > 0) msg += `, ${result.conflicts} conflict(s) resolved`;
+      if (result.errors > 0)    msg += `, ${result.errors} error(s)`;
+      this.snackBar.open(msg, 'OK', { duration: 5000 });
+    } finally {
+      this.syncing = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  async pullFromServer() {
+    if (this.syncService.pendingCount > 0) {
+      const confirmed = await firstValueFrom(
+        this.dialog.open(ConfirmDialogComponent, {
+          data: {
+            message:      'You have pending local changes that have not been synced. Pulling from the server will overwrite them. Continue?',
+            confirmLabel: 'Pull anyway',
+          }
+        }).afterClosed()
+      );
+      if (!confirmed) return;
+    }
+    this.pulling = true;
+    this.cdr.detectChanges();
+    try {
+      await this.syncService.pull();
+      this.snackBar.open('Local data refreshed from server', 'OK', { duration: 3000 });
+    } finally {
+      this.pulling = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  downloadData() {
+    this.syncService.exportStore(this.storeId);
+  }
+
+  // ── Logo ──────────────────────────────────────────────────────────────────
+
+  onLogoSelected(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    try {
+      if (this.store) {
+        this.store = { ...this.store, logoUrl: URL.createObjectURL(file) };
+        this.cdr.detectChanges();
+      }
+    } catch { /* preview unavailable in some environments */ }
+    this.apiService.uploadStoreLogo(this.storeId, file).subscribe({
+      next: dto => {
+        // Append a timestamp to bust the browser cache — the server always writes to
+        // the same path (/logos/{id}.ext) so the URL never changes otherwise.
+        const logoUrl = dto.logoUrl ? `${dto.logoUrl}?t=${Date.now()}` : null;
+        if (this.store) this.store = { ...this.store, logoUrl };
+        const cached = this.ctx.stores.getById(this.storeId);
+        if (cached) this.ctx.stores.update({ ...cached, logoUrl });
+        this.storeContext.storesChanged$.next();
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.snackBar.open('Logo upload failed', 'Close', { duration: 3000 });
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  async uploadData(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    // Reset so the same file can be re-selected if needed
+    (event.target as HTMLInputElement).value = '';
+
+    const validation = await this.syncService.validateImportFile(file, this.storeId);
+
+    if (validation.status === 'parseError' || validation.status === 'invalidFormat') {
+      this.snackBar.open(validation.error ?? 'Invalid file', 'OK', { duration: 4000 });
+      return;
+    }
+
+    if (validation.status === 'storeIdMismatch') {
+      const confirmed = await firstValueFrom(
+        this.dialog.open(ConfirmDialogComponent, {
+          data: {
+            message:      `This file was exported for store #${validation.fileStoreId}, but you are viewing store #${this.storeId}. Import anyway?`,
+            confirmLabel: 'Import anyway',
+          }
+        }).afterClosed()
+      );
+      if (!confirmed) return;
+    }
+
+    this.syncService.applyImport(validation.data!);
+    this.snackBar.open('Data imported successfully', 'OK', { duration: 3000 });
+    this.cdr.detectChanges();
+  }
+}

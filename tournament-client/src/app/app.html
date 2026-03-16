@@ -1,0 +1,72 @@
+<mat-sidenav-container class="app-container">
+  <mat-sidenav mode="side" opened class="sidenav">
+    <!-- <div class="sidenav-header">
+      <mat-icon>emoji_events</mat-icon>
+      <span>Commander Tournament</span>
+    </div> -->
+    <mat-nav-list>
+      <a mat-list-item routerLink="/leaderboard" routerLinkActive="active">
+        <mat-icon matListItemIcon>leaderboard</mat-icon>
+        <span matListItemTitle>Leaderboard</span>
+      </a>
+      <a mat-list-item routerLink="/players" routerLinkActive="active">
+        <mat-icon matListItemIcon>people</mat-icon>
+        <span matListItemTitle>Players</span>
+      </a>
+      <a mat-list-item routerLink="/events" routerLinkActive="active">
+        <mat-icon matListItemIcon>event</mat-icon>
+        <span matListItemTitle>Events</span>
+      </a>
+      @if (isStoreEmployee) {
+        <a mat-list-item routerLink="/stores" routerLinkActive="active">
+          <mat-icon matListItemIcon>store</mat-icon>
+          <span matListItemTitle>Stores</span>
+        </a>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="content">
+    <mat-toolbar color="primary">
+      @if (isAdmin) {
+        @if (selectedStoreId) {
+          @if (selectedStore?.logoUrl) {
+            <img class="store-logo-thumb" [src]="selectedStore!.logoUrl!" [alt]="selectedStore!.storeName">
+          } @else {
+            <mat-icon class="store-logo-placeholder">store</mat-icon>
+          }
+        }
+        <mat-form-field class="store-selector" appearance="outline" subscriptSizing="dynamic">
+          <mat-select [(ngModel)]="selectedStoreId" placeholder="Select Store">
+            @for (s of stores; track s.id) {
+              <mat-option [value]="s.id">{{ s.storeName }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      } @else {
+        <span>{{ headerTitle }}</span>
+      }
+      <span class="toolbar-spacer"></span>
+      @if (currentUser; as user) {
+        <span class="toolbar-username">{{ user.name }}</span>
+        <button mat-icon-button [matMenuTriggerFor]="userMenu" aria-label="User menu">
+          <mat-icon>account_circle</mat-icon>
+        </button>
+        <mat-menu #userMenu="matMenu">
+          <button mat-menu-item (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            <span>Logout</span>
+          </button>
+        </mat-menu>
+      } @else {
+        <button mat-button (click)="login()">
+          <mat-icon>login</mat-icon>
+          Login with Google
+        </button>
+      }
+    </mat-toolbar>
+    <div class="page-content">
+      <router-outlet></router-outlet>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

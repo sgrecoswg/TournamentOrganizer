@@ -1,0 +1,45 @@
+# Claude Code local project settings and memory
+.claude/
+
+# .NET build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# EF Core / LocalDB
+*.mdf
+*.ldf
+*.ndf
+
+# User secrets (never commit — use dotnet user-secrets)
+# Real values live in %APPDATA%\Microsoft\UserSecrets\
+# appsettings.Development.json is safe (only log levels)
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+# Rider
+.idea/
+
+# Test results
+test-results/
+TestResults/
+
+# Playwright
+playwright-report/
+
+# Scratch files
+new*.txt
+promptsuggestion.md
+
+# OS
+.DS_Store
+Thumbs.db
