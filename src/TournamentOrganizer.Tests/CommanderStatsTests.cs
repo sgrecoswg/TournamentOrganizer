@@ -61,21 +61,13 @@ public class CommanderStatsTests
     private static Player MakePlayer(int id) =>
         new() { Id = id, Name = $"Player{id}", Mu = 25, Sigma = 8.333 };
 
-    private static EventRegistration MakeRegistration(int playerId, int eventId, string? commanders) =>
-        new() { PlayerId = playerId, EventId = eventId, Commanders = commanders };
-
-    private static GameResult MakeResult(int playerId, int eventId, int finishPosition) =>
+    private static GameResult MakeResult(int playerId, int finishPosition, string? commanderPlayed = null) =>
         new()
         {
             PlayerId = playerId,
             FinishPosition = finishPosition,
-            Game = new Game
-            {
-                Pod = new Pod
-                {
-                    Round = new Round { EventId = eventId }
-                }
-            }
+            CommanderPlayed = commanderPlayed,
+            Game = new Game { Pod = new Pod { Round = new Round { EventId = 1 } } }
         };
 
     // ── Tests ─────────────────────────────────────────────────────────────
@@ -86,12 +78,10 @@ public class CommanderStatsTests
         var playerRepo = new FakePlayerRepository();
         var gameRepo   = new FakeGameRepository();
         playerRepo.Add(MakePlayer(1));
-        playerRepo.AddRegistration(MakeRegistration(1, 1, "Atraxa"));
-        playerRepo.AddRegistration(MakeRegistration(1, 2, "Omnath"));
 
-        gameRepo.AddResult(MakeResult(1, 1, 1)); // Atraxa event: win
-        gameRepo.AddResult(MakeResult(1, 1, 2)); // Atraxa event: 2nd
-        gameRepo.AddResult(MakeResult(1, 2, 3)); // Omnath event: 3rd
+        gameRepo.AddResult(MakeResult(1, 1, "Atraxa")); // win
+        gameRepo.AddResult(MakeResult(1, 2, "Atraxa")); // 2nd
+        gameRepo.AddResult(MakeResult(1, 3, "Omnath")); // 3rd
 
         var svc = BuildService(playerRepo, gameRepo);
         var result = await svc.GetCommanderStatsAsync(1);
@@ -114,11 +104,10 @@ public class CommanderStatsTests
         var playerRepo = new FakePlayerRepository();
         var gameRepo   = new FakeGameRepository();
         playerRepo.Add(MakePlayer(1));
-        playerRepo.AddRegistration(MakeRegistration(1, 1, "Atraxa"));
 
-        gameRepo.AddResult(MakeResult(1, 1, 1)); // win
-        gameRepo.AddResult(MakeResult(1, 1, 1)); // win
-        gameRepo.AddResult(MakeResult(1, 1, 3)); // 3rd
+        gameRepo.AddResult(MakeResult(1, 1, "Atraxa")); // win
+        gameRepo.AddResult(MakeResult(1, 1, "Atraxa")); // win
+        gameRepo.AddResult(MakeResult(1, 3, "Atraxa")); // 3rd
 
         var svc = BuildService(playerRepo, gameRepo);
         var result = await svc.GetCommanderStatsAsync(1);
@@ -130,14 +119,11 @@ public class CommanderStatsTests
     }
 
     [Fact]
-    public async Task GetCommanderStatsAsync_NoCommandersDeclared_ReturnsEmptyList()
+    public async Task GetCommanderStatsAsync_NoCommanderPlayed_ReturnsEmptyList()
     {
         var playerRepo = new FakePlayerRepository();
         var gameRepo   = new FakeGameRepository();
-        playerRepo.Add(MakePlayer(1));
-        playerRepo.AddRegistration(MakeRegistration(1, 1, null)); // no commander declared
-
-        gameRepo.AddResult(MakeResult(1, 1, 2));
+        playerRepo.Add(MakePlayer(1));      
 
         var svc = BuildService(playerRepo, gameRepo);
         var result = await svc.GetCommanderStatsAsync(1);
@@ -165,10 +151,9 @@ public class CommanderStatsTests
         var playerRepo = new FakePlayerRepository();
         var gameRepo   = new FakeGameRepository();
         playerRepo.Add(MakePlayer(1));
-        playerRepo.AddRegistration(MakeRegistration(1, 1, "Atraxa"));
 
-        gameRepo.AddResult(MakeResult(1, 1, 1)); // finish 1
-        gameRepo.AddResult(MakeResult(1, 1, 3)); // finish 3
+        gameRepo.AddResult(MakeResult(1, 1, "Atraxa")); // finish 1
+        gameRepo.AddResult(MakeResult(1, 3, "Atraxa")); // finish 3
         // avg = 2.0
 
         var svc = BuildService(playerRepo, gameRepo);

@@ -4,6 +4,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 You are a Senior .NET and Angular Developer specializing in Test-Driven Development (TDD). You are working on a "Magic the Gathering" Tournament Organizer application.
 
+## Git Workflow (MANDATORY)
+
+All work follows a **feature branch → PR → dev** flow:
+
+1. **Start every task** from the `dev` branch, pulled to latest:
+   ```bash
+   git checkout dev && git pull TournamentOrganizer dev
+   ```
+2. **Create a feature branch** named after the task:
+   ```bash
+   git checkout -b feature/<short-task-name>
+   ```
+3. **Do all work on the feature branch** — commits, migrations, tests.
+4. **After all tests pass**, commit all changes and push:
+   ```bash
+   git push -u TournamentOrganizer feature/<short-task-name>
+   ```
+5. **Open or update the PR** targeting `dev`:
+   ```bash
+   # Check if a PR already exists for this branch
+   gh pr list --head feature/<short-task-name> --base dev --json number --jq '.[0].number'
+   # If a PR number is returned → the PR already exists; the push in step 4 already updated it.
+   # If no PR is returned → create one:
+   gh pr create --base dev --title "..." --body "..."
+   ```
+
+**Rules:**
+- Never commit directly to `dev` or `main`.
+- Never push to `main` — `main` is updated only via PR from `dev`.
+- Bug fixes discovered during a task go on the **same branch** as the task (additional commits), not a new branch.
+- The remote is named `TournamentOrganizer` (not `origin`).
+
 ## Commands
 
 Several slash-command skills are available for common operations — prefer these over raw shell commands:

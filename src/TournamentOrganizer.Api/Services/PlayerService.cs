@@ -148,19 +148,16 @@ public class PlayerService : IPlayerService
         var player = await _playerRepo.GetByIdAsync(playerId);
         if (player == null) return null;
 
-        var registrations = await _playerRepo.GetPlayerEventRegistrationsAsync(playerId);
         var results = await _gameRepo.GetPlayerResultsAsync(playerId);
 
-        var stats = registrations
-            .Where(r => r.Commanders != null)
-            .GroupBy(r => r.Commanders!)
+        var stats = results
+            .Where(r => r.CommanderPlayed != null)
+            .GroupBy(r => r.CommanderPlayed!)
             .Select(g =>
             {
-                var eventIds = g.Select(r => r.EventId).ToHashSet();
-                var relevant = results.Where(r => eventIds.Contains(r.Game.Pod.Round.EventId)).ToList();
-                var gamesPlayed = relevant.Count;
-                var wins = relevant.Count(r => r.FinishPosition == 1);
-                var avgFinish = gamesPlayed > 0 ? relevant.Average(r => r.FinishPosition) : 0.0;
+                var gamesPlayed = g.Count();
+                var wins = g.Count(r => r.FinishPosition == 1);
+                var avgFinish = gamesPlayed > 0 ? g.Average(r => r.FinishPosition) : 0.0;
                 return new CommanderStatDto(g.Key, gamesPlayed, wins, avgFinish);
             })
             .ToList();
