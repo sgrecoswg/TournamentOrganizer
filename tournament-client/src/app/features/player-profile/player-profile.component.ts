@@ -18,7 +18,7 @@ import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PlayerService } from '../../core/services/player.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
-import { PlayerProfile, WishlistEntryDto, TradeEntryDto, BulkUploadResultDto, SuggestedTradeDto, TradeCardDemandDto } from '../../core/models/api.models';
+import { PlayerProfile, WishlistEntryDto, TradeEntryDto, BulkUploadResultDto, SuggestedTradeDto, TradeCardDemandDto, CommanderStatDto } from '../../core/models/api.models';
 import { RatingBadgeComponent } from '../../shared/components/rating-badge.component';
 import { PlacementBadgeComponent } from '../../shared/components/placement-badge.component';
 
@@ -70,6 +70,42 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
           </div>
         </div>
       </div>
+
+      @if (commanderStats.length) {
+        <div class="commander-stats-section">
+          <h3>My Commanders</h3>
+          <mat-card>
+            <mat-card-content>
+              <table mat-table [dataSource]="commanderStats" class="full-width">
+                <ng-container matColumnDef="commanderName">
+                  <th mat-header-cell *matHeaderCellDef>Commander(s)</th>
+                  <td mat-cell *matCellDef="let row">{{ row.commanderName }}</td>
+                </ng-container>
+                <ng-container matColumnDef="gamesPlayed">
+                  <th mat-header-cell *matHeaderCellDef>Games</th>
+                  <td mat-cell *matCellDef="let row">{{ row.gamesPlayed }}</td>
+                </ng-container>
+                <ng-container matColumnDef="wins">
+                  <th mat-header-cell *matHeaderCellDef>Wins</th>
+                  <td mat-cell *matCellDef="let row">{{ row.wins }}</td>
+                </ng-container>
+                <ng-container matColumnDef="winPct">
+                  <th mat-header-cell *matHeaderCellDef>Win %</th>
+                  <td mat-cell *matCellDef="let row">
+                    {{ row.gamesPlayed > 0 ? (row.wins / row.gamesPlayed * 100).toFixed(1) : '0.0' }}%
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="avgFinish">
+                  <th mat-header-cell *matHeaderCellDef>Avg Finish</th>
+                  <td mat-cell *matCellDef="let row">{{ row.avgFinish | number:'1.1-2' }}</td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="commanderColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: commanderColumns;"></tr>
+              </table>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      }
 
       <mat-tab-group>
 
@@ -365,6 +401,7 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
 })
 export class PlayerProfileComponent implements OnInit {
   profile: PlayerProfile | null = null;
+  commanderStats: CommanderStatDto[] = [];
   wishlist: WishlistEntryDto[] = [];
   wishlistSupply = new Map<string, string[]>();
   tradeList: TradeEntryDto[] = [];
@@ -372,6 +409,7 @@ export class PlayerProfileComponent implements OnInit {
   tradeDemand = new Map<string, TradeCardDemandDto>();
 
   eventColumns = ['eventName', 'eventDate', 'decklist', 'commander', 'store'];
+  commanderColumns = ['commanderName', 'gamesPlayed', 'wins', 'winPct', 'avgFinish'];
   historyPageSize = 10;
   historyPageIndex = 0;
 
@@ -437,6 +475,7 @@ export class PlayerProfileComponent implements OnInit {
         this.loadTradeList(id);
         this.loadSuggestedTrades(id);
         this.loadTradeDemand(id);
+        this.loadCommanderStats(id);
       },
       error: () => {
         this.apiOnline = false;
@@ -449,6 +488,13 @@ export class PlayerProfileComponent implements OnInit {
           this.snackBar.open('Player profile unavailable offline', 'OK', { duration: 3000 });
         }
       }
+    });
+  }
+
+  private loadCommanderStats(playerId: number) {
+    this.apiService.getCommanderStats(playerId).subscribe({
+      next: stats => { this.commanderStats = stats.commanders; this.cdr.detectChanges(); },
+      error: () => {}
     });
   }
 

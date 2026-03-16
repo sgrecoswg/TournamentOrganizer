@@ -46,6 +46,18 @@ public record PlayerEventRegistrationDto(
     string? StoreName
 );
 
+public record CommanderStatDto(
+    string CommanderName,
+    int GamesPlayed,
+    int Wins,
+    double AvgFinish
+);
+
+public record PlayerCommanderStatsDto(
+    int PlayerId,
+    List<CommanderStatDto> Commanders
+);
+
 public record HeadToHeadEntryDto(
     int OpponentId,
     string OpponentName,

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TournamentOrganizer.Api.DTOs;
 using TournamentOrganizer.Api.Services.Interfaces;
@@ -52,5 +53,14 @@ public class PlayersController : ControllerBase
     {
         var records = await _playerService.GetHeadToHeadAsync(id);
         return records == null ? NotFound() : Ok(records);
+    }
+
+    [HttpGet("{id}/commanderstats")]
+    [AllowAnonymous]
+    public async Task<ActionResult<PlayerCommanderStatsDto>> GetCommanderStats(int id)
+    {
+        var result = await _playerService.GetCommanderStatsAsync(id);
+        if (result == null) return NotFound();
+        return Ok(result);
     }
 }

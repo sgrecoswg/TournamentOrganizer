@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { CheckInResponseDto, EventDto, EventPlayerDto, LeaderboardEntry, PairingsDto, PlayerDto, PlayerProfile, StoreDto, StoreDetailDto, ThemeDto } from '../../src/app/core/models/api.models';
+import { CheckInResponseDto, CommanderStatDto, EventDto, EventPlayerDto, LeaderboardEntry, PairingsDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, StoreDto, StoreDetailDto, ThemeDto } from '../../src/app/core/models/api.models';
 
 /** Intercept GET /api/events and return the given list. */
 export async function mockGetEvents(page: Page, events: EventDto[]): Promise<void> {
@@ -332,6 +332,22 @@ export async function mockCheckInByToken(
 
 export function makeCheckInResponseDto(overrides: Partial<CheckInResponseDto> = {}): CheckInResponseDto {
   return { eventId: 1, eventName: 'Friday Night Magic', ...overrides };
+}
+
+export function makeCommanderStatDto(overrides: Partial<CommanderStatDto> = {}): CommanderStatDto {
+  return { commanderName: 'Atraxa', gamesPlayed: 5, wins: 3, avgFinish: 1.8, ...overrides };
+}
+
+export async function mockGetCommanderStats(
+  page: Page, playerId: number, response: PlayerCommanderStatsDto
+): Promise<void> {
+  await page.route(`**/api/players/${playerId}/commanderstats`, route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
 }
 
 export function makePairingsDto(overrides: Partial<PairingsDto> = {}): PairingsDto {

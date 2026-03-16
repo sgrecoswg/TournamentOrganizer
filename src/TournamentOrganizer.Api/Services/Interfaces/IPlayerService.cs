@@ -10,4 +10,5 @@ public interface IPlayerService
     Task<List<PlayerDto>> GetAllAsync();
     Task<List<LeaderboardEntryDto>> GetLeaderboardAsync();
     Task<List<HeadToHeadEntryDto>?> GetHeadToHeadAsync(int playerId);
+    Task<PlayerCommanderStatsDto?> GetCommanderStatsAsync(int playerId);
 }

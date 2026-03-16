@@ -79,6 +79,18 @@ export interface PlayerEventRegistration {
   storeName: string | null;
 }
 
+export interface CommanderStatDto {
+  commanderName: string;
+  gamesPlayed: number;
+  wins: number;
+  avgFinish: number;
+}
+
+export interface PlayerCommanderStatsDto {
+  playerId: number;
+  commanders: CommanderStatDto[];
+}
+
 // Event DTOs
 export type PointSystem = 'ScoreBased' | 'WinBased' | 'VictoryPoints' | 'PointWager' | 'SocialVoting' | 'FiveOneZero' | 'SeatBased';
 

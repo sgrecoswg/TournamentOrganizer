@@ -143,6 +143,31 @@ public class PlayerService : IPlayerService
             .ToList();
     }
 
+    public async Task<PlayerCommanderStatsDto?> GetCommanderStatsAsync(int playerId)
+    {
+        var player = await _playerRepo.GetByIdAsync(playerId);
+        if (player == null) return null;
+
+        var registrations = await _playerRepo.GetPlayerEventRegistrationsAsync(playerId);
+        var results = await _gameRepo.GetPlayerResultsAsync(playerId);
+
+        var stats = registrations
+            .Where(r => r.Commanders != null)
+            .GroupBy(r => r.Commanders!)
+            .Select(g =>
+            {
+                var eventIds = g.Select(r => r.EventId).ToHashSet();
+                var relevant = results.Where(r => eventIds.Contains(r.Game.Pod.Round.EventId)).ToList();
+                var gamesPlayed = relevant.Count;
+                var wins = relevant.Count(r => r.FinishPosition == 1);
+                var avgFinish = gamesPlayed > 0 ? relevant.Average(r => r.FinishPosition) : 0.0;
+                return new CommanderStatDto(g.Key, gamesPlayed, wins, avgFinish);
+            })
+            .ToList();
+
+        return new PlayerCommanderStatsDto(playerId, stats);
+    }
+
     private static PlayerDto ToDto(Player p) => new(
         p.Id, p.Name, p.Email, p.Mu, p.Sigma, p.ConservativeScore, p.IsRanked, p.PlacementGamesLeft, p.IsActive);
 }

@@ -10,7 +10,7 @@ import { PlayerService } from '../../core/services/player.service';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
-import { PlayerProfile, PlayerDto } from '../../core/models/api.models';
+import { PlayerProfile, PlayerDto, CommanderStatDto } from '../../core/models/api.models';
 
 describe('PlayerProfileComponent (smoke)', () => {
   const profileStub: PlayerProfile = {
@@ -89,11 +89,12 @@ describe('PlayerProfileComponent — tab visibility by API state', () => {
 
   let mockPlayerService: { getProfile: jest.Mock; updatePlayer: jest.Mock };
   let mockApi: {
-    getWishlist:       jest.Mock;
-    getWishlistSupply: jest.Mock;
-    getTradeList:      jest.Mock;
+    getWishlist:        jest.Mock;
+    getWishlistSupply:  jest.Mock;
+    getTradeList:       jest.Mock;
     getSuggestedTrades: jest.Mock;
-    getTradeDemand:    jest.Mock;
+    getTradeDemand:     jest.Mock;
+    getCommanderStats:  jest.Mock;
   };
   let mockCtx: { players: { getById: jest.Mock; getAll: jest.Mock } };
   let mockAuth: { currentUser: null };
@@ -113,6 +114,7 @@ describe('PlayerProfileComponent — tab visibility by API state', () => {
       getTradeList:       jest.fn().mockReturnValue(of([])),
       getSuggestedTrades: jest.fn().mockReturnValue(of([])),
       getTradeDemand:     jest.fn().mockReturnValue(of([])),
+      getCommanderStats:  jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, commanders: [] })),
     };
     mockCtx     = { players: { getById: jest.fn().mockReturnValue(cachedPlayer), getAll: jest.fn().mockReturnValue([]) } };
     mockAuth    = { currentUser: null };
@@ -200,5 +202,86 @@ describe('PlayerProfileComponent — tab visibility by API state', () => {
     const fixture = TestBed.createComponent(PlayerProfileComponent);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Alice');
+  });
+});
+
+// ── Commander Stats ───────────────────────────────────────────────────────────
+
+describe('PlayerProfileComponent — Commander Stats', () => {
+  const PLAYER_ID = 1;
+  const profileStub: PlayerProfile = {
+    id: PLAYER_ID, name: 'Alice', email: 'alice@test.com',
+    mu: 25, sigma: 8.333, conservativeScore: 0,
+    isRanked: true, placementGamesLeft: 0, isActive: true,
+    gameHistory: [], eventRegistrations: [],
+  };
+
+  function makeCommanderStat(overrides: Partial<CommanderStatDto> = {}): CommanderStatDto {
+    return { commanderName: 'Atraxa', gamesPlayed: 5, wins: 3, avgFinish: 1.8, ...overrides };
+  }
+
+  async function setup(commanders: CommanderStatDto[]) {
+    const mockPlayerService = {
+      getProfile:   jest.fn().mockReturnValue(of(profileStub)),
+      updatePlayer: jest.fn().mockReturnValue(of(profileStub)),
+    };
+    const mockApi = {
+      getWishlist:        jest.fn().mockReturnValue(of([])),
+      getWishlistSupply:  jest.fn().mockReturnValue(of([])),
+      getTradeList:       jest.fn().mockReturnValue(of([])),
+      getSuggestedTrades: jest.fn().mockReturnValue(of([])),
+      getTradeDemand:     jest.fn().mockReturnValue(of([])),
+      getCommanderStats:  jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, commanders })),
+    };
+    const mockCtx  = { players: { getById: jest.fn().mockReturnValue(null), getAll: jest.fn().mockReturnValue([]) } };
+    const mockAuth = { currentUser: null };
+
+    await TestBed.configureTestingModule({
+      imports: [PlayerProfileComponent],
+      providers: [
+        provideRouter([]),
+        provideAnimationsAsync(),
+        { provide: ActivatedRoute,      useValue: { snapshot: { paramMap: { get: () => String(PLAYER_ID) } } } },
+        { provide: PlayerService,       useValue: mockPlayerService },
+        { provide: ApiService,          useValue: mockApi },
+        { provide: LocalStorageContext, useValue: mockCtx },
+        { provide: AuthService,         useValue: mockAuth },
+        { provide: MatDialog,           useValue: { open: jest.fn() } },
+        { provide: MatSnackBar,         useValue: { open: jest.fn() } },
+      ],
+    }).compileComponents();
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('shows My Commanders heading and row when commander data is present', async () => {
+    await setup([makeCommanderStat()]);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('My Commanders');
+    expect(el.textContent).toContain('Atraxa');
+  });
+
+  it('shows correct win % for a commander', async () => {
+    // 3 wins / 5 games = 60.0%
+    await setup([makeCommanderStat({ gamesPlayed: 5, wins: 3 })]);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('60.0%');
+  });
+
+  it('hides My Commanders section when commanders list is empty', async () => {
+    await setup([]);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('My Commanders');
+  });
+
+  it('shows 0.0% win rate when gamesPlayed is 0 (guards against NaN)', async () => {
+    await setup([makeCommanderStat({ gamesPlayed: 0, wins: 0 })]);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('0.0%');
   });
 });
