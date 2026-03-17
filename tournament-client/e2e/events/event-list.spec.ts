@@ -310,6 +310,104 @@ test.describe('Event List — role-based UI: Admin, no store selected', () => {
   });
 });
 
+// ── Sync button on offline event cards ────────────────────────────────────────
+
+const OFFLINE_EVENT = makeEventDto({ id: -1, name: 'Offline Event', status: 'Registration' });
+const SYNCED_EVENT  = makeEventDto({ id: 99, name: 'Synced Event',  status: 'Registration' });
+
+test.describe('Event List — sync button visibility', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
+    // Seed an offline (negative-ID) event into localStorage before Angular boots.
+    await page.addInitScript((evt) => {
+      localStorage.setItem('to_store_1_events', JSON.stringify([evt]));
+      localStorage.setItem('to_store_1_events_meta', JSON.stringify([[-1, 'added']]));
+    }, OFFLINE_EVENT);
+    await stubUnmatchedApi(page);
+    await page.route('**/api/events', route => route.fulfill({ status: 500 }));
+    await page.goto('/events');
+  });
+
+  test('Sync button is visible on an offline event card', async ({ page }) => {
+    const card = page.locator('mat-card.event-card').filter({ hasText: 'Offline Event' });
+    await expect(card.locator('button.sync-btn')).toBeVisible();
+  });
+
+  test('Sync button icon shows sync icon', async ({ page }) => {
+    const card = page.locator('mat-card.event-card').filter({ hasText: 'Offline Event' });
+    await expect(card.locator('button.sync-btn mat-icon')).toHaveText('sync');
+  });
+});
+
+test.describe('Event List — sync button NOT visible on synced event', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
+    await stubUnmatchedApi(page);
+    await mockGetEvents(page, [SYNCED_EVENT]);
+    await page.goto('/events');
+  });
+
+  test('Sync button is NOT visible on a synced event card', async ({ page }) => {
+    const card = page.locator('mat-card.event-card').filter({ hasText: 'Synced Event' });
+    await expect(card.locator('button.sync-btn')).not.toBeVisible();
+  });
+});
+
+test.describe('Event List — sync button click', () => {
+  test('clicking Sync calls POST /api/events and shows success snackbar', async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
+    const CREATED_EVENT = makeEventDto({ id: 5, name: 'Offline Event', status: 'Registration' });
+    await page.addInitScript((evt) => {
+      localStorage.setItem('to_store_1_events', JSON.stringify([evt]));
+      localStorage.setItem('to_store_1_events_meta', JSON.stringify([[-1, 'added']]));
+    }, OFFLINE_EVENT);
+    await stubUnmatchedApi(page);
+    // loadAllEvents early-exits from cache; let POST /api/events succeed with a real ID
+    await page.route('**/api/events', route => {
+      if (route.request().method() === 'POST') {
+        route.fulfill({ json: CREATED_EVENT });
+      } else {
+        route.fulfill({ status: 500 });
+      }
+    });
+    await page.goto('/events');
+
+    const card = page.locator('mat-card.event-card').filter({ hasText: 'Offline Event' });
+    await card.locator('button.sync-btn').click();
+
+    await expect(page.getByText(/synced successfully/i)).toBeVisible();
+  });
+
+  test('clicking Sync does NOT navigate away from the event list', async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
+    await page.addInitScript((evt) => {
+      localStorage.setItem('to_store_1_events', JSON.stringify([evt]));
+      localStorage.setItem('to_store_1_events_meta', JSON.stringify([[-1, 'added']]));
+    }, OFFLINE_EVENT);
+    await stubUnmatchedApi(page);
+    await page.route('**/api/events', route => route.fulfill({ status: 500 }));
+    await page.goto('/events');
+
+    const card = page.locator('mat-card.event-card').filter({ hasText: 'Offline Event' });
+    await card.locator('button.sync-btn').click();
+
+    await expect(page).toHaveURL(/\/events$/);
+  });
+
+  test('Player does NOT see a Sync button even for an offline event', async ({ page }) => {
+    await loginAs(page, 'Player');
+    await page.addInitScript((evt) => {
+      localStorage.setItem('to_store_1_events', JSON.stringify([evt]));
+      localStorage.setItem('to_store_1_events_meta', JSON.stringify([[-1, 'added']]));
+    }, OFFLINE_EVENT);
+    await stubUnmatchedApi(page);
+    await page.route('**/api/events', route => route.fulfill({ status: 500 }));
+    await page.goto('/events');
+
+    await expect(page.locator('button.sync-btn')).not.toBeVisible();
+  });
+});
+
 // ── Role-based UI: Admin — store selected via toolbar ─────────────────────────
 
 test.describe('Event List — role-based UI: Admin, store selected via toolbar', () => {

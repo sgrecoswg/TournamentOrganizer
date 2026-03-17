@@ -17,6 +17,7 @@ import { Subscription } from 'rxjs';
 import { EventService } from '../../core/services/event.service';
 import { AuthService } from '../../core/services/auth.service';
 import { StoreContextService } from '../../core/services/store-context.service';
+import { SyncService } from '../../core/services/sync.service';
 import { EventDto, PointSystem, POINT_SYSTEM_LABELS } from '../../core/models/api.models';
 
 @Component({
@@ -99,6 +100,11 @@ import { EventDto, PointSystem, POINT_SYSTEM_LABELS } from '../../core/models/ap
                 </mat-card-content>
                 @if (authService.isStoreEmployee) {
                   <mat-card-actions>
+                    @if (isOffline(evt)) {
+                      <button mat-button color="accent" class="sync-btn" (click)="syncEvent(evt, $event)">
+                        <mat-icon>sync</mat-icon> Sync
+                      </button>
+                    }
                     <button mat-button color="warn" (click)="removeEvent(evt.id, $event)">
                       <mat-icon>delete</mat-icon> Remove
                     </button>
@@ -164,7 +170,8 @@ export class EventListComponent implements OnInit, OnDestroy {
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef,
     public authService: AuthService,
-    public storeContext: StoreContextService
+    public storeContext: StoreContextService,
+    private syncService: SyncService
   ) {}
 
   ngOnInit() {
@@ -181,6 +188,26 @@ export class EventListComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.storeChangeSub.unsubscribe();
+  }
+
+  isOffline(evt: EventDto): boolean {
+    return evt.id < 0;
+  }
+
+  syncEvent(evt: EventDto, event: MouseEvent) {
+    event.stopPropagation();
+    this.syncService.push().then(result => {
+      if (result.errors > 0) {
+        this.snackBar.open('Sync completed with errors', 'OK', { duration: 4000 });
+      } else {
+        this.snackBar.open('Event synced successfully', 'OK', { duration: 3000 });
+      }
+      this.eventService.loadAllEvents();
+      this.cdr.detectChanges();
+    }).catch(() => {
+      this.snackBar.open('Sync failed', 'OK', { duration: 4000 });
+      this.cdr.detectChanges();
+    });
   }
 
   removeEvent(id: number, event: MouseEvent) {

@@ -7,6 +7,7 @@ import { EventListComponent } from './event-list.component';
 import { EventService } from '../../core/services/event.service';
 import { AuthService } from '../../core/services/auth.service';
 import { StoreContextService } from '../../core/services/store-context.service';
+import { SyncService } from '../../core/services/sync.service';
 import { EventDto } from '../../core/models/api.models';
 
 describe('EventListComponent (smoke)', () => {
@@ -136,5 +137,82 @@ describe('EventListComponent — Create New Event visibility (Admin)', () => {
     const fixture = TestBed.createComponent(EventListComponent);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).not.toContain('Create New Event');
+  });
+});
+
+// ── Sync button on event cards ─────────────────────────────────────────────────
+
+describe('EventListComponent — sync button', () => {
+  const eventsSubject = new BehaviorSubject<EventDto[]>([]);
+  const selectedStoreId$ = new Subject<number | null>();
+
+  const SYNCED_EVENT:  EventDto = { id: 1,  name: 'Synced Event',  date: '2026-03-15', status: 'Registration', playerCount: 0, defaultRoundTimeMinutes: 55, maxPlayers: null, pointSystem: 'ScoreBased' };
+  const OFFLINE_EVENT: EventDto = { id: -1, name: 'Offline Event', date: '2026-03-15', status: 'Registration', playerCount: 0, defaultRoundTimeMinutes: 55, maxPlayers: null, pointSystem: 'ScoreBased' };
+
+  let mockSyncService: { push: jest.Mock };
+  let mockEventService: Partial<EventService>;
+  let snackBarOpenSpy: jest.SpyInstance;
+
+  async function setup(events: EventDto[]) {
+    eventsSubject.next(events);
+    mockSyncService = { push: jest.fn().mockResolvedValue({ pushed: 1, conflicts: 0, errors: 0 }) };
+    mockEventService = {
+      events$: eventsSubject.asObservable(),
+      loadAllEvents: jest.fn(),
+      createEvent: jest.fn().mockReturnValue(of(null)),
+      removeEvent: jest.fn().mockReturnValue(of(null)),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [EventListComponent],
+      providers: [
+        provideRouter([]),
+        provideAnimationsAsync(),
+        { provide: EventService,        useValue: mockEventService },
+        { provide: MatSnackBar,         useValue: { open: jest.fn() } },
+        { provide: AuthService,         useValue: { isStoreEmployee: true, isAdmin: false, currentUser: null } },
+        { provide: StoreContextService, useValue: { selectedStoreId: 1, selectedStoreId$: selectedStoreId$.asObservable() } },
+        { provide: SyncService,         useValue: mockSyncService },
+      ],
+    }).compileComponents();
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('shows a Sync button on an offline (negative-ID) event card', async () => {
+    await setup([OFFLINE_EVENT]);
+    const fixture = TestBed.createComponent(EventListComponent);
+    fixture.detectChanges();
+    const btn = fixture.nativeElement.querySelector('button.sync-btn');
+    expect(btn).toBeTruthy();
+  });
+
+  it('does NOT show a Sync button on a synced (positive-ID) event card', async () => {
+    await setup([SYNCED_EVENT]);
+    const fixture = TestBed.createComponent(EventListComponent);
+    fixture.detectChanges();
+    const btn = fixture.nativeElement.querySelector('button.sync-btn');
+    expect(btn).toBeNull();
+  });
+
+  it('clicking Sync calls SyncService.push()', async () => {
+    await setup([OFFLINE_EVENT]);
+    const fixture = TestBed.createComponent(EventListComponent);
+    fixture.detectChanges();
+    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button.sync-btn');
+    btn.click();
+    expect(mockSyncService.push).toHaveBeenCalled();
+  });
+
+  it('clicking Sync does NOT navigate to the event (stopPropagation)', async () => {
+    await setup([OFFLINE_EVENT]);
+    const fixture = TestBed.createComponent(EventListComponent);
+    fixture.detectChanges();
+    const card: HTMLElement = fixture.nativeElement.querySelector('mat-card.event-card');
+    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button.sync-btn');
+    const cardClickSpy = jest.fn();
+    card.addEventListener('click', cardClickSpy);
+    btn.click();
+    expect(cardClickSpy).not.toHaveBeenCalled();
   });
 });
