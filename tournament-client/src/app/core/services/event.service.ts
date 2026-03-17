@@ -246,7 +246,8 @@ export class EventService {
 
   loadEventPlayers(eventId: number): void {
     const cached = this.readCache<EventPlayerDto>('ep', eventId);
-    if (cached.length > 0) this.eventPlayersSubject.next(cached);
+    // Always emit immediately (cached data or []) to clear any stale players from a previous event.
+    this.eventPlayersSubject.next(cached);
     if (eventId < 0) return; // locally-created event — no server record exists
 
     this.api.getEventPlayers(eventId).pipe(

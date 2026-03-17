@@ -452,4 +452,54 @@ describe('EventService', () => {
       expect(await firstValueFrom(service.rounds$)).toEqual([]);
     });
   });
+
+  // ── loadEventPlayers ──────────────────────────────────────────────────────
+
+  describe('loadEventPlayers', () => {
+    const player1: EventPlayerDto = {
+      playerId: 1, playerName: 'Alice', isCheckedIn: false,
+      isDropped: false, isDisqualified: false, isWaitlisted: false,
+      checkInToken: null, podColor: null, seatNumber: null,
+    };
+
+    it('clears stale players when loading a different event with no cache', async () => {
+      // Seed subject with players from a previous event
+      mockApi.getEventPlayers.mockReturnValueOnce(of([player1]));
+      service.loadEventPlayers(1);
+      expect(await firstValueFrom(service.eventPlayers$)).toEqual([player1]);
+
+      // Now load a new event — no cache, API not yet resolved
+      mockApi.getEventPlayers.mockReturnValue(new (require('rxjs').Subject)());
+      service.loadEventPlayers(2);
+
+      // Should immediately show empty list, not event 1's players
+      expect(await firstValueFrom(service.eventPlayers$)).toEqual([]);
+    });
+
+    it('emits cached players immediately when cache exists for the event', async () => {
+      // Use a pending Subject so the API never synchronously overwrites the cache.
+      mockApi.getEventPlayers.mockReturnValue(new (require('rxjs').Subject)());
+      const cacheKey = 'to_store_1_ep_5';
+      mockStorage.getItem.mockImplementation((k: string) =>
+        k === cacheKey ? JSON.stringify([player1]) : null
+      );
+
+      service.loadEventPlayers(5);
+
+      expect(await firstValueFrom(service.eventPlayers$)).toEqual([player1]);
+    });
+
+    it('replaces cached players with fresh API response', async () => {
+      const player2: EventPlayerDto = {
+        playerId: 2, playerName: 'Bob', isCheckedIn: false,
+        isDropped: false, isDisqualified: false, isWaitlisted: false,
+        checkInToken: null, podColor: null, seatNumber: null,
+      };
+      mockApi.getEventPlayers.mockReturnValue(of([player2]));
+
+      service.loadEventPlayers(5);
+
+      expect(await firstValueFrom(service.eventPlayers$)).toEqual([player2]);
+    });
+  });
 });
