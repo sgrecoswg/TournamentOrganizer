@@ -23,6 +23,7 @@ public class AppDbContext : DbContext
     public DbSet<StoreEvent> StoreEvents => Set<StoreEvent>();
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<Theme> Themes => Set<Theme>();
+    public DbSet<EventTemplate> EventTemplates => Set<EventTemplate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -172,6 +173,19 @@ public class AppDbContext : DbContext
             new Theme { Id = 3, Name = "Forest",  CssClass = "theme-forest",  IsActive = true, CreatedOn = seedDate, CreatedBy = "seed", UpdatedOn = seedDate, UpdatedBy = "seed" },
             new Theme { Id = 4, Name = "Ocean",   CssClass = "theme-ocean",   IsActive = true, CreatedOn = seedDate, CreatedBy = "seed", UpdatedOn = seedDate, UpdatedBy = "seed" }
         );
+
+        modelBuilder.Entity<EventTemplate>(entity =>
+        {
+            entity.Property(t => t.Name).HasMaxLength(200).IsRequired();
+            entity.Property(t => t.Description).HasMaxLength(500);
+            entity.Property(t => t.Format).HasMaxLength(100).IsRequired();
+            entity.Property(t => t.MaxPlayers).HasDefaultValue(16);
+            entity.Property(t => t.NumberOfRounds).HasDefaultValue(4);
+            entity.HasOne(t => t.Store)
+                .WithMany(s => s.EventTemplates)
+                .HasForeignKey(t => t.StoreId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
 
         modelBuilder.Entity<StoreEvent>(entity =>
         {

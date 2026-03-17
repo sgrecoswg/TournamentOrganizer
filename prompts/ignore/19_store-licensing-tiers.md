@@ -1,5 +1,7 @@
 # Feature: Multi-Tier Store Licensing
 
+> **GitHub Issue:** [#24 feat: Multi-Tier Store Licensing (Free / Tier1 / Tier2)](https://github.com/sgrecoswg/TournamentOrganizer/issues/24)
+
 ## Context
 Stores currently have a single `License` record (active/inactive + date range) with no concept of feature tiers. This adds a `Tier` field to the license so stores unlock features progressively. Admins always have full access regardless of tier. Free stores use the existing local-storage-only offline mode; paid tiers unlock server-side persistence and advanced features.
 

@@ -1,5 +1,7 @@
 # Feature: AI Agent Interface
 
+> **GitHub Issue:** [#39 feat: AI Agent Interface (streaming chat with tool calling)](https://github.com/sgrecoswg/TournamentOrganizer/issues/39)
+
 ## Context
 A full-page AI chat assistant at `/ai-agent`, accessible to `StoreManager`, `Administrator`, and a new `Developer` role. The agent uses tool/function calling to read and act on application data within the caller's permission boundary. Responses stream token-by-token via SSE. The AI provider (Claude, GPT-4, etc.) is selectable at runtime from the chat UI.
 

@@ -1,5 +1,7 @@
 # RLS: Cross-Store Access Tests
 
+> **GitHub Issue:** [#34 test: RLS — Cross-Store Access Tests](https://github.com/sgrecoswg/TournamentOrganizer/issues/34)
+
 ## What
 Tests verifying that a StoreEmployee/StoreManager of store A cannot read or mutate store B's data.
 

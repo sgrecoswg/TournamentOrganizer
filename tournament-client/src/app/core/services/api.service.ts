@@ -13,6 +13,7 @@ import {
   AppUserDto, AssignEmployeeDto,
   LicenseDto, CreateLicenseDto, UpdateLicenseDto,
   BulkRegisterConfirmDto, BulkRegisterResultDto,
+  EventTemplateDto, CreateEventTemplateDto,
 } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -283,5 +284,23 @@ export class ApiService {
 
   bulkRegisterConfirm(eventId: number, dto: BulkRegisterConfirmDto): Observable<BulkRegisterResultDto> {
     return this.http.post<BulkRegisterResultDto>(`${this.base}/events/${eventId}/bulkregister/confirm`, dto);
+  }
+
+  // ── Event Templates ────────────────────────────────────────────────────────
+
+  getEventTemplates(storeId: number): Observable<EventTemplateDto[]> {
+    return this.http.get<EventTemplateDto[]>(`${this.base}/stores/${storeId}/eventtemplates`);
+  }
+
+  createEventTemplate(storeId: number, dto: CreateEventTemplateDto): Observable<EventTemplateDto> {
+    return this.http.post<EventTemplateDto>(`${this.base}/stores/${storeId}/eventtemplates`, dto);
+  }
+
+  updateEventTemplate(storeId: number, id: number, dto: CreateEventTemplateDto): Observable<EventTemplateDto> {
+    return this.http.put<EventTemplateDto>(`${this.base}/stores/${storeId}/eventtemplates/${id}`, dto);
+  }
+
+  deleteEventTemplate(storeId: number, id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/stores/${storeId}/eventtemplates/${id}`);
   }
 }

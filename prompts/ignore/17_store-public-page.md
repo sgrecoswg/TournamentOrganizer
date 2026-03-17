@@ -1,5 +1,7 @@
 # Feature: Store Public Page
 
+> **GitHub Issue:** [#22 feat: Store Public Page (no auth required)](https://github.com/sgrecoswg/TournamentOrganizer/issues/22)
+
 ## Context
 Currently stores are only visible to logged-in users. A public-facing store page — accessible without login — lets players browse upcoming events, see the local leaderboard, and find store info. This drives organic discovery and gives stores a shareable URL.
 

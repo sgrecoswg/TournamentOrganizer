@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../helpers/auth';
-import { mockGetEvents, mockGetStores, makeStoreDto, stubUnmatchedApi, makeEventDto } from '../helpers/api-mock';
+import { mockGetEvents, mockGetStores, mockGetEventTemplates, makeStoreDto, makeEventTemplateDto, stubUnmatchedApi, makeEventDto } from '../helpers/api-mock';
 
 // ─── Event List (/events) ─────────────────────────────────────────────────────
 //
@@ -429,5 +429,48 @@ test.describe('Event List — role-based UI: Admin, store selected via toolbar',
 
     // Section now visible
     await expect(page.getByText('Create New Event')).toBeVisible();
+  });
+});
+
+// ── Event Templates — Use Template ────────────────────────────────────────────
+
+const TEMPLATE = makeEventTemplateDto({ id: 1, storeId: 1, name: 'Friday Night Commander', format: 'Commander', maxPlayers: 16, numberOfRounds: 4 });
+
+test.describe('Event List — Use Template: visible for StoreEmployee', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: 1 });
+    await stubUnmatchedApi(page);
+    await mockGetEvents(page, []);
+    await mockGetEventTemplates(page, 1, [TEMPLATE]);
+    await page.goto('/events');
+  });
+
+  test('"Use Template" dropdown is visible', async ({ page }) => {
+    await expect(page.getByLabel('Use Template')).toBeVisible();
+  });
+
+  test('selecting a template pre-fills the Event Name field', async ({ page }) => {
+    await page.getByLabel('Use Template').click();
+    await page.getByRole('option', { name: 'Friday Night Commander' }).click();
+    await expect(page.getByLabel('Event Name')).toHaveValue('Friday Night Commander');
+  });
+
+  test('selecting a template pre-fills the Max Players field', async ({ page }) => {
+    await page.getByLabel('Use Template').click();
+    await page.getByRole('option', { name: 'Friday Night Commander' }).click();
+    await expect(page.getByLabel('Max Players')).toHaveValue('16');
+  });
+});
+
+test.describe('Event List — Use Template: hidden for Player', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player');
+    await stubUnmatchedApi(page);
+    await mockGetEvents(page, []);
+    await page.goto('/events');
+  });
+
+  test('"Use Template" button is NOT visible for Player', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /Use Template/ })).not.toBeVisible();
   });
 });

@@ -1,5 +1,7 @@
 # RLS: Player Self-Service Boundary Tests
 
+> **GitHub Issue:** [#38 test: RLS — Player Self-Service Boundary Tests](https://github.com/sgrecoswg/TournamentOrganizer/issues/38)
+
 ## What
 Tests ensuring Players can only act on their own data and cannot access or modify other players' records.
 

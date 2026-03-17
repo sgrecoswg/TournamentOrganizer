@@ -1,5 +1,7 @@
 # Feature: License Expiry Warning Banner
 
+> **GitHub Issue:** [#25 feat: License Expiry Warning Banner](https://github.com/sgrecoswg/TournamentOrganizer/issues/25)
+
 ## Context
 Store managers have no visibility into upcoming license expiry until it happens. This adds a prominent warning banner in the store detail page when the license is within a configurable threshold (default 30 days) of expiring, prompting action before the store loses paid features.
 

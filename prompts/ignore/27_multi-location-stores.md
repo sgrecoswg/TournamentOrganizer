@@ -1,5 +1,7 @@
 # Feature: Multi-Location Stores (Store Groups)
 
+> **GitHub Issue:** [#32 feat: Multi-Location Stores (Store Groups)](https://github.com/sgrecoswg/TournamentOrganizer/issues/32)
+
 ## Context
 Some game store chains operate multiple physical locations under one brand. Currently each store is independent with its own admin. This adds a `StoreGroup` entity that lets a chain admin manage all their locations under one account — shared license, shared admin access, per-location events and employees.
 

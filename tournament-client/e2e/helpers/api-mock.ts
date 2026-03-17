@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, LeaderboardEntry, PairingsDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, StoreDto, StoreDetailDto, ThemeDto } from '../../src/app/core/models/api.models';
+import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, PairingsDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, StoreDto, StoreDetailDto, ThemeDto } from '../../src/app/core/models/api.models';
 
 /** Intercept GET /api/events and return the given list. */
 export async function mockGetEvents(page: Page, events: EventDto[]): Promise<void> {
@@ -442,6 +442,51 @@ export function makeBulkRegisterResultDto(overrides: Partial<BulkRegisterResultD
     registered: 0,
     created: 0,
     errors: [],
+    ...overrides,
+  };
+}
+
+// ── Event Templates ────────────────────────────────────────────────────────────
+
+export async function mockGetEventTemplates(page: Page, storeId: number, templates: EventTemplateDto[]): Promise<void> {
+  await page.route(`**/api/stores/${storeId}/eventtemplates`, route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ json: templates });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export async function mockCreateEventTemplate(page: Page, storeId: number, response: EventTemplateDto): Promise<void> {
+  await page.route(`**/api/stores/${storeId}/eventtemplates`, route => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({ status: 201, json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export async function mockDeleteEventTemplate(page: Page, storeId: number, id: number): Promise<void> {
+  await page.route(`**/api/stores/${storeId}/eventtemplates/${id}`, route => {
+    if (route.request().method() === 'DELETE') {
+      route.fulfill({ json: { message: 'Template deleted' } });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export function makeEventTemplateDto(overrides: Partial<EventTemplateDto> = {}): EventTemplateDto {
+  return {
+    id:             1,
+    storeId:        1,
+    name:           'Friday Night Commander',
+    description:    null,
+    format:         'Commander',
+    maxPlayers:     16,
+    numberOfRounds: 4,
     ...overrides,
   };
 }

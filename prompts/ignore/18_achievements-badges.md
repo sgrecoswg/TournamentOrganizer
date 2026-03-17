@@ -1,5 +1,7 @@
 # Feature: Player Achievements & Badges
 
+> **GitHub Issue:** [#23 feat: Player Achievements & Badges](https://github.com/sgrecoswg/TournamentOrganizer/issues/23)
+
 ## Context
 Players have no persistent recognition for accomplishments beyond their TrueSkill rating. Badges reward milestones (first win, tournament winner, placement games complete, etc.) and are displayed on player profiles. They are awarded automatically by the backend when the relevant event occurs.
 

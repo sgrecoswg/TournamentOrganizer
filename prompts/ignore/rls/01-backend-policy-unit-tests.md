@@ -1,5 +1,7 @@
 # RLS: Backend Policy Unit Tests
 
+> **GitHub Issue:** [#33 test: RLS — Backend Policy Unit Tests](https://github.com/sgrecoswg/TournamentOrganizer/issues/33)
+
 ## What
 Add xUnit tests verifying that ASP.NET authorization policies actually block the roles they should.
 

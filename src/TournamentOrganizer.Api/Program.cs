@@ -73,6 +73,7 @@ builder.Services.AddScoped<IStoreSettingsRepository, StoreSettingsRepository>();
 builder.Services.AddScoped<IStoreEventRepository, StoreEventRepository>();
 builder.Services.AddScoped<ILicenseRepository, LicenseRepository>();
 builder.Services.AddScoped<IThemeRepository, ThemeRepository>();
+builder.Services.AddScoped<IEventTemplateRepository, EventTemplateRepository>();
 
 // Services
 builder.Services.AddScoped<ITrueSkillService, TrueSkillService>();
@@ -86,6 +87,7 @@ builder.Services.AddScoped<IThemeService, ThemeService>();
 builder.Services.AddScoped<ISuggestedTradeService, SuggestedTradeService>();
 builder.Services.AddScoped<ICommanderMetaService, CommanderMetaService>();
 builder.Services.AddScoped<IDiscordWebhookService, DiscordWebhookService>();
+builder.Services.AddScoped<IEventTemplateService, EventTemplateService>();
 builder.Services.AddScoped<IAppUserRepository, AppUserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 

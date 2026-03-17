@@ -1,5 +1,7 @@
 # Feature: Tier3 Analytics Dashboard
 
+> **GitHub Issue:** [#30 feat: Tier3 Analytics Dashboard](https://github.com/sgrecoswg/TournamentOrganizer/issues/30)
+
 ## Context
 Store managers currently have no insight into event trends, player performance, or commander meta at their store. A Tier3 license tier adds an Analytics tab to the store detail page with charts and stats derived from existing game result data.
 

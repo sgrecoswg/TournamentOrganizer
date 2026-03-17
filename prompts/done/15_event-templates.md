@@ -1,5 +1,7 @@
 # Feature: Event Templates / Recurring Events
 
+> **GitHub Issue:** [#20 feat: Event Templates / Recurring Events](https://github.com/sgrecoswg/TournamentOrganizer/issues/20)
+
 ## Context
 Stores running weekly or regular events recreate the same configuration (format, max players, round count) from scratch each time. Event templates let a StoreManager save a configuration once and create new events from it in one click.
 

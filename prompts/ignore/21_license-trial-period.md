@@ -1,5 +1,7 @@
 # Feature: License Trial Period
 
+> **GitHub Issue:** [#26 feat: License Trial Period (30-day Tier2 for new stores)](https://github.com/sgrecoswg/TournamentOrganizer/issues/26)
+
 ## Context
 New stores currently have no license and land on the Free tier immediately, which gives a poor first impression. This adds a 30-day Tier2 trial so new stores can evaluate all features before committing to a paid tier.
 

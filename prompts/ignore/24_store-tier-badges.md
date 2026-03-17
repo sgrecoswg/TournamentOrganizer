@@ -1,5 +1,7 @@
 # Feature: Store Tier Badges on Store List
 
+> **GitHub Issue:** [#29 feat: Store Tier Badges on Store List (Admin view)](https://github.com/sgrecoswg/TournamentOrganizer/issues/29)
+
 ## Context
 Admins managing multiple stores have no at-a-glance view of which stores are on which license tier. This adds a tier chip/badge to each store card in the store list (Admin-only) and extends `StoreDto` to include the current effective tier.
 

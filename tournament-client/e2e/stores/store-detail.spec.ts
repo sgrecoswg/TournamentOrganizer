@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../helpers/auth';
-import { mockGetStore, mockGetEmployees, mockGetThemes, mockUploadStoreLogo, mockTestDiscordWebhook, stubUnmatchedApi, makeStoreDetailDto, makeStoreDto, makeThemeDto } from '../helpers/api-mock';
+import { mockGetStore, mockGetEmployees, mockGetThemes, mockUploadStoreLogo, mockTestDiscordWebhook, mockGetEventTemplates, mockCreateEventTemplate, mockDeleteEventTemplate, makeEventTemplateDto, stubUnmatchedApi, makeStoreDetailDto, makeStoreDto, makeThemeDto } from '../helpers/api-mock';
 
 // ─── Store Detail (/stores/:id) ───────────────────────────────────────────────
 //
@@ -482,3 +482,99 @@ test.describe('Store Detail — Discord: hidden for Player', () => {
     await expect(page.getByLabel('Discord Webhook URL')).not.toBeVisible();
   });
 });
+
+// ── Event Templates tab ───────────────────────────────────────────────────────
+
+const TEMPLATE_1 = makeEventTemplateDto({ id: 1, storeId: 1, name: 'Friday Night Commander', format: 'Commander', maxPlayers: 16, numberOfRounds: 4 });
+const TEMPLATE_2 = makeEventTemplateDto({ id: 2, storeId: 1, name: 'Two-Headed Giant',       format: 'THG',       maxPlayers: 8,  numberOfRounds: 3 });
+
+test.describe('Store Detail — Event Templates: list', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetEmployees(page, 1, []);
+    await mockGetEventTemplates(page, 1, [TEMPLATE_1, TEMPLATE_2]);
+    await mockGetStore(page, STORE);
+    await page.goto('/stores/1');
+    await page.getByRole('tab', { name: 'Templates' }).click();
+  });
+
+  test('Templates tab is visible for StoreManager', async ({ page }) => {
+    await expect(page.getByRole('tab', { name: 'Templates' })).toBeVisible();
+  });
+
+  test('template names are shown', async ({ page }) => {
+    await expect(page.getByText('Friday Night Commander')).toBeVisible();
+    await expect(page.getByText('Two-Headed Giant')).toBeVisible();
+  });
+
+  test('template format and max players are shown', async ({ page }) => {
+    await expect(page.getByText('Commander')).toBeVisible();
+    await expect(page.getByText('16')).toBeVisible();
+  });
+});
+
+test.describe('Store Detail — Event Templates: create', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetEmployees(page, 1, []);
+    await mockGetEventTemplates(page, 1, []);
+    await mockCreateEventTemplate(page, 1, TEMPLATE_1);
+    await mockGetStore(page, STORE);
+    await page.goto('/stores/1');
+    await page.getByRole('tab', { name: 'Templates' }).click();
+  });
+
+  test('New Template button is visible', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /New Template/ })).toBeVisible();
+  });
+
+  test('clicking New Template shows the form', async ({ page }) => {
+    await page.getByRole('button', { name: /New Template/ }).click();
+    await expect(page.getByLabel('Template Name')).toBeVisible();
+  });
+
+  test('saving a new template calls POST and shows the template', async ({ page }) => {
+    await page.getByRole('button', { name: /New Template/ }).click();
+    await page.getByLabel('Template Name').fill('Friday Night Commander');
+    await page.getByRole('button', { name: /^Save Template$/ }).click();
+    await expect(page.getByText(/Friday Night Commander/)).toBeVisible();
+  });
+});
+
+test.describe('Store Detail — Event Templates: delete', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetEmployees(page, 1, []);
+    await mockGetEventTemplates(page, 1, [TEMPLATE_1]);
+    await mockDeleteEventTemplate(page, 1, 1);
+    await mockGetStore(page, STORE);
+    await page.goto('/stores/1');
+    await page.getByRole('tab', { name: 'Templates' }).click();
+  });
+
+  test('Delete button calls DELETE and removes template from list', async ({ page }) => {
+    await expect(page.getByText('Friday Night Commander')).toBeVisible();
+    await page.getByRole('button', { name: /Delete/ }).first().click();
+    await expect(page.getByText('Friday Night Commander')).not.toBeVisible();
+  });
+});
+
+test.describe('Store Detail — Event Templates: hidden for Player', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player');
+    await stubUnmatchedApi(page);
+    await mockGetStore(page, STORE);
+    await page.goto('/stores/1');
+  });
+
+  test('Templates tab is NOT visible for Player', async ({ page }) => {
+    await expect(page.getByRole('tab', { name: 'Templates' })).not.toBeVisible();
+  });
+});
+

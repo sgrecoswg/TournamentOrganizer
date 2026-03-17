@@ -1,5 +1,7 @@
 # Feature: License Expiry Grace Period
 
+> **GitHub Issue:** [#27 feat: License Expiry Grace Period](https://github.com/sgrecoswg/TournamentOrganizer/issues/27)
+
 ## Context
 When a license expires, stores currently drop to Free immediately. A configurable grace period lets stores continue using their paid features for N days after expiry before losing access — giving time to renew without disrupting an in-progress event.
 

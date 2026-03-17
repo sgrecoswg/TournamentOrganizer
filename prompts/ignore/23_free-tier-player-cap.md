@@ -1,5 +1,7 @@
 # Feature: Free Tier Player Cap per Event
 
+> **GitHub Issue:** [#28 feat: Free Tier Player Cap per Event](https://github.com/sgrecoswg/TournamentOrganizer/issues/28)
+
 ## Context
 Free tier stores use local storage only and have no paid subscription. To encourage upgrades, Free tier events are capped at a configurable maximum player count (default 16). Tier1+ stores have no cap. Admins are never capped.
 

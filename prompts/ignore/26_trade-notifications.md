@@ -1,5 +1,7 @@
 # Feature: Trade Match Notifications
 
+> **GitHub Issue:** [#31 feat: Trade Match Notifications (in-app)](https://github.com/sgrecoswg/TournamentOrganizer/issues/31)
+
 ## Context
 Suggested trade matches (Tier2) are currently only visible when a player actively navigates to their profile. This adds an in-app notification system: when a new trade match is found — triggered by any wishlist or trade list update — both players receive a notification. A notification bell in the nav bar shows the unread count.
 

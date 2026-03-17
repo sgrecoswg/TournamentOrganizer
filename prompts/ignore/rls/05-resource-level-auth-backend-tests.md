@@ -1,5 +1,7 @@
 # RLS: Resource-Level Authorization Backend Tests
 
+> **GitHub Issue:** [#37 test: RLS — Resource-Level Authorization Backend Tests](https://github.com/sgrecoswg/TournamentOrganizer/issues/37)
+
 ## What
 xUnit tests for the manual resource-level checks inside controllers (beyond just policy attributes).
 

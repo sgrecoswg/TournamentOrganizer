@@ -1,5 +1,7 @@
 # RLS: Administrator Role E2E Tests
 
+> **GitHub Issue:** [#36 test: RLS — Administrator Role E2E Tests](https://github.com/sgrecoswg/TournamentOrganizer/issues/36)
+
 ## What
 E2E tests covering Administrator-specific global access scenarios that are currently untested.
 

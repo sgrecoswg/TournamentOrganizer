@@ -1,5 +1,7 @@
 # Feature: Player Rating History Chart
 
+> **GitHub Issue:** [#21 feat: Player Rating History Chart](https://github.com/sgrecoswg/TournamentOrganizer/issues/21)
+
 ## Context
 A player's current TrueSkill rating gives no sense of their trajectory. A rating history chart shows `ConservativeScore` over time (one point per game), revealing improvement, slumps, and peak performance. All the data to compute this exists in `GameResult` — it just needs to be replayed chronologically.
 

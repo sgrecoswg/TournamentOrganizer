@@ -16,4 +16,5 @@ public class Store
     public License? License { get; set; }
     public StoreSettings? Settings { get; set; }
     public ICollection<StoreEvent> StoreEvents { get; set; } = new List<StoreEvent>();
+    public ICollection<EventTemplate> EventTemplates { get; set; } = new List<EventTemplate>();
 }

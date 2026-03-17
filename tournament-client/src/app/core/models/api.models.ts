@@ -482,3 +482,24 @@ export interface BulkRegisterConfirmDto    { registrations: BulkRegisterConfirmI
 /** Response from POST /api/events/{id}/bulkregister/confirm */
 export interface BulkRegisterResultDto     { registered: number; created: number; errors: { email: string; reason: string }[]; }
 
+// ── Event Templates ────────────────────────────────────────────────────────────
+
+export interface EventTemplateDto {
+  id: number;
+  storeId: number;
+  name: string;
+  description?: string | null;
+  format: string;
+  maxPlayers: number;
+  numberOfRounds: number;
+}
+
+export interface CreateEventTemplateDto {
+  name: string;
+  description?: string | null;
+  format: string;
+  maxPlayers: number;
+  numberOfRounds: number;
+}
+
+
