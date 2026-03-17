@@ -8,11 +8,10 @@ import { EventDetailComponent } from './event-detail.component';
 import { EventService } from '../../core/services/event.service';
 import { PlayerService } from '../../core/services/player.service';
 import { AuthService } from '../../core/services/auth.service';
-import { ApiService } from '../../core/services/api.service';
-import { LocalStorageContext } from '../../core/services/local-storage-context.service';
+import { MatDialog } from '@angular/material/dialog';
+import { Subject } from 'rxjs';
 import {
   EventDto, EventPlayerDto, PlayerDto, RoundDto, StandingsEntry,
-  BulkRegisterConfirmDto, BulkRegisterResultDto,
 } from '../../core/models/api.models';
 
 describe('EventDetailComponent', () => {
@@ -74,10 +73,8 @@ describe('EventDetailComponent', () => {
     loadAllPlayers: jest.Mock;
   };
 
-  let mockSnackBar:   { open: jest.Mock };
-  let mockRouter:     { navigate: jest.Mock };
-  let mockApiService: { bulkRegisterConfirm: jest.Mock };
-  let mockCtx:        { players: { getAll: jest.Mock; getById: jest.Mock } };
+  let mockSnackBar: { open: jest.Mock };
+  let mockRouter:   { navigate: jest.Mock };
 
   async function setup(authOverrides: object = {}) {
     const mockAuth = {
@@ -101,8 +98,6 @@ describe('EventDetailComponent', () => {
         { provide: PlayerService,        useValue: mockPlayerService },
         { provide: AuthService,          useValue: mockAuth },
         { provide: MatSnackBar,          useValue: mockSnackBar },
-        { provide: ApiService,           useValue: mockApiService },
-        { provide: LocalStorageContext,  useValue: mockCtx },
       ],
     }).compileComponents();
   }
@@ -149,8 +144,6 @@ describe('EventDetailComponent', () => {
       createUrlTree: jest.fn().mockReturnValue({}),
       serializeUrl: jest.fn().mockReturnValue('/fake'),
     };
-    mockApiService = { bulkRegisterConfirm: jest.fn().mockReturnValue(of({ registered: 0, created: 0, errors: [] })) };
-    mockCtx = { players: { getAll: jest.fn().mockReturnValue([]), getById: jest.fn().mockReturnValue(null) } };
   });
 
   // ── Smoke ───────────────────────────────────────────────────────────────────
@@ -1032,258 +1025,93 @@ describe('EventDetailComponent', () => {
     });
   });
 
-  // ── Bulk Register ─────────────────────────────────────────────────────────
+  // ── Bulk Register dialog ───────────────────────────────────────────────────
 
   describe('Bulk Register', () => {
     const regEvent: EventDto = { ...eventStub, status: 'Registration' };
 
-    const alicePlayer: PlayerDto = {
-      id: 10, name: 'Alice Manager', email: 'alice@shop.com',
-      mu: 25, sigma: 8.333, conservativeScore: 0, isRanked: false, placementGamesLeft: 5, isActive: true,
-    };
-
-    const bobPlayer: PlayerDto = {
-      id: 11, name: 'Bob Player', email: 'bob@example.com',
-      mu: 25, sigma: 8.333, conservativeScore: 0, isRanked: false, placementGamesLeft: 5, isActive: true,
-    };
-
-    // Fake FileReader that calls onload synchronously
-    let fakeFileContent = '';
-    class MockFileReader {
-      result: string = '';
-      onload: (() => void) | null = null;
-      readAsText(_file: File) {
-        this.result = fakeFileContent;
-        this.onload?.();
-      }
-    }
-
-    beforeEach(() => {
-      (global as any).FileReader = MockFileReader;
-    });
-
-    it('Upload File button is visible for StoreEmployee when event is in Registration', async () => {
+    it('Bulk Register Players button is visible for StoreEmployee', async () => {
       await setup({ isStoreEmployee: true });
       const fixture = TestBed.createComponent(EventDetailComponent);
       fixture.detectChanges();
       currentEventSubject.next(regEvent);
       fixture.detectChanges();
-
       const el: HTMLElement = fixture.nativeElement;
-      const btn = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('Upload File'));
+      const btn = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('Bulk Register'));
       expect(btn).toBeTruthy();
     });
 
-    it('Upload File button is NOT visible for Player role', async () => {
+    it('Bulk Register Players button is NOT visible for Player role', async () => {
       await setup({ isStoreEmployee: false });
       const fixture = TestBed.createComponent(EventDetailComponent);
       fixture.detectChanges();
       currentEventSubject.next(regEvent);
       fixture.detectChanges();
-
       const el: HTMLElement = fixture.nativeElement;
-      const btn = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('Upload File'));
+      const btn = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('Bulk Register'));
       expect(btn).toBeFalsy();
     });
 
-    it('Register Selected button is disabled when no players checked', async () => {
+    it('clicking Bulk Register opens MatDialog with correct data', async () => {
       await setup({ isStoreEmployee: true });
       const fixture = TestBed.createComponent(EventDetailComponent);
       fixture.detectChanges();
-      currentEventSubject.next(regEvent);
+      currentEventSubject.next({ ...regEvent, maxPlayers: 8, playerCount: 4 });
       fixture.detectChanges();
 
-      const el: HTMLElement = fixture.nativeElement;
-      const btn = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('Register Selected')) as HTMLButtonElement | undefined;
-      expect(btn).toBeTruthy();
-      expect(btn?.disabled).toBe(true);
-    });
+      const dialogOpenSpy = jest.spyOn((fixture.componentInstance as any).dialog, 'open')
+        .mockReturnValue({ afterClosed: () => of(undefined) });
 
-    it('Register Selected button is enabled when at least one player is checked', async () => {
-      mockCtx.players.getAll.mockReturnValue([alicePlayer]);
-      await setup({ isStoreEmployee: true });
-      const fixture = TestBed.createComponent(EventDetailComponent);
-      fixture.detectChanges();
-      currentEventSubject.next(regEvent);
-      fixture.detectChanges();
+      fixture.componentInstance.openBulkRegisterDialog();
 
-      const comp = fixture.componentInstance;
-      comp.selectedPlayerIds.add(alicePlayer.id);
-
-      // Verify the bound expression that controls disabled
-      expect(comp.selectedPlayerIds.size).toBeGreaterThan(0);
-    });
-
-    it('onBulkFileSelected resolves found players without calling apiService', async () => {
-      fakeFileContent = 'alice@shop.com\n';
-      mockCtx.players.getAll.mockReturnValue([alicePlayer]);
-      await setup({ isStoreEmployee: true });
-      const fixture = TestBed.createComponent(EventDetailComponent);
-      fixture.detectChanges();
-      currentEventSubject.next(regEvent);
-      fixture.detectChanges();
-
-      const fakeEvent = { target: { files: [new File([''], 'test.txt')] } } as unknown as Event;
-      fixture.componentInstance.onBulkFileSelected(fakeEvent);
-
-      expect(mockApiService.bulkRegisterConfirm).not.toHaveBeenCalled();
-      expect(fixture.componentInstance.previewData?.found.length).toBe(1);
-      expect(fixture.componentInstance.previewData?.found[0].email).toBe('alice@shop.com');
-    });
-
-    it('onBulkFileSelected puts email not in cache into previewData.notFound', async () => {
-      fakeFileContent = 'unknown@example.com\n';
-      mockCtx.players.getAll.mockReturnValue([]);
-      await setup({ isStoreEmployee: true });
-      const fixture = TestBed.createComponent(EventDetailComponent);
-      fixture.detectChanges();
-      currentEventSubject.next(regEvent);
-      fixture.detectChanges();
-
-      const fakeEvent = { target: { files: [new File([''], 'test.txt')] } } as unknown as Event;
-      fixture.componentInstance.onBulkFileSelected(fakeEvent);
-
-      expect(fixture.componentInstance.previewData?.notFound).toContain('unknown@example.com');
-    });
-
-    it('onBulkFileSelected puts already-registered player into previewData.alreadyRegistered', async () => {
-      fakeFileContent = 'alice@shop.com\n';
-      mockCtx.players.getAll.mockReturnValue([alicePlayer]);
-      await setup({ isStoreEmployee: true });
-      const fixture = TestBed.createComponent(EventDetailComponent);
-      fixture.detectChanges();
-      // alice is already registered
-      eventPlayersSubject.next([{ ...epStub, playerId: alicePlayer.id }]);
-      currentEventSubject.next(regEvent);
-      fixture.detectChanges();
-
-      const fakeEvent = { target: { files: [new File([''], 'test.txt')] } } as unknown as Event;
-      fixture.componentInstance.onBulkFileSelected(fakeEvent);
-
-      expect(fixture.componentInstance.previewData?.alreadyRegistered.length).toBe(1);
-      expect(fixture.componentInstance.previewData?.found.length).toBe(0);
-    });
-
-    it('preview panel is absent before file upload or Register Selected', async () => {
-      await setup({ isStoreEmployee: true });
-      const fixture = TestBed.createComponent(EventDetailComponent);
-      fixture.detectChanges();
-      currentEventSubject.next(regEvent);
-      fixture.detectChanges();
-
-      const el: HTMLElement = fixture.nativeElement;
-      const headings = Array.from(el.querySelectorAll('h3'));
-      expect(headings.some(h => h.textContent?.includes('Preview Registration'))).toBe(false);
-    });
-
-    it('preview panel shows after file upload', async () => {
-      fakeFileContent = 'alice@shop.com\n';
-      mockCtx.players.getAll.mockReturnValue([alicePlayer]);
-      await setup({ isStoreEmployee: true });
-      const fixture = TestBed.createComponent(EventDetailComponent);
-      fixture.detectChanges();
-      currentEventSubject.next(regEvent);
-      fixture.detectChanges();
-
-      const fakeEvent = { target: { files: [new File([''], 'test.txt')] } } as unknown as Event;
-      fixture.componentInstance.onBulkFileSelected(fakeEvent);
-      fixture.detectChanges();
-
-      const el: HTMLElement = fixture.nativeElement;
-      const headings = Array.from(el.querySelectorAll('h3'));
-      expect(headings.some(h => h.textContent?.includes('Preview Registration'))).toBe(true);
-    });
-
-    it('cancelPreview hides the preview panel', async () => {
-      fakeFileContent = 'alice@shop.com\n';
-      mockCtx.players.getAll.mockReturnValue([alicePlayer]);
-      await setup({ isStoreEmployee: true });
-      const fixture = TestBed.createComponent(EventDetailComponent);
-      fixture.detectChanges();
-      currentEventSubject.next(regEvent);
-      fixture.detectChanges();
-
-      const fakeEvent = { target: { files: [new File([''], 'test.txt')] } } as unknown as Event;
-      fixture.componentInstance.onBulkFileSelected(fakeEvent);
-      fixture.detectChanges();
-
-      fixture.componentInstance.cancelPreview();
-      fixture.detectChanges();
-
-      const el: HTMLElement = fixture.nativeElement;
-      const headings = Array.from(el.querySelectorAll('h3'));
-      expect(headings.some(h => h.textContent?.includes('Preview Registration'))).toBe(false);
-    });
-
-    it('confirmBulkRegistration calls apiService.bulkRegisterConfirm with correct payload', async () => {
-      fakeFileContent = 'alice@shop.com\n';
-      mockCtx.players.getAll.mockReturnValue([alicePlayer]);
-      mockApiService.bulkRegisterConfirm.mockReturnValue(of({ registered: 1, created: 0, errors: [] }));
-      await setup({ isStoreEmployee: true });
-      const fixture = TestBed.createComponent(EventDetailComponent);
-      fixture.detectChanges();
-      currentEventSubject.next(regEvent);
-      fixture.detectChanges();
-
-      const fakeEvent = { target: { files: [new File([''], 'test.txt')] } } as unknown as Event;
-      fixture.componentInstance.onBulkFileSelected(fakeEvent);
-      fixture.detectChanges();
-
-      fixture.componentInstance.confirmBulkRegistration();
-
-      expect(mockApiService.bulkRegisterConfirm).toHaveBeenCalledWith(
-        EVENT_ID,
+      expect(dialogOpenSpy).toHaveBeenCalledWith(
+        expect.anything(),
         expect.objectContaining({
-          registrations: expect.arrayContaining([
-            expect.objectContaining({ playerId: alicePlayer.id, email: alicePlayer.email }),
-          ]),
+          data: expect.objectContaining({ eventId: EVENT_ID, availableSlots: 4 }),
         }),
       );
     });
 
-    it('snackbar shows summary after successful confirmBulkRegistration', async () => {
-      fakeFileContent = 'alice@shop.com\n';
-      mockCtx.players.getAll.mockReturnValue([alicePlayer]);
-      mockApiService.bulkRegisterConfirm.mockReturnValue(of({ registered: 2, created: 1, errors: [] } as BulkRegisterResultDto));
+    it('after dialog closes with result, snackbar shows summary and event reloads', async () => {
       await setup({ isStoreEmployee: true });
       const fixture = TestBed.createComponent(EventDetailComponent);
       fixture.detectChanges();
       currentEventSubject.next(regEvent);
       fixture.detectChanges();
 
-      const snackBarOpenSpy = jest.spyOn((fixture.componentInstance as any).snackBar, 'open')
-        .mockReturnValue({} as any);
+      const closeSubject = new Subject<{ registered: number; created: number; errors: [] }>();
+      jest.spyOn((fixture.componentInstance as any).dialog, 'open')
+        .mockReturnValue({ afterClosed: () => closeSubject.asObservable() });
+      const snackBarOpenSpy = jest.spyOn((fixture.componentInstance as any).snackBar, 'open').mockReturnValue({} as any);
 
-      const fakeEvent = { target: { files: [new File([''], 'test.txt')] } } as unknown as Event;
-      fixture.componentInstance.onBulkFileSelected(fakeEvent);
-      fixture.detectChanges();
-      fixture.componentInstance.confirmBulkRegistration();
+      fixture.componentInstance.openBulkRegisterDialog();
+      closeSubject.next({ registered: 3, created: 1, errors: [] });
 
       expect(snackBarOpenSpy).toHaveBeenCalledWith(
-        expect.stringContaining('2 registered'),
+        expect.stringContaining('3 registered'),
         'OK',
         expect.any(Object),
       );
+      expect(mockEventService.loadEventPlayers).toHaveBeenCalledWith(EVENT_ID);
+      expect(mockEventService.loadEvent).toHaveBeenCalledWith(EVENT_ID);
     });
 
-    it('onRegisterSelected builds preview from selectedPlayerIds without calling apiService', async () => {
-      mockCtx.players.getAll.mockReturnValue([alicePlayer, bobPlayer]);
-      mockCtx.players.getById.mockImplementation((id: number) =>
-        id === alicePlayer.id ? alicePlayer : id === bobPlayer.id ? bobPlayer : null,
-      );
+    it('after dialog closes with undefined (cancel), no snackbar or reload', async () => {
       await setup({ isStoreEmployee: true });
       const fixture = TestBed.createComponent(EventDetailComponent);
       fixture.detectChanges();
       currentEventSubject.next(regEvent);
       fixture.detectChanges();
 
-      const comp = fixture.componentInstance;
-      comp.selectedPlayerIds.add(alicePlayer.id);
-      comp.onRegisterSelected();
+      const closeSubject = new Subject<undefined>();
+      jest.spyOn((fixture.componentInstance as any).dialog, 'open')
+        .mockReturnValue({ afterClosed: () => closeSubject.asObservable() });
+      const snackBarOpenSpy = jest.spyOn((fixture.componentInstance as any).snackBar, 'open').mockReturnValue({} as any);
 
-      expect(mockApiService.bulkRegisterConfirm).not.toHaveBeenCalled();
-      expect(comp.showPreview).toBe(true);
-      expect(comp.previewData?.found.length).toBe(1);
+      fixture.componentInstance.openBulkRegisterDialog();
+      closeSubject.next(undefined);
+
+      expect(snackBarOpenSpy).not.toHaveBeenCalled();
     });
   });
 });

@@ -14,19 +14,17 @@ import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/ma
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatCardModule } from '@angular/material/card';
-import { MatListModule } from '@angular/material/list';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import * as QRCode from 'qrcode';
 import { EventService } from '../../core/services/event.service';
 import { PlayerService } from '../../core/services/player.service';
 import { AuthService } from '../../core/services/auth.service';
-import { ApiService } from '../../core/services/api.service';
-import { LocalStorageContext } from '../../core/services/local-storage-context.service';
 import {
   EventDto, RoundDto, StandingsEntry, EventPlayerDto, PlayerDto, POINT_SYSTEM_LABELS,
-  BulkRegisterFoundDto, BulkRegisterPreviewDto,
 } from '../../core/models/api.models';
 import { PodCardComponent, PodResultState } from './pod-card.component';
 import { EventStandingsComponent } from './event-standings.component';
+import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.component';
 
 @Component({
   selector: 'app-event-detail',
@@ -36,7 +34,7 @@ import { EventStandingsComponent } from './event-standings.component';
     MatTableModule, MatChipsModule, MatExpansionModule, MatIconModule,
     MatAutocompleteModule, MatSnackBarModule,
     PodCardComponent, EventStandingsComponent,
-    MatCheckboxModule, MatCardModule, MatListModule,
+    MatCheckboxModule, MatCardModule, MatDialogModule,
   ],
   template: `
     @if (event) {
@@ -171,91 +169,9 @@ import { EventStandingsComponent } from './event-standings.component';
 
                 <!-- ── Bulk Register ── -->
                 <div class="bulk-register-section">
-                  <h4>Bulk Register</h4>
-
-                  <!-- File upload -->
-                  <div class="bulk-upload-row">
-                    <button mat-stroked-button (click)="bulkFileInput.click()">
-                      <mat-icon>upload_file</mat-icon> Upload File
-                    </button>
-                    <input #bulkFileInput type="file" accept=".txt,.csv"
-                           style="display:none"
-                           (change)="onBulkFileSelected($event)">
-                  </div>
-
-                  <!-- Multi-select from store player pool -->
-                  <div class="bulk-multiselect">
-                    <div class="bulk-filter-row">
-                      <mat-form-field class="bulk-filter-field">
-                        <mat-label>Filter Players</mat-label>
-                        <input matInput [(ngModel)]="playerFilterText" (ngModelChange)="detect()">
-                      </mat-form-field>
-                      <button mat-button (click)="toggleSelectAll(true)">Select All</button>
-                      <button mat-button (click)="toggleSelectAll(false)">Deselect All</button>
-                    </div>
-                    <mat-selection-list>
-                      @for (p of filteredPlayerPool; track p.id) {
-                        <mat-list-option
-                          [selected]="selectedPlayerIds.has(p.id)"
-                          (selectedChange)="$event ? selectedPlayerIds.add(p.id) : selectedPlayerIds.delete(p.id); detect()">
-                          {{ p.name }} — {{ p.email }}
-                        </mat-list-option>
-                      }
-                    </mat-selection-list>
-                    <button mat-raised-button color="primary"
-                            [disabled]="selectedPlayerIds.size === 0"
-                            (click)="onRegisterSelected()">
-                      Register Selected
-                    </button>
-                  </div>
-
-                  <!-- Preview panel -->
-                  @if (showPreview && previewData) {
-                    <div class="bulk-preview-panel">
-                      <h3>Preview Registration</h3>
-
-                      @if (previewData.found.length > 0) {
-                        <p><strong>Will register ({{ previewData.found.length }}):</strong></p>
-                        @for (f of previewData.found; track f.playerId) {
-                          <div class="preview-row">
-                            <mat-checkbox [(ngModel)]="previewSelected[f.playerId]" (ngModelChange)="detect()">
-                              {{ f.name }} — {{ f.email }}
-                            </mat-checkbox>
-                          </div>
-                        }
-                      }
-
-                      @if (previewData.notFound.length > 0) {
-                        <p><strong>New players to create ({{ previewData.notFound.length }}):</strong></p>
-                        @for (email of previewData.notFound; track email) {
-                          <div class="preview-row">
-                            <mat-checkbox [(ngModel)]="unknownIncluded[email]" (ngModelChange)="detect()">
-                              {{ email }}
-                            </mat-checkbox>
-                            <mat-form-field class="name-field">
-                              <mat-label>Name for {{ email }}</mat-label>
-                              <input matInput [(ngModel)]="unknownNames[email]">
-                            </mat-form-field>
-                          </div>
-                        }
-                      }
-
-                      @if (previewData.alreadyRegistered.length > 0) {
-                        <p><strong>Already registered (skipped):</strong>
-                          @for (a of previewData.alreadyRegistered; track a.playerId) {
-                            <span> {{ a.email }}</span>
-                          }
-                        </p>
-                      }
-
-                      <div class="preview-actions">
-                        <button mat-raised-button color="primary" (click)="confirmBulkRegistration()">
-                          Confirm Registration
-                        </button>
-                        <button mat-button (click)="cancelPreview()">Cancel</button>
-                      </div>
-                    </div>
-                  }
+                  <button mat-stroked-button (click)="openBulkRegisterDialog()">
+                    <mat-icon>group_add</mat-icon> Bulk Register Players
+                  </button>
                 </div>
               }
               @if (!authService.isStoreEmployee && authService.currentUser?.playerId && !isAlreadyRegistered(authService.currentUser!.playerId!) && !isEventFull) {
@@ -566,26 +482,7 @@ export class EventDetailComponent implements OnInit {
   editingCommanderPlayerId: number | null = null;
   editCommanderValue = '';
 
-  // ── Bulk Register ─────────────────────────────────────────────────────────
-  storePlayerPool: PlayerDto[] = [];
-  selectedPlayerIds = new Set<number>();
-  playerFilterText = '';
-  showPreview = false;
-  previewData: BulkRegisterPreviewDto | null = null;
-  unknownNames: Record<string, string> = {};
-  unknownIncluded: Record<string, boolean> = {};
-  previewSelected: Record<number, boolean> = {};
   private registeredPlayerIds = new Set<number>();
-
-  /** Called from template event handlers that need a detectChanges() call. */
-  detect(): void { this.cdr.detectChanges(); }
-
-  get filteredPlayerPool(): PlayerDto[] {
-    const search = this.playerFilterText.toLowerCase();
-    return this.storePlayerPool.filter(p =>
-      p.name.toLowerCase().includes(search) || p.email.toLowerCase().includes(search),
-    );
-  }
 
   constructor(
     private route: ActivatedRoute,
@@ -595,8 +492,7 @@ export class EventDetailComponent implements OnInit {
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef,
     public authService: AuthService,
-    private apiService: ApiService,
-    private ctx: LocalStorageContext,
+    private dialog: MatDialog,
   ) {}
 
   ngOnInit() {
@@ -638,7 +534,6 @@ export class EventDetailComponent implements OnInit {
     this.eventService.loadRounds(this.eventId);
     this.playerService.loadAllPlayers();
     this.loadStandings();
-    this.storePlayerPool = this.ctx.players.getAll();
   }
 
   private syncPodStates(rounds: RoundDto[]) {
@@ -1044,105 +939,29 @@ export class EventDetailComponent implements OnInit {
     }
   }
 
-  // ── Bulk Register methods ─────────────────────────────────────────────────
+  // ── Bulk Register ─────────────────────────────────────────────────────────
 
-  onBulkFileSelected(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const lines = (reader.result as string)
-        .split('\n')
-        .map(l => l.trim().toLowerCase())
-        .filter(l => l.length > 0 && l !== 'email');
+  openBulkRegisterDialog(): void {
+    const availableSlots = this.event?.maxPlayers
+      ? this.event.maxPlayers - this.event.playerCount
+      : Infinity;
 
-      const allPlayers = this.ctx.players.getAll();
-      const found: BulkRegisterFoundDto[] = [];
-      const notFound: string[] = [];
-      const alreadyRegistered: BulkRegisterFoundDto[] = [];
-
-      for (const email of lines) {
-        const player = allPlayers.find(p => p.email.toLowerCase() === email);
-        if (!player) {
-          notFound.push(email);
-        } else if (this.registeredPlayerIds.has(player.id)) {
-          alreadyRegistered.push({ playerId: player.id, name: player.name, email: player.email });
-        } else {
-          found.push({ playerId: player.id, name: player.name, email: player.email });
-        }
-      }
-
-      this.previewData = { found, notFound, alreadyRegistered };
-      this.previewSelected = Object.fromEntries(found.map(f => [f.playerId, true]));
-      this.unknownNames    = Object.fromEntries(notFound.map(e => [e, '']));
-      this.unknownIncluded = Object.fromEntries(notFound.map(e => [e, true]));
-      this.showPreview = true;
-      this.cdr.detectChanges();
-    };
-    reader.readAsText(file);
-  }
-
-  onRegisterSelected(): void {
-    const found: BulkRegisterFoundDto[] = [];
-    const alreadyRegistered: BulkRegisterFoundDto[] = [];
-    for (const id of this.selectedPlayerIds) {
-      const player = this.ctx.players.getById(id);
-      if (!player) continue;
-      if (this.registeredPlayerIds.has(id)) {
-        alreadyRegistered.push({ playerId: id, name: player.name, email: player.email });
-      } else {
-        found.push({ playerId: id, name: player.name, email: player.email });
-      }
-    }
-    this.previewData = { found, notFound: [], alreadyRegistered };
-    this.previewSelected = Object.fromEntries(found.map(f => [f.playerId, true]));
-    this.showPreview = true;
-    this.cdr.detectChanges();
-  }
-
-  confirmBulkRegistration(): void {
-    if (!this.previewData) return;
-    const registrations = [
-      // Found players whose checkbox is still checked
-      ...this.previewData.found
-        .filter(f => this.previewSelected[f.playerId])
-        .map(f => ({ playerId: f.playerId, email: f.email })),
-      // Unknown emails that the user has included and filled in a name for
-      ...this.previewData.notFound
-        .filter(e => this.unknownIncluded[e])
-        .map(e => ({ playerId: null, email: e, name: this.unknownNames[e] || null })),
-    ];
-
-    this.apiService.bulkRegisterConfirm(this.eventId, { registrations }).subscribe({
-      next: (result) => {
-        const msg = `${result.registered} registered, ${result.created} new players created`;
-        this.snackBar.open(msg, 'OK', { duration: 5000 });
-        this.showPreview = false;
-        this.previewData = null;
-        this.selectedPlayerIds.clear();
-        this.eventService.loadEventPlayers(this.eventId);
-        this.eventService.loadEvent(this.eventId);
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.snackBar.open(err.error?.error || 'Bulk registration failed', 'OK', { duration: 4000 });
-        this.cdr.detectChanges();
+    const ref = this.dialog.open(BulkRegisterDialogComponent, {
+      width: '680px',
+      data: {
+        eventId: this.eventId,
+        availableSlots,
+        registeredPlayerIds: new Set(this.registeredPlayerIds),
       },
     });
-  }
 
-  cancelPreview(): void {
-    this.showPreview = false;
-    this.previewData = null;
-    this.cdr.detectChanges();
-  }
-
-  toggleSelectAll(selectAll: boolean): void {
-    if (selectAll) {
-      this.filteredPlayerPool.forEach(p => this.selectedPlayerIds.add(p.id));
-    } else {
-      this.selectedPlayerIds.clear();
-    }
-    this.cdr.detectChanges();
+    ref.afterClosed().subscribe(result => {
+      if (!result) return;
+      const msg = `${result.registered} registered, ${result.created} new players created`;
+      this.snackBar.open(msg, 'OK', { duration: 5000 });
+      this.eventService.loadEventPlayers(this.eventId);
+      this.eventService.loadEvent(this.eventId);
+      this.cdr.detectChanges();
+    });
   }
 }

@@ -687,3 +687,72 @@ test.describe('Bulk Register: role gate', () => {
     await expect(page.getByRole('button', { name: 'Select All', exact: true })).not.toBeVisible();
   });
 });
+
+// ── Bulk Register: capacity guard ─────────────────────────────────────────────
+
+test.describe('Bulk Register: capacity guard — over capacity', () => {
+  // Event has maxPlayers: 3, playerCount: 2 → only 1 slot left
+  // Two players are in the store pool but not yet registered → selecting both exceeds capacity
+  const CAPPED_EVENT = makeEventDto({ id: EVENT_ID, status: 'Registration', playerCount: 2, maxPlayers: 3, storeId: STORE_ID });
+
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, []);
+    await mockGetEvent(page, CAPPED_EVENT);
+    await mockGetEventPlayers(page, EVENT_ID, []);
+    await seedStorePlayers(page, [ALICE_STORE_PLAYER, BOB_STORE_PLAYER]);
+    await page.goto(`/events/${EVENT_ID}`);
+  });
+
+  test('capacity warning is shown when selection exceeds available slots', async ({ page }) => {
+    // Select both players (2 > 1 available slot)
+    await page.getByRole('button', { name: 'Select All', exact: true }).click();
+    await page.getByRole('button', { name: /Register Selected/i }).click();
+
+    await expect(page.locator('.capacity-warning')).toBeVisible();
+    await expect(page.locator('.capacity-warning')).toContainText('1 remaining');
+  });
+
+  test('Confirm Registration button is disabled when over capacity', async ({ page }) => {
+    await page.getByRole('button', { name: 'Select All', exact: true }).click();
+    await page.getByRole('button', { name: /Register Selected/i }).click();
+
+    await expect(page.getByRole('button', { name: /Confirm Registration/i })).toBeDisabled();
+  });
+
+  test('warning disappears and Confirm is enabled after deselecting to fit capacity', async ({ page }) => {
+    await page.getByRole('button', { name: 'Select All', exact: true }).click();
+    await page.getByRole('button', { name: /Register Selected/i }).click();
+
+    // Uncheck one player to bring count within the 1 available slot
+    const checkboxes = page.locator('.bulk-preview-panel mat-checkbox');
+    await checkboxes.first().click();
+
+    await expect(page.locator('.capacity-warning')).not.toBeVisible();
+    await expect(page.getByRole('button', { name: /Confirm Registration/i })).toBeEnabled();
+  });
+});
+
+test.describe('Bulk Register: capacity guard — within capacity', () => {
+  // Event has no maxPlayers → unlimited
+  const UNLIMITED_EVENT = makeEventDto({ id: EVENT_ID, status: 'Registration', playerCount: 2, maxPlayers: null, storeId: STORE_ID });
+
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, []);
+    await mockGetEvent(page, UNLIMITED_EVENT);
+    await mockGetEventPlayers(page, EVENT_ID, []);
+    await seedStorePlayers(page, [ALICE_STORE_PLAYER, BOB_STORE_PLAYER]);
+    await page.goto(`/events/${EVENT_ID}`);
+  });
+
+  test('no capacity warning when event has no maxPlayers', async ({ page }) => {
+    await page.getByRole('button', { name: 'Select All', exact: true }).click();
+    await page.getByRole('button', { name: /Register Selected/i }).click();
+
+    await expect(page.locator('.capacity-warning')).not.toBeVisible();
+    await expect(page.getByRole('button', { name: /Confirm Registration/i })).toBeEnabled();
+  });
+});
