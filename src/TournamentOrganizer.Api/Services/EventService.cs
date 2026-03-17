@@ -849,4 +849,54 @@ public class EventService : IEventService
             registration.IsDropped, registration.IsDisqualified, registration.IsCheckedIn,
             registration.DroppedAfterRound, registration.IsWaitlisted, registration.WaitlistPosition);
     }
+
+    public async Task<BulkRegisterResultDto> BulkRegisterConfirmAsync(int eventId, BulkRegisterConfirmDto dto)
+    {
+        int registered = 0;
+        int created = 0;
+        var errors = new List<BulkRegisterErrorDto>();
+
+        foreach (var item in dto.Registrations)
+        {
+            try
+            {
+                int playerId;
+
+                if (item.PlayerId == null)
+                {
+                    // New player — name is required
+                    if (string.IsNullOrWhiteSpace(item.Name))
+                    {
+                        errors.Add(new BulkRegisterErrorDto(item.Email, "Name is required to create a new player."));
+                        continue;
+                    }
+
+                    var newPlayer = await _playerRepo.CreateAsync(new Player
+                    {
+                        Name = item.Name,
+                        Email = item.Email,
+                        PlacementGamesLeft = 5,
+                        Mu = 25.0,
+                        Sigma = 8.333,
+                        IsActive = true,
+                    });
+                    playerId = newPlayer.Id;
+                    created++;
+                }
+                else
+                {
+                    playerId = item.PlayerId.Value;
+                }
+
+                await RegisterPlayerAsync(eventId, playerId);
+                registered++;
+            }
+            catch (Exception ex)
+            {
+                errors.Add(new BulkRegisterErrorDto(item.Email, ex.Message));
+            }
+        }
+
+        return new BulkRegisterResultDto(registered, created, errors);
+    }
 }

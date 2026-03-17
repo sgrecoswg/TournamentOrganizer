@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, LeaderboardEntry, PairingsDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, StoreDto, StoreDetailDto, ThemeDto } from '../../src/app/core/models/api.models';
+import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, LeaderboardEntry, PairingsDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, StoreDto, StoreDetailDto, ThemeDto } from '../../src/app/core/models/api.models';
 
 /** Intercept GET /api/events and return the given list. */
 export async function mockGetEvents(page: Page, events: EventDto[]): Promise<void> {
@@ -422,6 +422,26 @@ export function makePairingsDto(overrides: Partial<PairingsDto> = {}): PairingsD
         ],
       },
     ],
+    ...overrides,
+  };
+}
+
+/** Intercept POST /api/events/:id/bulkregister/confirm and return the given result. */
+export async function mockBulkRegisterConfirm(page: Page, eventId: number, response: BulkRegisterResultDto): Promise<void> {
+  await page.route(`**/api/events/${eventId}/bulkregister/confirm`, route => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export function makeBulkRegisterResultDto(overrides: Partial<BulkRegisterResultDto> = {}): BulkRegisterResultDto {
+  return {
+    registered: 0,
+    created: 0,
+    errors: [],
     ...overrides,
   };
 }
