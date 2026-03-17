@@ -13,9 +13,13 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatDialog } from '@angular/material/dialog';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { CardDemandDialogComponent } from './dialogs/card-demand-dialog.component';
 import { ApiService } from '../../core/services/api.service';
+import { ScryfallService } from '../../core/services/scryfall.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PlayerService } from '../../core/services/player.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
@@ -29,7 +33,7 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
     CommonModule, FormsModule, RouterLink,
     MatCardModule, MatTableModule, MatTabsModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatSnackBarModule, MatTooltipModule, MatPaginatorModule,
-    MatProgressSpinnerModule,
+    MatProgressSpinnerModule, MatAutocompleteModule,
     RatingBadgeComponent, PlacementBadgeComponent
   ],
   template: `
@@ -212,7 +216,17 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
                     <div class="add-card-form">
                       <mat-form-field>
                         <mat-label>Card name</mat-label>
-                        <input matInput [(ngModel)]="newWishlistCard" (keydown.enter)="addToWishlist()" placeholder="e.g. Lightning Bolt">
+                        <input matInput
+                               [(ngModel)]="newWishlistCard"
+                               [matAutocomplete]="wishlistAuto"
+                               (ngModelChange)="onWishlistCardChange($event)"
+                               (keydown.enter)="addToWishlist()"
+                               placeholder="e.g. Lightning Bolt">
+                        <mat-autocomplete #wishlistAuto="matAutocomplete">
+                          @for (s of wishlistSuggestions; track s) {
+                            <mat-option [value]="s">{{ s }}</mat-option>
+                          }
+                        </mat-autocomplete>
                       </mat-form-field>
                       <mat-form-field class="qty-field">
                         <mat-label>Qty</mat-label>
@@ -296,7 +310,17 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
                     <div class="add-card-form">
                       <mat-form-field>
                         <mat-label>Card name</mat-label>
-                        <input matInput [(ngModel)]="newTradeCard" (keydown.enter)="addToTradeList()" placeholder="e.g. Sol Ring">
+                        <input matInput
+                               [(ngModel)]="newTradeCard"
+                               [matAutocomplete]="tradeAuto"
+                               (ngModelChange)="onTradeCardChange($event)"
+                               (keydown.enter)="addToTradeList()"
+                               placeholder="e.g. Sol Ring">
+                        <mat-autocomplete #tradeAuto="matAutocomplete">
+                          @for (s of tradeSuggestions; track s) {
+                            <mat-option [value]="s">{{ s }}</mat-option>
+                          }
+                        </mat-autocomplete>
                       </mat-form-field>
                       <mat-form-field class="qty-field">
                         <mat-label>Qty</mat-label>
@@ -487,6 +511,11 @@ export class PlayerProfileComponent implements OnInit {
   newTradeCard = '';
   newTradeQty = 1;
 
+  wishlistSuggestions: string[] = [];
+  tradeSuggestions: string[] = [];
+  private wishlistQuery$ = new Subject<string>();
+  private tradeQuery$ = new Subject<string>();
+
   constructor(
     private route: ActivatedRoute,
     private playerService: PlayerService,
@@ -495,8 +524,12 @@ export class PlayerProfileComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog,
     private authService: AuthService,
-    private ctx: LocalStorageContext
+    private ctx: LocalStorageContext,
+    private scryfallService: ScryfallService,
   ) {}
+
+  onWishlistCardChange(query: string): void { this.wishlistQuery$.next(query); }
+  onTradeCardChange(query: string): void    { this.tradeQuery$.next(query); }
 
   get canEditProfile(): boolean {
     const user = this.authService.currentUser;
@@ -549,6 +582,16 @@ export class PlayerProfileComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.wishlistQuery$.pipe(
+      debounceTime(300), distinctUntilChanged(),
+      switchMap(q => this.scryfallService.getSuggestions(q)),
+    ).subscribe(s => { this.wishlistSuggestions = s; this.cdr.detectChanges(); });
+
+    this.tradeQuery$.pipe(
+      debounceTime(300), distinctUntilChanged(),
+      switchMap(q => this.scryfallService.getSuggestions(q)),
+    ).subscribe(s => { this.tradeSuggestions = s; this.cdr.detectChanges(); });
+
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.playerService.getProfile(id).subscribe({
       next: p => {

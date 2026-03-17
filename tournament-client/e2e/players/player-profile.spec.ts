@@ -6,6 +6,8 @@ import {
   mockGetCommanderStats,
   mockUploadPlayerAvatar,
   mockRemovePlayerAvatar,
+  mockScryfallAutocomplete,
+  mockPlayerProfileSubApis,
   makePlayerProfile,
   makePlayerDto,
   makeCommanderStatDto,
@@ -297,5 +299,103 @@ test.describe('Player Profile — avatar: remove', () => {
     await btn.click();
     expect(deleteCalled).toBe(true);
     await expect(page.locator('div.player-avatar-placeholder')).toBeVisible();
+  });
+});
+
+// ── Card name autocomplete ─────────────────────────────────────────────────────
+
+test.describe('Player Profile — wishlist card autocomplete', () => {
+  test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await mockPlayerProfileSubApis(page, 1);
+    await mockScryfallAutocomplete(page, ['Sol Ring', 'Sol Talisman', 'Solemn Simulacrum']);
+    await mockGetPlayerProfile(page, makePlayerProfile({ id: 1 }));
+    await loginAs(page, 'Administrator');
+    await page.goto('/players/1');
+    await page.getByRole('tab', { name: 'Trading' }).click();
+    // The inner mat-tab-group is portal-rendered; wait for it to attach after the outer tab activates
+    await page.locator('mat-tab-group mat-tab-group').waitFor({ state: 'attached', timeout: 5000 });
+    await expect(page.locator('input[placeholder="e.g. Lightning Bolt"]')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('shows suggestions after typing in wishlist card input', async ({ page }) => {
+    const input = page.locator('input[placeholder="e.g. Lightning Bolt"]');
+    await input.click();
+    await input.pressSequentially('sol', { delay: 50 });
+    // Wait for debounce + network response
+    await expect(page.locator('mat-option').filter({ hasText: 'Sol Ring' })).toBeVisible({ timeout: 2000 });
+    await expect(page.locator('mat-option').filter({ hasText: 'Sol Talisman' })).toBeVisible();
+  });
+
+  test('selecting a suggestion fills the wishlist input', async ({ page }) => {
+    const input = page.locator('input[placeholder="e.g. Lightning Bolt"]');
+    await input.click();
+    await input.pressSequentially('sol', { delay: 50 });
+    await page.locator('mat-option').filter({ hasText: 'Sol Ring' }).click();
+    await expect(input).toHaveValue('Sol Ring');
+  });
+
+  test('no suggestions shown for very short query', async ({ page }) => {
+    await mockScryfallAutocomplete(page, []);
+    const input = page.locator('input[placeholder="e.g. Lightning Bolt"]');
+    await input.click();
+    await input.pressSequentially('s', { delay: 50 });
+    await page.waitForTimeout(400);
+    await expect(page.locator('mat-option')).toHaveCount(0);
+  });
+});
+
+test.describe('Player Profile — trade card autocomplete', () => {
+  test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await mockPlayerProfileSubApis(page, 1);
+    await mockScryfallAutocomplete(page, ['Atraxa, Praetors\' Voice', 'Atarka, World Render']);
+    await mockGetPlayerProfile(page, makePlayerProfile({ id: 1 }));
+    await loginAs(page, 'Administrator');
+    await page.goto('/players/1');
+    // Wait for profile, then navigate Trading → Wishlist (to activate the sub-tab-group) → For Trade
+    await page.getByRole('tab', { name: 'Trading' }).click();
+    await page.locator('mat-tab-group mat-tab-group').waitFor({ state: 'attached', timeout: 5000 });
+    await page.getByRole('tab', { name: /For Trade/ }).click();
+    await expect(page.locator('input[placeholder="e.g. Sol Ring"]')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('shows suggestions after typing in trade card input', async ({ page }) => {
+    const input = page.locator('input[placeholder="e.g. Sol Ring"]');
+    await input.click();
+    await input.pressSequentially('atr', { delay: 50 });
+    await expect(page.locator('mat-option').filter({ hasText: 'Atraxa' })).toBeVisible({ timeout: 2000 });
+  });
+
+  test('selecting a trade suggestion fills the input', async ({ page }) => {
+    const input = page.locator('input[placeholder="e.g. Sol Ring"]');
+    await input.click();
+    await input.pressSequentially('atr', { delay: 50 });
+    await page.locator('mat-option').filter({ hasText: 'Atraxa' }).click();
+    await expect(input).toHaveValue('Atraxa, Praetors\' Voice');
+  });
+});
+
+test.describe('Player Profile — card autocomplete: Scryfall unavailable', () => {
+  test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await mockPlayerProfileSubApis(page, 1);
+    // Scryfall returns a network error
+    await page.route('https://api.scryfall.com/**', route => route.abort());
+    await mockGetPlayerProfile(page, makePlayerProfile({ id: 1 }));
+    await loginAs(page, 'Administrator');
+    await page.goto('/players/1');
+    await page.getByRole('tab', { name: 'Trading' }).click();
+    await page.locator('mat-tab-group mat-tab-group').waitFor({ state: 'attached', timeout: 5000 });
+    await expect(page.locator('input[placeholder="e.g. Lightning Bolt"]')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('manual card entry still works when Scryfall is unavailable', async ({ page }) => {
+    const input = page.locator('input[placeholder="e.g. Lightning Bolt"]');
+    await input.click();
+    await input.fill('Black Lotus');
+    await expect(input).toHaveValue('Black Lotus');
+    // No crash — no mat-option shown but the input value is intact
+    await expect(page.locator('mat-option')).toHaveCount(0);
   });
 });

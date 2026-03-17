@@ -445,3 +445,34 @@ export function makeBulkRegisterResultDto(overrides: Partial<BulkRegisterResultD
     ...overrides,
   };
 }
+
+/** Intercept GET https://api.scryfall.com/cards/autocomplete and return the given suggestions. */
+export async function mockScryfallAutocomplete(page: Page, suggestions: string[]): Promise<void> {
+  await page.route('https://api.scryfall.com/cards/autocomplete**', route => {
+    route.fulfill({ json: { object: 'catalog', data: suggestions } });
+  });
+}
+
+/**
+ * Stub all player-profile sub-resource endpoints (wishlist, trades, commander stats, etc.)
+ * with empty arrays so that mat-table data sources receive valid iterables.
+ * Register this AFTER stubUnmatchedApi so it takes priority (Playwright LIFO route order).
+ */
+export async function mockPlayerProfileSubApis(page: Page, playerId: number): Promise<void> {
+  await page.route(`**/api/players/${playerId}/commanderstats`, route =>
+    route.fulfill({ json: { playerId, commanders: [] } }));
+  await page.route(`**/api/players/${playerId}/wishlist/supply`, route =>
+    route.fulfill({ json: [] }));
+  await page.route(`**/api/players/${playerId}/wishlist`, route => {
+    if (route.request().method() === 'GET') route.fulfill({ json: [] });
+    else route.continue();
+  });
+  await page.route(`**/api/players/${playerId}/trades/suggestions`, route =>
+    route.fulfill({ json: [] }));
+  await page.route(`**/api/players/${playerId}/trades/demand`, route =>
+    route.fulfill({ json: [] }));
+  await page.route(`**/api/players/${playerId}/trades`, route => {
+    if (route.request().method() === 'GET') route.fulfill({ json: [] });
+    else route.continue();
+  });
+}

@@ -104,6 +104,7 @@ public class EventRepository : IEventRepository
 
     public async Task<EventRegistration?> GetRegistrationAsync(int eventId, int playerId)
         => await _db.EventRegistrations
+            .Include(er => er.Player)
             .FirstOrDefaultAsync(er => er.EventId == eventId && er.PlayerId == playerId);
 
     public async Task<List<EventRegistration>> GetRegistrationsWithPlayersAsync(int eventId)

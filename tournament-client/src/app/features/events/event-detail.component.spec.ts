@@ -9,7 +9,8 @@ import { EventService } from '../../core/services/event.service';
 import { PlayerService } from '../../core/services/player.service';
 import { AuthService } from '../../core/services/auth.service';
 import { MatDialog } from '@angular/material/dialog';
-import { Subject } from 'rxjs';
+import { Subject, of as observableOf } from 'rxjs';
+import { ScryfallService } from '../../core/services/scryfall.service';
 import {
   EventDto, EventPlayerDto, PlayerDto, RoundDto, StandingsEntry,
 } from '../../core/models/api.models';
@@ -1112,6 +1113,90 @@ describe('EventDetailComponent', () => {
       closeSubject.next(undefined);
 
       expect(snackBarOpenSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Commander autocomplete ─────────────────────────────────────────────────
+
+  describe('Commander autocomplete', () => {
+    let mockScryfallService: { getSuggestions: jest.Mock };
+
+    beforeEach(() => {
+      mockScryfallService = {
+        getSuggestions: jest.fn().mockReturnValue(observableOf([])),
+      };
+    });
+
+    async function setupWithScryfall(authOverrides: object = {}) {
+      const mockAuth = {
+        isStoreEmployee: true,
+        isAdmin: false,
+        currentUser: null,
+        ...authOverrides,
+      };
+      await TestBed.configureTestingModule({
+        imports: [EventDetailComponent],
+        providers: [
+          provideRouter([]),
+          provideAnimationsAsync(),
+          {
+            provide: ActivatedRoute,
+            useValue: { snapshot: { paramMap: { get: jest.fn().mockReturnValue(String(EVENT_ID)) } } },
+          },
+          { provide: Router,          useValue: mockRouter },
+          { provide: EventService,    useValue: mockEventService },
+          { provide: PlayerService,   useValue: mockPlayerService },
+          { provide: AuthService,     useValue: mockAuth },
+          { provide: MatSnackBar,     useValue: mockSnackBar },
+          { provide: ScryfallService, useValue: mockScryfallService },
+        ],
+      }).compileComponents();
+    }
+
+    it('onCommanderInputChange calls ScryfallService.getSuggestions with the query', async () => {
+      jest.useFakeTimers();
+      mockScryfallService.getSuggestions.mockReturnValue(observableOf(["Atraxa, Praetors' Voice"]));
+      await setupWithScryfall();
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+
+      fixture.componentInstance.onCommanderInputChange('atr');
+      jest.advanceTimersByTime(300);
+
+      expect(mockScryfallService.getSuggestions).toHaveBeenCalledWith('atr');
+      jest.useRealTimers();
+    });
+
+    it('commanderSuggestions is populated from ScryfallService response', async () => {
+      jest.useFakeTimers();
+      mockScryfallService.getSuggestions.mockReturnValue(observableOf(["Atraxa, Praetors' Voice", 'Atarka, World Render']));
+      await setupWithScryfall();
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+
+      fixture.componentInstance.onCommanderInputChange('atr');
+      jest.advanceTimersByTime(300);
+
+      expect(fixture.componentInstance.commanderSuggestions).toEqual([
+        "Atraxa, Praetors' Voice",
+        'Atarka, World Render',
+      ]);
+      jest.useRealTimers();
+    });
+
+    it('onCommanderInputChange with short query yields empty suggestions', async () => {
+      jest.useFakeTimers();
+      mockScryfallService.getSuggestions.mockReturnValue(observableOf([]));
+      await setupWithScryfall();
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+
+      fixture.componentInstance.onCommanderInputChange('a');
+      jest.advanceTimersByTime(300);
+
+      // getSuggestions returns [] for single char — commanderSuggestions stays empty
+      expect(fixture.componentInstance.commanderSuggestions).toEqual([]);
+      jest.useRealTimers();
     });
   });
 });

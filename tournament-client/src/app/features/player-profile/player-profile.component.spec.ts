@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { of, throwError } from 'rxjs';
+import { ScryfallService } from '../../core/services/scryfall.service';
 import { PlayerProfileComponent } from './player-profile.component';
 import { PlayerService } from '../../core/services/player.service';
 import { ApiService } from '../../core/services/api.service';
@@ -443,5 +444,113 @@ describe('PlayerProfileComponent — Avatar', () => {
     expect(mockApi.removePlayerAvatar).toHaveBeenCalledWith(PLAYER_ID);
     fixture.detectChanges();
     expect(fixture.componentInstance.profile?.avatarUrl).toBeNull();
+  });
+});
+
+// ── Card name autocomplete ──────────────────────────────────────────────────
+
+describe('PlayerProfileComponent — card name autocomplete', () => {
+  const PLAYER_ID = 1;
+
+  function makeProfile(): PlayerProfile {
+    return {
+      id: PLAYER_ID, name: 'Alice', email: 'alice@test.com',
+      mu: 25, sigma: 8.333, conservativeScore: 0,
+      isRanked: false, placementGamesLeft: 5, isActive: true,
+      gameHistory: [], eventRegistrations: [],
+    };
+  }
+
+  let mockScryfallService: { getSuggestions: jest.Mock };
+
+  async function setup() {
+    mockScryfallService = { getSuggestions: jest.fn().mockReturnValue(of([])) };
+
+    await TestBed.configureTestingModule({
+      imports: [PlayerProfileComponent],
+      providers: [
+        provideRouter([]),
+        provideAnimationsAsync(),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => String(PLAYER_ID) } } } },
+        { provide: PlayerService, useValue: { getProfile: jest.fn().mockReturnValue(of(makeProfile())), updatePlayer: jest.fn().mockReturnValue(of(makeProfile())), refreshPlayersFromApi: jest.fn().mockReturnValue(of(undefined)) } },
+        { provide: ApiService, useValue: {
+          getWishlist: jest.fn().mockReturnValue(of([])),
+          getWishlistSupply: jest.fn().mockReturnValue(of([])),
+          getTradeList: jest.fn().mockReturnValue(of([])),
+          getSuggestedTrades: jest.fn().mockReturnValue(of([])),
+          getTradeDemand: jest.fn().mockReturnValue(of([])),
+          getCommanderStats: jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, commanders: [] })),
+        }},
+        { provide: LocalStorageContext, useValue: { players: { getById: jest.fn(), getAll: jest.fn().mockReturnValue([]) } } },
+        { provide: AuthService, useValue: { currentUser: null, isAdmin: false, isStoreManager: false } },
+        { provide: MatDialog, useValue: { open: jest.fn() } },
+        { provide: MatSnackBar, useValue: { open: jest.fn() } },
+        { provide: ScryfallService, useValue: mockScryfallService },
+      ],
+    }).compileComponents();
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('onWishlistCardChange calls ScryfallService and populates wishlistSuggestions', async () => {
+    await setup();
+    jest.useFakeTimers();
+    mockScryfallService.getSuggestions.mockReturnValue(of(['Sol Ring', 'Sol Talisman']));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.onWishlistCardChange('sol');
+    jest.advanceTimersByTime(300);
+
+    expect(mockScryfallService.getSuggestions).toHaveBeenCalledWith('sol');
+    expect(fixture.componentInstance.wishlistSuggestions).toEqual(['Sol Ring', 'Sol Talisman']);
+    jest.useRealTimers();
+  });
+
+  it('onTradeCardChange calls ScryfallService and populates tradeSuggestions', async () => {
+    await setup();
+    jest.useFakeTimers();
+    mockScryfallService.getSuggestions.mockReturnValue(of(['Sol Ring']));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.onTradeCardChange('sol');
+    jest.advanceTimersByTime(300);
+
+    expect(mockScryfallService.getSuggestions).toHaveBeenCalledWith('sol');
+    expect(fixture.componentInstance.tradeSuggestions).toEqual(['Sol Ring']);
+    jest.useRealTimers();
+  });
+
+  it('short query yields empty wishlistSuggestions', async () => {
+    await setup();
+    jest.useFakeTimers();
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.onWishlistCardChange('s');
+    jest.advanceTimersByTime(300);
+
+    expect(fixture.componentInstance.wishlistSuggestions).toEqual([]);
+    jest.useRealTimers();
+  });
+
+  it('wishlist and trade suggestions are independent', async () => {
+    await setup();
+    jest.useFakeTimers();
+    mockScryfallService.getSuggestions
+      .mockReturnValueOnce(of(['Lightning Bolt']))
+      .mockReturnValueOnce(of(['Sol Ring']));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.onWishlistCardChange('lig');
+    jest.advanceTimersByTime(300);
+    fixture.componentInstance.onTradeCardChange('sol');
+    jest.advanceTimersByTime(300);
+
+    expect(fixture.componentInstance.wishlistSuggestions).toEqual(['Lightning Bolt']);
+    expect(fixture.componentInstance.tradeSuggestions).toEqual(['Sol Ring']);
+    jest.useRealTimers();
   });
 });
