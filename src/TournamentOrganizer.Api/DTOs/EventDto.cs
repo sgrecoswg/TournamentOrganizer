@@ -52,3 +52,16 @@ public record DeclareCommanderDto(string? Commanders, string? DecklistUrl);
 public record PodPlayerPairingsDto(int PlayerId, string Name, string? CommanderName, int SeatOrder = 0);
 public record PodPairingsDto(int PodId, int PodNumber, List<PodPlayerPairingsDto> Players, string GameStatus = "Pending", int? WinnerPlayerId = null);
 public record PairingsDto(int EventId, string EventName, int? CurrentRound, List<PodPairingsDto> Pods);
+
+// ── Bulk register ────────────────────────────────────────────────────────────
+
+public record BulkRegisterConfirmDto(List<BulkRegisterConfirmItemDto> Registrations);
+
+public record BulkRegisterConfirmItemDto(
+    int?    PlayerId,   // null when creating a new player
+    string  Email,
+    string? Name        // required when PlayerId is null
+);
+
+public record BulkRegisterResultDto(int Registered, int Created, List<BulkRegisterErrorDto> Errors);
+public record BulkRegisterErrorDto(string Email, string Reason);

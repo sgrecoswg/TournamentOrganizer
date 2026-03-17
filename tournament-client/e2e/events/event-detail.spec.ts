@@ -11,8 +11,10 @@ import {
   mockSetPlayerDropped,
   mockPromoteFromWaitlist,
   mockDeclareCommander,
+  mockBulkRegisterConfirm,
   makeEventDto,
   makeEventPlayerDto,
+  makeBulkRegisterResultDto,
 } from '../helpers/api-mock';
 
 // ─── Event Detail — Check-In ──────────────────────────────────────────────────
@@ -456,5 +458,232 @@ test.describe('Commander Declaration: role gate', () => {
 
   test('edit icon NOT visible on another player row', async ({ page }) => {
     await expect(page.getByTitle('Edit commander')).not.toBeVisible();
+  });
+});
+
+// ── Bulk Register ─────────────────────────────────────────────────────────────
+//
+// Player data is seeded into localStorage BEFORE navigation via addInitScript.
+// The localStorage key format is to_store_<storeId>_players.
+
+const ALICE_STORE_PLAYER = { id: 10, name: 'Alice Manager', email: 'alice@shop.com', mu: 25, sigma: 8.333, conservativeScore: 0, isRanked: false, placementGamesLeft: 5, isActive: true };
+const BOB_STORE_PLAYER   = { id: 11, name: 'Bob Player',    email: 'bob@example.com', mu: 25, sigma: 8.333, conservativeScore: 0, isRanked: false, placementGamesLeft: 5, isActive: true };
+
+/** Seed players into localStorage for store 1 before page load. */
+async function seedStorePlayers(page: import('@playwright/test').Page, players: typeof ALICE_STORE_PLAYER[]) {
+  await page.addInitScript((p) => {
+    localStorage.setItem('to_store_1_players', JSON.stringify(p));
+    localStorage.setItem('to_store_1_players_meta', JSON.stringify([]));
+  }, players);
+}
+
+test.describe('Bulk Register: upload file — visibility', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
+    await seedStorePlayers(page, [ALICE_STORE_PLAYER, BOB_STORE_PLAYER]);
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, []);
+    await mockGetEvent(page, REG_EVENT);
+    await mockGetEventPlayers(page, EVENT_ID, []);
+    await page.goto(`/events/${EVENT_ID}`);
+  });
+
+  test('Upload File button is visible for StoreEmployee during Registration', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /upload file/i })).toBeVisible();
+  });
+
+  test('hidden file input for .txt/.csv is present', async ({ page }) => {
+    await expect(page.locator('input[type="file"][accept=".txt,.csv"]')).toBeAttached();
+  });
+
+  test('multi-select list renders store players', async ({ page }) => {
+    await expect(page.getByText('Alice Manager')).toBeVisible();
+    await expect(page.getByText('Bob Player')).toBeVisible();
+  });
+});
+
+test.describe('Bulk Register: upload file — preview panel', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
+    await seedStorePlayers(page, [ALICE_STORE_PLAYER, BOB_STORE_PLAYER]);
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, []);
+    await mockGetEvent(page, REG_EVENT);
+    await mockGetEventPlayers(page, EVENT_ID, []);
+
+    // Upload a file containing alice (found) and unknown@new.com (not found)
+    await page.addInitScript(() => {
+      // Override FileReader so it loads the fake CSV synchronously
+      (window as any).__fakeFileContent = 'alice@shop.com\nunknown@new.com';
+    });
+
+    await page.goto(`/events/${EVENT_ID}`);
+
+    // Trigger file selection by dispatching a synthetic change event via evaluate
+    await page.locator('input[type="file"][accept=".txt,.csv"]').evaluate((input: HTMLInputElement) => {
+      const content = (window as any).__fakeFileContent ?? '';
+      const file = new File([content], 'players.txt', { type: 'text/plain' });
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      Object.defineProperty(input, 'files', { value: dataTransfer.files });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
+
+  test('Preview Registration heading appears after file upload', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Preview Registration', level: 3 })).toBeVisible();
+  });
+
+  test('"Will register" section lists alice', async ({ page }) => {
+    await expect(page.locator('.bulk-preview-panel')).toContainText('alice@shop.com');
+  });
+
+  test('"New players to create" section shows unknown email with name input', async ({ page }) => {
+    await expect(page.locator('.bulk-preview-panel')).toContainText('New players to create');
+    await expect(page.getByLabel('Name for unknown@new.com')).toBeVisible();
+  });
+});
+
+test.describe('Bulk Register: confirm', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
+    await seedStorePlayers(page, [ALICE_STORE_PLAYER]);
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, []);
+    await mockGetEvent(page, REG_EVENT);
+    await mockGetEventPlayers(page, EVENT_ID, []);
+    await mockBulkRegisterConfirm(page, EVENT_ID, makeBulkRegisterResultDto({ registered: 2, created: 1 }));
+
+    await page.addInitScript(() => {
+      (window as any).__fakeFileContent = 'alice@shop.com';
+    });
+
+    await page.goto(`/events/${EVENT_ID}`);
+
+    await page.locator('input[type="file"][accept=".txt,.csv"]').evaluate((input: HTMLInputElement) => {
+      const content = (window as any).__fakeFileContent ?? '';
+      const file = new File([content], 'players.txt', { type: 'text/plain' });
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      Object.defineProperty(input, 'files', { value: dataTransfer.files });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
+
+  test('clicking Confirm Registration shows summary snackbar', async ({ page }) => {
+    await page.getByRole('button', { name: 'Confirm Registration' }).click();
+    await expect(page.getByText(/2 registered/)).toBeVisible();
+  });
+
+  test('preview panel is hidden after confirm', async ({ page }) => {
+    await page.getByRole('button', { name: 'Confirm Registration' }).click();
+    await expect(page.getByRole('heading', { name: 'Preview Registration', level: 3 })).not.toBeVisible();
+  });
+});
+
+test.describe('Bulk Register: cancel', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
+    await seedStorePlayers(page, [ALICE_STORE_PLAYER]);
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, []);
+    await mockGetEvent(page, REG_EVENT);
+    await mockGetEventPlayers(page, EVENT_ID, []);
+
+    await page.addInitScript(() => {
+      (window as any).__fakeFileContent = 'alice@shop.com';
+    });
+
+    await page.goto(`/events/${EVENT_ID}`);
+
+    await page.locator('input[type="file"][accept=".txt,.csv"]').evaluate((input: HTMLInputElement) => {
+      const content = (window as any).__fakeFileContent ?? '';
+      const file = new File([content], 'players.txt', { type: 'text/plain' });
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      Object.defineProperty(input, 'files', { value: dataTransfer.files });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
+
+  test('clicking Cancel hides the preview panel', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Preview Registration', level: 3 })).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.getByRole('heading', { name: 'Preview Registration', level: 3 })).not.toBeVisible();
+  });
+});
+
+test.describe('Bulk Register: multi-select', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
+    await seedStorePlayers(page, [ALICE_STORE_PLAYER, BOB_STORE_PLAYER]);
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, []);
+    await mockGetEvent(page, REG_EVENT);
+    await mockGetEventPlayers(page, EVENT_ID, []);
+    await page.goto(`/events/${EVENT_ID}`);
+  });
+
+  test('Select All button checks all players and enables Register Selected', async ({ page }) => {
+    await page.getByRole('button', { name: 'Select All', exact: true }).click();
+    // Register Selected should now be enabled
+    await expect(page.getByRole('button', { name: 'Register Selected' })).not.toBeDisabled();
+  });
+
+  test('clicking Register Selected shows preview panel', async ({ page }) => {
+    await page.getByRole('button', { name: 'Select All', exact: true }).click();
+    await page.getByRole('button', { name: 'Register Selected' }).click();
+    await expect(page.getByRole('heading', { name: 'Preview Registration', level: 3 })).toBeVisible();
+  });
+});
+
+test.describe('Bulk Register: already registered', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
+    await seedStorePlayers(page, [ALICE_STORE_PLAYER]);
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, []);
+    await mockGetEvent(page, REG_EVENT);
+    // Alice is already registered
+    await mockGetEventPlayers(page, EVENT_ID, [makeEventPlayerDto({ playerId: ALICE_STORE_PLAYER.id, name: ALICE_STORE_PLAYER.name })]);
+
+    await page.addInitScript(() => {
+      (window as any).__fakeFileContent = 'alice@shop.com';
+    });
+
+    await page.goto(`/events/${EVENT_ID}`);
+
+    await page.locator('input[type="file"][accept=".txt,.csv"]').evaluate((input: HTMLInputElement) => {
+      const content = (window as any).__fakeFileContent ?? '';
+      const file = new File([content], 'players.txt', { type: 'text/plain' });
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      Object.defineProperty(input, 'files', { value: dataTransfer.files });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
+
+  test('already-registered player appears in the skipped section', async ({ page }) => {
+    await expect(page.locator('.bulk-preview-panel')).toContainText('Already registered (skipped)');
+    await expect(page.locator('.bulk-preview-panel')).toContainText('alice@shop.com');
+  });
+});
+
+test.describe('Bulk Register: role gate', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player', { playerId: 99 });
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, []);
+    await mockGetEvent(page, REG_EVENT);
+    await mockGetEventPlayers(page, EVENT_ID, []);
+    await page.goto(`/events/${EVENT_ID}`);
+  });
+
+  test('Upload File button is NOT visible for Player role', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /upload file/i })).not.toBeVisible();
+  });
+
+  test('multi-select section is NOT visible for Player role', async ({ page }) => {
+    await expect(page.getByRole('button', { name: 'Select All', exact: true })).not.toBeVisible();
   });
 });

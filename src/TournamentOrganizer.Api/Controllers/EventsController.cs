@@ -260,6 +260,14 @@ public class EventsController : ControllerBase
         catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
     }
 
+    [HttpPost("{id}/bulkregister/confirm")]
+    [Authorize]
+    public async Task<ActionResult<BulkRegisterResultDto>> BulkRegisterConfirm(int id, BulkRegisterConfirmDto dto)
+    {
+        if (!await UserCanManageEvent(id)) return Forbid();
+        return Ok(await _eventService.BulkRegisterConfirmAsync(id, dto));
+    }
+
     [HttpPost("checkin/{token}")]
     [Authorize]
     public async Task<ActionResult<CheckInResponseDto>> CheckInByToken(string token)

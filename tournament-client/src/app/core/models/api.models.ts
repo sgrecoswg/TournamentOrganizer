@@ -438,3 +438,23 @@ export interface StandingsEntry {
   finishPositions: number[];
   gameResults: string[];
 }
+
+// ── Bulk Register ──────────────────────────────────────────────────────────────
+
+/** Frontend-only: resolved player from local cache */
+export interface BulkRegisterFoundDto  { playerId: number; name: string; email: string; }
+
+/** Frontend-only: preview data built client-side before any API call */
+export interface BulkRegisterPreviewDto {
+  found:             BulkRegisterFoundDto[];
+  notFound:          string[];
+  alreadyRegistered: BulkRegisterFoundDto[];
+}
+
+/** Sent to POST /api/events/{id}/bulkregister/confirm */
+export interface BulkRegisterConfirmItemDto { playerId?: number | null; email: string; name?: string | null; }
+export interface BulkRegisterConfirmDto    { registrations: BulkRegisterConfirmItemDto[]; }
+
+/** Response from POST /api/events/{id}/bulkregister/confirm */
+export interface BulkRegisterResultDto     { registered: number; created: number; errors: { email: string; reason: string }[]; }
+
