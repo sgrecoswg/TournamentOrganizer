@@ -155,7 +155,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                     <input matInput [(ngModel)]="decklistUrl" placeholder="https://...">
                   </mat-form-field>
                   <mat-form-field>
-                    <mat-label>Commander(s) (optional)</mat-label>
+                    <mat-label>Commander (optional)</mat-label>
                     <input matInput
                            [(ngModel)]="commandersInput"
                            [matAutocomplete]="commanderRegAuto"
@@ -163,6 +163,19 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                            placeholder="e.g. Atraxa, Praetors' Voice">
                     <mat-autocomplete #commanderRegAuto="matAutocomplete">
                       @for (s of commanderSuggestions; track s) {
+                        <mat-option [value]="s">{{ s }}</mat-option>
+                      }
+                    </mat-autocomplete>
+                  </mat-form-field>
+                  <mat-form-field>
+                    <mat-label>Partner Commander (optional)</mat-label>
+                    <input matInput
+                           [(ngModel)]="commandersInput2"
+                           [matAutocomplete]="commanderPartnerRegAuto"
+                           (ngModelChange)="onPartnerInputChange($event)"
+                           placeholder="e.g. Akiri, Line-Slinger">
+                    <mat-autocomplete #commanderPartnerRegAuto="matAutocomplete">
+                      @for (s of commanderPartnerSuggestions; track s) {
                         <mat-option [value]="s">{{ s }}</mat-option>
                       }
                     </mat-autocomplete>
@@ -257,6 +270,20 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                                        (keyup.escape)="cancelEditCommander()">
                                 <mat-autocomplete #commanderEditAuto="matAutocomplete">
                                   @for (s of commanderSuggestions; track s) {
+                                    <mat-option [value]="s">{{ s }}</mat-option>
+                                  }
+                                </mat-autocomplete>
+                              </mat-form-field>
+                              <mat-form-field class="commander-inline-field">
+                                <input matInput
+                                       [(ngModel)]="editCommanderValue2"
+                                       [matAutocomplete]="commanderPartnerEditAuto"
+                                       (ngModelChange)="onPartnerInputChange($event)"
+                                       placeholder="Partner (optional)"
+                                       (keyup.enter)="saveCommander(row)"
+                                       (keyup.escape)="cancelEditCommander()">
+                                <mat-autocomplete #commanderPartnerEditAuto="matAutocomplete">
+                                  @for (s of commanderPartnerSuggestions; track s) {
                                     <mat-option [value]="s">{{ s }}</mat-option>
                                   }
                                 </mat-autocomplete>
@@ -485,6 +512,7 @@ export class EventDetailComponent implements OnInit {
   playerSearchText: string = '';
   decklistUrl: string | null = null;
   commandersInput: string = '';
+  commandersInput2: string = '';
   readonly playerColumns = ['index', 'name', 'decklist', 'commander', 'status', 'actions'];
   private readonly PLAYERS_TAB = 0;
 
@@ -502,9 +530,12 @@ export class EventDetailComponent implements OnInit {
 
   editingCommanderPlayerId: number | null = null;
   editCommanderValue = '';
+  editCommanderValue2 = '';
 
   commanderSuggestions: string[] = [];
+  commanderPartnerSuggestions: string[] = [];
   private commanderQuery$ = new Subject<string>();
+  private commanderPartnerQuery$ = new Subject<string>();
 
   private registeredPlayerIds = new Set<number>();
 
@@ -535,12 +566,29 @@ export class EventDetailComponent implements OnInit {
       this.commanderSuggestions = suggestions;
       this.cdr.detectChanges();
     });
+    this.commanderPartnerQuery$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap(q => this.scryfallService.getSuggestions(q)),
+    ).subscribe(suggestions => {
+      this.commanderPartnerSuggestions = suggestions;
+      this.cdr.detectChanges();
+    });
     this.initSubscriptions();
     this.loadData();
   }
 
   onCommanderInputChange(query: string): void {
     this.commanderQuery$.next(query);
+  }
+
+  onPartnerInputChange(query: string): void {
+    this.commanderPartnerQuery$.next(query);
+  }
+
+  private buildCommandersString(cmd1: string, cmd2: string): string | null {
+    const parts = [cmd1.trim(), cmd2.trim()].filter(Boolean);
+    return parts.length ? parts.join(' / ') : null;
   }
 
   private initSubscriptions() {
@@ -761,7 +809,7 @@ export class EventDetailComponent implements OnInit {
     this.eventService.registerPlayer(this.eventId, {
       playerId: this.playerIdToRegister,
       decklistUrl: this.decklistUrl || undefined,
-      commanders: this.commandersInput || null
+      commanders: this.buildCommandersString(this.commandersInput, this.commandersInput2)
     }).subscribe({
       next: () => {
         this.snackBar.open('Player registered!', 'OK', { duration: 3000 });
@@ -771,6 +819,7 @@ export class EventDetailComponent implements OnInit {
         this.playerSearchText = '';
         this.decklistUrl = null;
         this.commandersInput = '';
+        this.commandersInput2 = '';
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -787,24 +836,28 @@ export class EventDetailComponent implements OnInit {
 
   startEditCommander(row: EventPlayerDto): void {
     this.editingCommanderPlayerId = row.playerId;
-    this.editCommanderValue = row.commanders ?? '';
+    const parts = (row.commanders ?? '').split(' / ');
+    this.editCommanderValue = parts[0] ?? '';
+    this.editCommanderValue2 = parts[1] ?? '';
     this.cdr.detectChanges();
   }
 
   cancelEditCommander(): void {
     this.editingCommanderPlayerId = null;
     this.editCommanderValue = '';
+    this.editCommanderValue2 = '';
     this.cdr.detectChanges();
   }
 
   saveCommander(row: EventPlayerDto): void {
-    const commanders = this.editCommanderValue.trim() || null;
+    const commanders = this.buildCommandersString(this.editCommanderValue, this.editCommanderValue2);
     this.eventService.declareCommander(this.eventId, row.playerId, commanders, row.decklistUrl).subscribe({
       next: (updated) => {
         const idx = this.eventPlayers.findIndex(p => p.playerId === updated.playerId);
         if (idx >= 0) this.eventPlayers[idx] = updated;
         this.editingCommanderPlayerId = null;
         this.editCommanderValue = '';
+        this.editCommanderValue2 = '';
         this.cdr.detectChanges();
       },
       error: (err) => {
