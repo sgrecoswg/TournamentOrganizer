@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using TournamentOrganizer.Api.DTOs;
+using TournamentOrganizer.Api.Models;
 using TournamentOrganizer.Api.Services.Interfaces;
 
 namespace TournamentOrganizer.Api.Controllers;
@@ -20,13 +21,15 @@ public class StoresController : ControllerBase
     private readonly IWebHostEnvironment _env;
     private readonly ICommanderMetaService _commanderMetaService;
     private readonly IDiscordWebhookService _discordService;
+    private readonly ILicenseTierService _licenseTierService;
 
-    public StoresController(IStoresService service, IWebHostEnvironment env, ICommanderMetaService commanderMetaService, IDiscordWebhookService discordService)
+    public StoresController(IStoresService service, IWebHostEnvironment env, ICommanderMetaService commanderMetaService, IDiscordWebhookService discordService, ILicenseTierService licenseTierService)
     {
         _service = service;
         _env = env;
         _commanderMetaService = commanderMetaService;
         _discordService = discordService;
+        _licenseTierService = licenseTierService;
     }
 
     [HttpGet]
@@ -50,6 +53,7 @@ public class StoresController : ControllerBase
 
     [HttpPut("{id}")]
     [Authorize(Policy = "StoreManager")]
+    [Authorize(Policy = "Tier1Required")]
     public async Task<ActionResult<StoreDetailDto>> Update(int id, UpdateStoreDto dto)
     {
         // Admin can update any store; StoreManager can only update their own.
@@ -64,6 +68,7 @@ public class StoresController : ControllerBase
 
     [HttpPost("{id}/logo")]
     [Authorize(Policy = "StoreEmployee")]
+    [Authorize(Policy = "Tier1Required")]
     public async Task<ActionResult<StoreDto>> UploadLogo(int id, IFormFile logo)
     {
         // Ownership check: Admin can update any store; StoreEmployee/Manager can only update their own.
@@ -155,5 +160,15 @@ public class StoresController : ControllerBase
     {
         var page = await _service.GetPublicPageAsync(slug);
         return page == null ? NotFound() : Ok(page);
+    }
+
+    [HttpGet("{storeId}/tier")]
+    [AllowAnonymous]
+    public async Task<ActionResult<StoreTierDto>> GetStoreTier(int storeId)
+    {
+        var tier = await _licenseTierService.GetEffectiveTierAsync(storeId);
+        // We need to also return whether it's active and expiry date
+        // For simplicity, delegate fully to the tier service for tier, and check license separately
+        return Ok(new StoreTierDto(storeId, tier, tier != LicenseTier.Free, null));
     }
 }

@@ -39,7 +39,7 @@ public class AuthController : ControllerBase
             return Redirect("http://localhost:4200/auth/callback?error=missing_claims");
 
         var user = await _authService.FindOrCreateUserAsync(email, name ?? email, googleId);
-        var token = _authService.GenerateJwt(user);
+        var token = await _authService.GenerateJwtAsync(user);
 
         return Redirect($"http://localhost:4200/auth/callback?token={token}");
     }

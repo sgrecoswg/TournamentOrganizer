@@ -46,7 +46,7 @@ export class ApiService {
     return this.http.delete<PlayerDto>(`${this.base}/players/${playerId}/avatar`);
   }
 
-  getPlayerProfile(id: number): Observable<PlayerProfile> {
+  getPlayerProfile(id: number): Observable<PlayerProfile> {    
     return this.http.get<PlayerProfile>(`${this.base}/players/${id}/profile`);
   }
 

@@ -136,7 +136,7 @@ public class CrossStoreAccessTests(TournamentOrganizerFactory factory)
     [Fact]
     public async Task StoreManager_Store1_GetOwnEmployees_IsAllowed()
     {
-        var client = factory.ClientAs("StoreManager", storeId: 1);
+        var client = factory.ClientAs("StoreManager", storeId: 1, licenseTier: "Tier1");
         var response = await client.GetAsync("/api/stores/1/employees");
         AssertAllowed(response);
     }
@@ -166,7 +166,7 @@ public class CrossStoreAccessTests(TournamentOrganizerFactory factory)
     [Fact]
     public async Task StoreManager_Store1_AddEmployee_OwnStore_IsAllowed()
     {
-        var client = factory.ClientAs("StoreManager", storeId: 1);
+        var client = factory.ClientAs("StoreManager", storeId: 1, licenseTier: "Tier1");
         var response = await client.PostAsJsonAsync("/api/stores/1/employees",
             new { email = "new@example.com", role = "StoreEmployee" });
         AssertAllowed(response);
