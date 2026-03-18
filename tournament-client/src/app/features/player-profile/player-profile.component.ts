@@ -149,21 +149,6 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
         </div>
       }
 
-      @if (ratingHistory.length > 1) {
-        <div class="rating-history-section">
-          <h3>Rating History</h3>
-          <mat-card>
-            <mat-card-content>
-              <canvas baseChart
-                      [data]="ratingChartData"
-                      [options]="ratingChartOptions"
-                      type="line">
-              </canvas>
-            </mat-card-content>
-          </mat-card>
-        </div>
-      }
-
       <mat-tab-group>
 
         <!-- History tab -->
@@ -517,6 +502,27 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
         </mat-tab>
         }
 
+        <!-- Rating History tab -->
+        <mat-tab label="Rating History">
+          <div class="tab-content rating-history-section">
+            @if (ratingHistory.length > 1) {
+              <mat-card>
+                <mat-card-content>
+                  <div class="chart-container">
+                    <canvas baseChart
+                            [data]="ratingChartData"
+                            [options]="ratingChartOptions"
+                            type="line">
+                    </canvas>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            } @else {
+              <p class="empty-state">No rating history yet — play more games to see your chart.</p>
+            }
+          </div>
+        </mat-tab>
+
       </mat-tab-group>
     }
   `,
@@ -558,6 +564,7 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
     .card-preview-loading { display: flex; justify-content: center; padding: 24px 0; }
     .card-preview-not-found { color: #999; font-size: 13px; font-style: italic; text-align: center; }
     .card-list-area { flex: 1; min-width: 0; }
+    .chart-container { position: relative; height: 200px; }
   `]
 })
 export class PlayerProfileComponent implements OnInit {
@@ -567,6 +574,7 @@ export class PlayerProfileComponent implements OnInit {
   ratingChartData: ChartData<'line'> = { datasets: [] };
   ratingChartOptions: ChartOptions<'line'> = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: { tooltip: { callbacks: {
       label: (ctx) => `Score: ${ctx.parsed.y?.toFixed(2) ?? ''}`
     }}}

@@ -38,8 +38,7 @@ test.describe('Player Profile — online', () => {
   });
 
   test('History tab IS visible', async ({ page }) => {
-    const tabs = page.getByRole('tab');
-    await expect(tabs.filter({ hasText: 'History' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'History', exact: true })).toBeVisible();
   });
 
   test('Trading tab IS visible', async ({ page }) => {
@@ -68,8 +67,7 @@ test.describe('Player Profile — offline (API 500)', () => {
   });
 
   test('History tab is NOT visible', async ({ page }) => {
-    const tabs = page.getByRole('tab');
-    await expect(tabs.filter({ hasText: 'History' })).not.toBeVisible();
+    await expect(page.getByRole('tab', { name: 'History', exact: true })).not.toBeVisible();
   });
 
   test('Trading tab is NOT visible', async ({ page }) => {
@@ -419,6 +417,7 @@ test.describe('Player Profile — Rating History: chart shown', () => {
     });
     await mockGetPlayerProfile(page, makePlayerProfile({ id: PLAYER_ID }));
     await page.goto(`/players/${PLAYER_ID}`);
+    await page.getByRole('tab', { name: 'Rating History' }).click();
   });
 
   test('rating-history-section is visible', async ({ page }) => {
@@ -434,16 +433,18 @@ test.describe('Player Profile — Rating History: hidden with < 2 points', () =>
   test.beforeEach(async ({ page }) => {
     await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await mockPlayerProfileSubApis(page, PLAYER_ID);
     await mockGetRatingHistory(page, PLAYER_ID, {
       playerId: PLAYER_ID,
       history: [makeRatingSnapshotDto()],
     });
     await mockGetPlayerProfile(page, makePlayerProfile({ id: PLAYER_ID }));
     await page.goto(`/players/${PLAYER_ID}`);
+    await page.getByRole('tab', { name: 'Rating History' }).click();
   });
 
-  test('rating-history-section is NOT present with 1 snapshot', async ({ page }) => {
-    await expect(page.locator('.rating-history-section')).not.toBeVisible();
+  test('canvas is NOT present with 1 snapshot', async ({ page }) => {
+    await expect(page.locator('.rating-history-section canvas')).not.toBeVisible();
   });
 });
 
@@ -451,12 +452,14 @@ test.describe('Player Profile — Rating History: hidden when empty', () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page, 'Player');
     await stubUnmatchedApi(page);
+    await mockPlayerProfileSubApis(page, PLAYER_ID);
     await mockGetRatingHistory(page, PLAYER_ID, { playerId: PLAYER_ID, history: [] });
     await mockGetPlayerProfile(page, makePlayerProfile({ id: PLAYER_ID }));
     await page.goto(`/players/${PLAYER_ID}`);
+    await page.getByRole('tab', { name: 'Rating History' }).click();
   });
 
-  test('rating-history-section is NOT present with empty history', async ({ page }) => {
-    await expect(page.locator('.rating-history-section')).not.toBeVisible();
+  test('canvas is NOT present with empty history', async ({ page }) => {
+    await expect(page.locator('.rating-history-section canvas')).not.toBeVisible();
   });
 });
