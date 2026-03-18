@@ -2,7 +2,7 @@ using TournamentOrganizer.Api.DTOs;
 
 namespace TournamentOrganizer.Api.Services.Interfaces;
 
-public enum BadgeTrigger { GameResultRecorded, EventCompleted, PlacementComplete }
+public enum BadgeTrigger { GameResultRecorded, EventCompleted, PlacementComplete, TournamentWinner }
 
 public interface IBadgeService
 {

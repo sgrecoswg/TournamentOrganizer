@@ -861,7 +861,23 @@ describe('PlayerProfileComponent — Badges', () => {
     return {
       id: PLAYER_ID, name: 'Alice', email: 'alice@test.com',
       mu: 25, sigma: 8.333, conservativeScore: 0,
-      isRanked: true, placementGamesLeft: 0, isActive: true,
+      isRanked: true, 
+      placementGamesLeft: 0,
+      isActive: true,
+      gameHistory: [],
+      eventRegistrations: [],
+      badges,
+    };
+  }
+  function makeBadge(overrides: Partial<PlayerBadgeDto> = {}): PlayerBadgeDto {
+    return { badgeKey: 'first_win', displayName: 'First Win', awardedAt: '2026-01-01T00:00:00Z', eventId: null, ...overrides };
+  }
+
+  function makeProfile(badges?: PlayerBadgeDto[]): PlayerProfile {
+    return {
+      id: PLAYER_ID, name: 'Alice', email: 'alice@test.com',
+      mu: 25, sigma: 8.333, conservativeScore: 0,
+      isRanked: false, placementGamesLeft: 5, isActive: true,
       gameHistory: [], eventRegistrations: [],
       badges,
     };
@@ -902,61 +918,54 @@ describe('PlayerProfileComponent — Badges', () => {
 
   afterEach(() => TestBed.resetTestingModule());
 
-  it('Achievements section is rendered when profile.badges is non-empty', async () => {
-    const badge: PlayerBadgeDto = { badgeKey: 'first_win', displayName: 'First Win', awardedAt: '2026-01-01T00:00:00Z', eventId: null };
-    await setup(makeProfileWithBadges([badge]));
+  it('renders Achievements section when profile.badges is non-empty', async () => {
+    const badge = makeBadge();
+    await setup(makeProfile([badge]));
     const fixture = TestBed.createComponent(PlayerProfileComponent);
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
     expect(el.textContent).toContain('Achievements');
   });
 
-  it('badge display name is shown', async () => {
-    const badge: PlayerBadgeDto = { badgeKey: 'first_win', displayName: 'First Win', awardedAt: '2026-01-01T00:00:00Z', eventId: null };
-    await setup(makeProfileWithBadges([badge]));
+  it('renders badge chip with display name', async () => {
+    const badge = makeBadge({ badgeKey: 'veteran', displayName: 'Veteran' });
+    await setup(makeProfile([badge]));
     const fixture = TestBed.createComponent(PlayerProfileComponent);
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.textContent).toContain('First Win');
-  });
-
-  it('Achievements section is absent when profile.badges is empty', async () => {
-    await setup(makeProfileWithBadges([]));
-    const fixture = TestBed.createComponent(PlayerProfileComponent);
-    fixture.detectChanges();
-    const el: HTMLElement = fixture.nativeElement;
-    expect(el.textContent).not.toContain('Achievements');
-  });
-
-  it('Achievements section is absent when profile.badges is undefined', async () => {
-    await setup(makeProfileWithBadges(undefined));
-    const fixture = TestBed.createComponent(PlayerProfileComponent);
-    fixture.detectChanges();
-    const el: HTMLElement = fixture.nativeElement;
-    expect(el.textContent).not.toContain('Achievements');
-  });
-
-  it('badgeIcon returns correct icon for known keys', async () => {
-    await setup(makeProfileWithBadges([]));
-    const fixture = TestBed.createComponent(PlayerProfileComponent);
-    const comp = fixture.componentInstance;
-    expect(comp.badgeIcon('first_win')).toBe('emoji_events');
-    expect(comp.badgeIcon('tournament_winner')).toBe('workspace_premium');
-    expect(comp.badgeIcon('unknown_key')).toBe('grade');
-  });
-
-  it('each badge chip shows the badge display name', async () => {
-    const badges: PlayerBadgeDto[] = [
-      { badgeKey: 'first_win',          displayName: 'First Win',           awardedAt: '2026-01-01T00:00:00Z', eventId: null },
-      { badgeKey: 'tournament_winner',  displayName: 'Tournament Champion', awardedAt: '2026-02-01T00:00:00Z', eventId: 1 },
-      { badgeKey: 'veteran',            displayName: 'Veteran',             awardedAt: '2026-03-01T00:00:00Z', eventId: null },
-    ];
-    await setup(makeProfileWithBadges(badges));
-    const fixture = TestBed.createComponent(PlayerProfileComponent);
-    fixture.detectChanges();
-    const el: HTMLElement = fixture.nativeElement;
-    expect(el.textContent).toContain('First Win');
-    expect(el.textContent).toContain('Tournament Champion');
     expect(el.textContent).toContain('Veteran');
+  });
+
+  it('Achievements section is absent when badges is empty array', async () => {
+    await setup(makeProfile([]));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).not.toContain('Achievements');
+  });
+
+  it('Achievements section is absent when badges is undefined', async () => {
+    await setup(makeProfile(undefined));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).not.toContain('Achievements');
+  });
+
+  it('each badge chip shows correct icon for known badge key', async () => {
+    const badge = makeBadge({ badgeKey: 'first_win', displayName: 'First Win' });
+    await setup(makeProfile([badge]));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.badgeIcon('first_win')).toBe('emoji_events');
+    expect(fixture.componentInstance.badgeIcon('veteran')).toBe('shield');
+    expect(fixture.componentInstance.badgeIcon('tournament_winner')).toBe('workspace_premium');
+  });
+
+  it('badgeIcon returns grade for unknown key', async () => {
+    await setup(makeProfile([]));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.badgeIcon('unknown_key')).toBe('grade');
   });
 });

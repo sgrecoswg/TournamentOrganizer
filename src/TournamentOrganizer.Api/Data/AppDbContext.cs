@@ -178,6 +178,16 @@ public class AppDbContext : DbContext
             new Theme { Id = 4, Name = "Ocean",   CssClass = "theme-ocean",   IsActive = true, CreatedOn = seedDate, CreatedBy = "seed", UpdatedOn = seedDate, UpdatedBy = "seed" }
         );
 
+        modelBuilder.Entity<PlayerBadge>(entity =>
+        {
+            entity.HasOne(pb => pb.Player)
+                .WithMany(p => p.Badges)
+                .HasForeignKey(pb => pb.PlayerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(pb => new { pb.PlayerId, pb.BadgeKey }).IsUnique();
+            entity.Property(pb => pb.BadgeKey).HasMaxLength(50).IsRequired();
+        });
+
         modelBuilder.Entity<EventTemplate>(entity =>
         {
             entity.Property(t => t.Name).HasMaxLength(200).IsRequired();

@@ -141,6 +141,18 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
                              aria-label="Seller Portal URL" />
                       <mat-hint>Optional. Used as the buy link on card previews. Use &#123;q&#125; as a placeholder for the card name.</mat-hint>
                     </mat-form-field>
+                    <div class="background-section">
+                      @if (store.backgroundImageUrl) {
+                        <img class="background-preview" [src]="store.backgroundImageUrl" alt="Page background">
+                      }
+                      <button mat-stroked-button (click)="bgInput.click()">
+                        <mat-icon>wallpaper</mat-icon>
+                        {{ store.backgroundImageUrl ? 'Change Background' : 'Upload Background' }}
+                      </button>
+                      <input #bgInput type="file" accept=".png,.jpg,.jpeg"
+                             style="display:none"
+                             (change)="onBackgroundSelected($event)">
+                    </div>
                   }
                 </div>
               </mat-card-content>
@@ -502,6 +514,8 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
     .template-card { max-width: 520px; }
     .template-desc { color: #666; font-size: 13px; margin: 4px 0 0; }
     .short-field { width: 160px; }
+    .background-section { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+    .background-preview { width: 100%; max-width: 480px; height: 120px; object-fit: cover; border-radius: 8px; }
   `]
 })
 export class StoreDetailComponent implements OnInit {
@@ -947,6 +961,30 @@ export class StoreDetailComponent implements OnInit {
       },
       error: () => {
         this.snackBar.open('Logo upload failed', 'Close', { duration: 3000 });
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  // ── Background ────────────────────────────────────────────────────────────
+
+  onBackgroundSelected(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    try {
+      if (this.store) {
+        this.store = { ...this.store, backgroundImageUrl: URL.createObjectURL(file) };
+        this.cdr.detectChanges();
+      }
+    } catch { /* preview unavailable in some environments */ }
+    this.apiService.uploadStoreBackground(this.storeId, file).subscribe({
+      next: dto => {
+        const bgUrl = dto.backgroundImageUrl ? `${dto.backgroundImageUrl}?t=${Date.now()}` : null;
+        if (this.store) this.store = { ...this.store, backgroundImageUrl: bgUrl };
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.snackBar.open('Background upload failed', 'Close', { duration: 3000 });
         this.cdr.detectChanges();
       }
     });

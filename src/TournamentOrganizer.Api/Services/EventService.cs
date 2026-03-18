@@ -604,6 +604,24 @@ public class EventService : IEventService
             var registeredPlayers = await _eventRepo.GetRegisteredPlayersAsync(eventId);
             foreach (var player in registeredPlayers)
                 await _badgeService.CheckAndAwardAsync(player.Id, BadgeTrigger.EventCompleted, eventId);
+            var registrations = await _eventRepo.GetRegistrationsWithPlayersAsync(eventId);
+            var activePlayers = registrations
+                .Where(r => !r.IsDropped && !r.IsDisqualified)
+                .ToList();
+
+            // Get standings to find the tournament winner
+            var completedStandings = await GetStandingsAsync(eventId);
+            var winnerId = completedStandings.OrderBy(s => s.Rank).FirstOrDefault()?.PlayerId;
+
+            foreach (var reg in activePlayers)
+            {
+                // Check undefeated_swiss and veteran for every participant
+                await _badgeService.CheckAndAwardAsync(reg.PlayerId, BadgeTrigger.EventCompleted, eventId);
+            }
+
+            // Award tournament_winner only to rank 1 player
+            if (winnerId.HasValue)
+                await _badgeService.CheckAndAwardAsync(winnerId.Value, BadgeTrigger.TournamentWinner, eventId);
         }
 
         var players = await _eventRepo.GetRegisteredPlayersAsync(eventId);

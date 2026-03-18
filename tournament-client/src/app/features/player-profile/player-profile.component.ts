@@ -25,7 +25,7 @@ import { ScryfallService } from '../../core/services/scryfall.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PlayerService } from '../../core/services/player.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
-import { PlayerProfile, WishlistEntryDto, TradeEntryDto, BulkUploadResultDto, SuggestedTradeDto, TradeCardDemandDto, CommanderStatDto, ScryfallCard, RatingSnapshotDto } from '../../core/models/api.models';
+import { PlayerProfile, PlayerBadgeDto, WishlistEntryDto, TradeEntryDto, BulkUploadResultDto, SuggestedTradeDto, TradeCardDemandDto, CommanderStatDto, ScryfallCard, RatingSnapshotDto } from '../../core/models/api.models';
 import { RatingBadgeComponent } from '../../shared/components/rating-badge.component';
 import { PlacementBadgeComponent } from '../../shared/components/placement-badge.component';
 
@@ -153,7 +153,7 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
         <div class="badges-section">
           <h3>Achievements</h3>
           <div class="badge-list">
-            @for (badge of profile!.badges!; track badge.badgeKey) {
+            @for (badge of profile.badges; track badge.badgeKey) {
               <div class="badge-chip" [matTooltip]="badge.displayName + ' — ' + (badge.awardedAt | date)">
                 <mat-icon>{{ badgeIcon(badge.badgeKey) }}</mat-icon>
                 <span>{{ badge.displayName }}</span>

@@ -9,11 +9,13 @@ public class PlayerService : IPlayerService
 {
     private readonly IPlayerRepository _playerRepo;
     private readonly IGameRepository _gameRepo;
+    private readonly IBadgeService _badgeService;
 
-    public PlayerService(IPlayerRepository playerRepo, IGameRepository gameRepo)
+    public PlayerService(IPlayerRepository playerRepo, IGameRepository gameRepo, IBadgeService badgeService)
     {
         _playerRepo = playerRepo;
         _gameRepo = gameRepo;
+        _badgeService = badgeService;
     }
 
     public async Task<PlayerDto> RegisterAsync(CreatePlayerDto dto)
@@ -57,6 +59,7 @@ public class PlayerService : IPlayerService
 
         var results = await _gameRepo.GetPlayerResultsAsync(id);
         var registrations = await _playerRepo.GetPlayerEventRegistrationsAsync(id);
+        var badges = await _badgeService.GetBadgesAsync(id);
 
         return new PlayerProfileDto(
             player.Id,
@@ -90,7 +93,8 @@ public class PlayerService : IPlayerService
                 er.Commanders,
                 er.Event.StoreEvent?.Store.StoreName
             )).ToList(),
-            player.AvatarUrl
+            player.AvatarUrl,
+            badges
         );
     }
 

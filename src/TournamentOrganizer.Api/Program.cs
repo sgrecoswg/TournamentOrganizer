@@ -165,6 +165,14 @@ app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
     RequestPath  = "/avatars"
 });
 
+var backgroundsPath = Path.Combine(wwwrootPath, "backgrounds");
+Directory.CreateDirectory(backgroundsPath);
+app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(backgroundsPath),
+    RequestPath  = "/backgrounds"
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 

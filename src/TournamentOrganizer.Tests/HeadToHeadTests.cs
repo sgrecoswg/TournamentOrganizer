@@ -52,6 +52,12 @@ public class HeadToHeadTests
         public Task<List<EventRegistration>> GetPlayerEventRegistrationsAsync(int playerId) => throw new NotImplementedException();
     }
 
+    private sealed class StubBadgeService : Api.Services.Interfaces.IBadgeService
+    {
+        public Task CheckAndAwardAsync(int playerId, Api.Services.Interfaces.BadgeTrigger trigger, int? eventId = null) => Task.CompletedTask;
+        public Task<List<Api.DTOs.PlayerBadgeDto>> GetBadgesAsync(int playerId) => Task.FromResult(new List<Api.DTOs.PlayerBadgeDto>());
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -81,7 +87,7 @@ public class HeadToHeadTests
         var game = MakeGame(1, (1, "Alice", 1), (2, "Bob", 2), (3, "Charlie", 3), (4, "Dave", 4));
         var repo = new FakeGameRepository(game.Results.ToList());
         var playerRepo = new FakePlayerRepository([new Player { Id = 1, Name = "Alice" }]);
-        var svc = new PlayerService(playerRepo, repo);
+        var svc = new PlayerService(playerRepo, repo, new StubBadgeService());
 
         var result = await svc.GetHeadToHeadAsync(1);
 
@@ -102,7 +108,7 @@ public class HeadToHeadTests
         var allResults = g1.Results.Concat(g2.Results).ToList();
         var repo = new FakeGameRepository(allResults);
         var playerRepo = new FakePlayerRepository([new Player { Id = 1, Name = "Alice" }]);
-        var svc = new PlayerService(playerRepo, repo);
+        var svc = new PlayerService(playerRepo, repo, new StubBadgeService());
 
         var result = await svc.GetHeadToHeadAsync(1);
 
@@ -118,7 +124,7 @@ public class HeadToHeadTests
         // Alice has never played against anyone
         var repo = new FakeGameRepository([]);
         var playerRepo = new FakePlayerRepository([new Player { Id = 1, Name = "Alice" }]);
-        var svc = new PlayerService(playerRepo, repo);
+        var svc = new PlayerService(playerRepo, repo, new StubBadgeService());
 
         var result = await svc.GetHeadToHeadAsync(1);
 
@@ -131,7 +137,7 @@ public class HeadToHeadTests
         var game = MakeGame(1, (1, "Alice", 1), (2, "Bob", 2), (3, "Charlie", 3));
         var repo = new FakeGameRepository(game.Results.ToList());
         var playerRepo = new FakePlayerRepository([new Player { Id = 1, Name = "Alice" }]);
-        var svc = new PlayerService(playerRepo, repo);
+        var svc = new PlayerService(playerRepo, repo, new StubBadgeService());
 
         var result = await svc.GetHeadToHeadAsync(1);
 
@@ -145,7 +151,7 @@ public class HeadToHeadTests
     {
         var repo = new FakeGameRepository([]);
         var playerRepo = new FakePlayerRepository([]);
-        var svc = new PlayerService(playerRepo, repo);
+        var svc = new PlayerService(playerRepo, repo, new StubBadgeService());
 
         var result = await svc.GetHeadToHeadAsync(999);
 
@@ -161,7 +167,7 @@ public class HeadToHeadTests
         var allResults = g1.Results.Concat(g2.Results).ToList();
         var repo = new FakeGameRepository(allResults);
         var playerRepo = new FakePlayerRepository([new Player { Id = 1, Name = "Alice" }]);
-        var svc = new PlayerService(playerRepo, repo);
+        var svc = new PlayerService(playerRepo, repo, new StubBadgeService());
 
         var result = await svc.GetHeadToHeadAsync(1);
 

@@ -1,18 +1,17 @@
 Pick a "Ready" item from the GitHub project board and implement it end-to-end.
 
-## Current project state
-- Ready items: !`gh project item-list 2 --owner sgrecoswg --format json | jq -r '.items[] | select(.status == "Ready") | "#" + (.content.number | tostring) + " | " + .title'`
-- Current branch: !`git branch --show-current`
-- Today's date: !`date +%Y-%m-%d`
-
 ## Step 1 — Pick the issue
 
 If `$ARGUMENTS` contains a GitHub issue number (e.g. `22`), use that issue.
 
-Otherwise:
-- Print the Ready items list from the header above.
+Otherwise, fetch the Ready items from the project board:
+```bash
+gh project item-list 2 --owner sgrecoswg --format json \
+  | jq -r '.items[] | select(.status == "Ready") | "#" + (.content.number | tostring) + " | " + .title'
+```
+
 - If there is exactly one Ready item, use it automatically and tell the user.
-- If there are multiple, ask the user which issue number they want to work on, then stop and wait.
+- If there are multiple, print the list, ask the user which issue number to work on, then stop and wait.
 
 ## Step 2 — Load the issue
 
