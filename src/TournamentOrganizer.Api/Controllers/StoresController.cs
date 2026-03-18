@@ -12,7 +12,9 @@ namespace TournamentOrganizer.Api.Controllers;
 public class StoresController : ControllerBase
 {
     private static readonly HashSet<string> _allowedExtensions = [".png", ".jpg", ".jpeg", ".gif"];
+    private static readonly HashSet<string> _allowedBackgroundExtensions = [".png", ".jpg", ".jpeg"];
     private const long MaxFileSizeBytes = 2 * 1024 * 1024; // 2 MB
+    private const long MaxBackgroundFileSizeBytes = 5 * 1024 * 1024; // 5 MB
 
     private readonly IStoresService _service;
     private readonly IWebHostEnvironment _env;
@@ -91,6 +93,37 @@ public class StoresController : ControllerBase
         return Ok(updated);
     }
 
+    [HttpPost("{id}/background")]
+    [Authorize(Policy = "StoreEmployee")]
+    public async Task<ActionResult<StoreDto>> UploadBackground(int id, IFormFile background)
+    {
+        // Ownership check: Admin can update any store; StoreEmployee/Manager can only update their own.
+        if (!User.HasClaim("role", "Administrator"))
+        {
+            var jwtStoreId = int.TryParse(User.FindFirstValue("storeId"), out var s) ? s : 0;
+            if (jwtStoreId != id) return Forbid();
+        }
+
+        var ext = Path.GetExtension(background.FileName).ToLowerInvariant();
+        if (!_allowedBackgroundExtensions.Contains(ext))
+            return BadRequest("Invalid file type. Allowed: .png, .jpg, .jpeg");
+
+        if (background.Length > MaxBackgroundFileSizeBytes)
+            return BadRequest("File exceeds 5 MB limit.");
+
+        var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
+        var bgDir = Path.Combine(webRoot, "backgrounds");
+        Directory.CreateDirectory(bgDir);
+
+        var filePath = Path.Combine(bgDir, $"{id}{ext}");
+        await using var stream = new FileStream(filePath, FileMode.Create);
+        await background.CopyToAsync(stream);
+
+        var backgroundUrl = $"/backgrounds/{id}{ext}";
+        var updated = await _service.UpdateBackgroundImageUrlAsync(id, backgroundUrl);
+        return Ok(updated);
+    }
+
     [HttpPost("{id}/discord/test")]
     [Authorize(Policy = "StoreManager")]
     public async Task<IActionResult> TestDiscordWebhook(int id)
@@ -114,5 +147,13 @@ public class StoresController : ControllerBase
             if (jwtStoreId != id) return Forbid();
         }
         return Ok(await _commanderMetaService.GetStoreMetaAsync(id, period));
+    }
+
+    [HttpGet("public/{slug}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<StorePublicDto>> GetPublicPage(string slug)
+    {
+        var page = await _service.GetPublicPageAsync(slug);
+        return page == null ? NotFound() : Ok(page);
     }
 }

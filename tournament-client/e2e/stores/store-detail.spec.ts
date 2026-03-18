@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../helpers/auth';
-import { mockGetStore, mockGetEmployees, mockGetThemes, mockUploadStoreLogo, mockTestDiscordWebhook, mockGetEventTemplates, mockCreateEventTemplate, mockDeleteEventTemplate, makeEventTemplateDto, stubUnmatchedApi, makeStoreDetailDto, makeStoreDto, makeThemeDto } from '../helpers/api-mock';
+import { mockGetStore, mockGetEmployees, mockGetThemes, mockUploadStoreLogo, mockUploadStoreBackground, mockTestDiscordWebhook, mockGetEventTemplates, mockCreateEventTemplate, mockDeleteEventTemplate, makeEventTemplateDto, stubUnmatchedApi, makeStoreDetailDto, makeStoreDto, makeThemeDto } from '../helpers/api-mock';
 
 // ─── Store Detail (/stores/:id) ───────────────────────────────────────────────
 //
@@ -575,6 +575,37 @@ test.describe('Store Detail — Event Templates: hidden for Player', () => {
 
   test('Templates tab is NOT visible for Player', async ({ page }) => {
     await expect(page.getByRole('tab', { name: 'Templates' })).not.toBeVisible();
+  });
+});
+
+// ── Upload Background ──────────────────────────────────────────────────────────
+
+test.describe('Store Detail — Upload Background (StoreManager)', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, STORE);
+    await mockGetEmployees(page, 1, EMPLOYEES);
+    await page.goto('/stores/1');
+  });
+
+  test('"Upload Background" button is visible for StoreManager', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /Background/ })).toBeVisible();
+  });
+});
+
+test.describe('Store Detail — Upload Background (Player)', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player');
+    await stubUnmatchedApi(page);
+    await mockGetStore(page, STORE);
+    await page.goto('/stores/1');
+  });
+
+  test('"Upload Background" button is NOT visible for Player role', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /Upload Background/ })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: /Change Background/ })).not.toBeVisible();
   });
 });
 

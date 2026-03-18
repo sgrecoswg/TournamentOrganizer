@@ -387,6 +387,36 @@ namespace TournamentOrganizer.Api.Migrations
                     b.ToTable("Players");
                 });
 
+            modelBuilder.Entity("TournamentOrganizer.Api.Models.PlayerBadge", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AwardedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("BadgeKey")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("EventId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PlayerId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayerId", "BadgeKey")
+                        .IsUnique();
+
+                    b.ToTable("PlayerBadges");
+                });
+
             modelBuilder.Entity("TournamentOrganizer.Api.Models.Pod", b =>
                 {
                     b.Property<int>("Id")
@@ -468,6 +498,9 @@ namespace TournamentOrganizer.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("BackgroundImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -484,8 +517,16 @@ namespace TournamentOrganizer.Api.Migrations
                     b.Property<int?>("LicenseId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Location")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
                     b.Property<string>("LogoUrl")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Slug")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
 
                     b.Property<string>("StoreName")
                         .IsRequired()
@@ -502,6 +543,10 @@ namespace TournamentOrganizer.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("LicenseId");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasFilter("[Slug] IS NOT NULL");
 
                     b.ToTable("Stores");
                 });
@@ -809,6 +854,17 @@ namespace TournamentOrganizer.Api.Migrations
                     b.Navigation("Store");
                 });
 
+            modelBuilder.Entity("TournamentOrganizer.Api.Models.PlayerBadge", b =>
+                {
+                    b.HasOne("TournamentOrganizer.Api.Models.Player", "Player")
+                        .WithMany("Badges")
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Player");
+                });
+
             modelBuilder.Entity("TournamentOrganizer.Api.Models.Pod", b =>
                 {
                     b.HasOne("TournamentOrganizer.Api.Models.Round", "Round")
@@ -935,6 +991,8 @@ namespace TournamentOrganizer.Api.Migrations
 
             modelBuilder.Entity("TournamentOrganizer.Api.Models.Player", b =>
                 {
+                    b.Navigation("Badges");
+
                     b.Navigation("EventRegistrations");
 
                     b.Navigation("GameResults");

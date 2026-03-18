@@ -24,6 +24,7 @@ public class AppDbContext : DbContext
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<Theme> Themes => Set<Theme>();
     public DbSet<EventTemplate> EventTemplates => Set<EventTemplate>();
+    public DbSet<PlayerBadge> PlayerBadges => Set<PlayerBadge>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -135,6 +136,9 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Store>(entity =>
         {
             entity.Property(s => s.StoreName).HasMaxLength(200).IsRequired();
+            entity.Property(s => s.Slug).HasMaxLength(120);
+            entity.Property(s => s.Location).HasMaxLength(300);
+            entity.HasIndex(s => s.Slug).IsUnique().HasFilter("[Slug] IS NOT NULL");
             entity.HasOne(s => s.License)
                 .WithMany()
                 .HasForeignKey(s => s.LicenseId)
@@ -174,6 +178,16 @@ public class AppDbContext : DbContext
             new Theme { Id = 4, Name = "Ocean",   CssClass = "theme-ocean",   IsActive = true, CreatedOn = seedDate, CreatedBy = "seed", UpdatedOn = seedDate, UpdatedBy = "seed" }
         );
 
+        modelBuilder.Entity<PlayerBadge>(entity =>
+        {
+            entity.HasOne(pb => pb.Player)
+                .WithMany(p => p.Badges)
+                .HasForeignKey(pb => pb.PlayerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(pb => new { pb.PlayerId, pb.BadgeKey }).IsUnique();
+            entity.Property(pb => pb.BadgeKey).HasMaxLength(50).IsRequired();
+        });
+
         modelBuilder.Entity<EventTemplate>(entity =>
         {
             entity.Property(t => t.Name).HasMaxLength(200).IsRequired();
@@ -185,6 +199,15 @@ public class AppDbContext : DbContext
                 .WithMany(s => s.EventTemplates)
                 .HasForeignKey(t => t.StoreId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PlayerBadge>(entity =>
+        {
+            entity.HasOne(b => b.Player)
+                .WithMany(p => p.Badges)
+                .HasForeignKey(b => b.PlayerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(b => b.BadgeKey).HasMaxLength(50).IsRequired();
         });
 
         modelBuilder.Entity<StoreEvent>(entity =>

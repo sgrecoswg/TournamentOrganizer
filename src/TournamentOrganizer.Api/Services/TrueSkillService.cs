@@ -8,11 +8,13 @@ public class TrueSkillService : ITrueSkillService
 {
     private readonly IPlayerRepository _playerRepo;
     private readonly IDiscordWebhookService _discordService;
+    private readonly IBadgeService _badgeService;
 
-    public TrueSkillService(IPlayerRepository playerRepo, IDiscordWebhookService discordService)
+    public TrueSkillService(IPlayerRepository playerRepo, IDiscordWebhookService discordService, IBadgeService badgeService)
     {
         _playerRepo = playerRepo;
         _discordService = discordService;
+        _badgeService = badgeService;
     }
 
     public async Task UpdateRatingsAsync(Game game)
@@ -50,8 +52,24 @@ public class TrueSkillService : ITrueSkillService
 
         await _playerRepo.UpdateRangeAsync(playersToUpdate);
 
+        // Award badges for each player
+        for (int i = 0; i < results.Count; i++)
+        {
+            var player = results[i].Player;
+            await _badgeService.CheckAndAwardAsync(player.Id, BadgeTrigger.GameResultRecorded, eventId);
+        }
+
         foreach (var (playerId, evtId) in newlyRanked)
+        {
             await _discordService.PostPlayerRankedAsync(playerId, evtId);
+            await _badgeService.CheckAndAwardAsync(playerId, BadgeTrigger.PlacementComplete, evtId);
+        }
+
+        // Check first_win and centurion for all players after rating update
+        foreach (var result in results)
+        {
+            await _badgeService.CheckAndAwardAsync(result.Player.Id, BadgeTrigger.GameResultRecorded, eventId);
+        }
     }
 
     public async Task UpdateRatingsFromEventStandingsAsync(List<(int PlayerId, int Rank, int GamesPlayed)> rankings)

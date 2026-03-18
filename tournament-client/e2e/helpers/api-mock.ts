@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, PairingsDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, StoreDto, StoreDetailDto, ThemeDto } from '../../src/app/core/models/api.models';
+import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, PairingsDto, PlayerBadgeDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, StoreDto, StoreDetailDto, StoreEventSummaryDto, StorePublicDto, StorePublicTopPlayerDto, ThemeDto } from '../../src/app/core/models/api.models';
 
 /** Intercept GET /api/events and return the given list. */
 export async function mockGetEvents(page: Page, events: EventDto[]): Promise<void> {
@@ -176,8 +176,30 @@ export function makePlayerProfile(overrides: Partial<PlayerProfile> = {}): Playe
     isActive:           true,
     gameHistory:        [],
     eventRegistrations: [],
+    badges:             [],
     ...overrides,
   };
+}
+
+export function makePlayerBadgeDto(overrides: Partial<PlayerBadgeDto> = {}): PlayerBadgeDto {
+  return {
+    badgeKey:    'first_win',
+    displayName: 'First Win',
+    awardedAt:   '2026-01-01T00:00:00Z',
+    eventId:     null,
+    ...overrides,
+  };
+}
+
+/** Intercept GET /api/players/:id/badges and return the given list. */
+export async function mockGetPlayerBadges(page: Page, playerId: number, badges: PlayerBadgeDto[]): Promise<void> {
+  await page.route(`**/api/players/${playerId}/badges`, route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ json: badges });
+    } else {
+      route.continue();
+    }
+  });
 }
 
 /** Intercept GET /api/leaderboard and return the given list. */
@@ -487,6 +509,76 @@ export function makeEventTemplateDto(overrides: Partial<EventTemplateDto> = {}):
     format:         'Commander',
     maxPlayers:     16,
     numberOfRounds: 4,
+    ...overrides,
+  };
+}
+
+// ── Store Public Page ──────────────────────────────────────────────────────────
+
+/** Intercept GET /api/stores/public/:slug and return the given page dto. */
+export async function mockGetStorePublicPage(page: Page, slug: string, response: StorePublicDto): Promise<void> {
+  await page.route(`**/api/stores/public/${slug}`, route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+/** Mock GET /api/stores/public/:slug to return a 404. */
+export async function mockGetStorePublicPageNotFound(page: Page, slug: string): Promise<void> {
+  await page.route(`**/api/stores/public/${slug}`, route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ status: 404, json: { error: 'Not found' } });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export function makeStorePublicDto(overrides: Partial<StorePublicDto> = {}): StorePublicDto {
+  return {
+    id:                 1,
+    storeName:          'Top Deck Games',
+    slug:               'top-deck-games',
+    location:           null,
+    logoUrl:            null,
+    backgroundImageUrl: null,
+    upcomingEvents:     [],
+    recentEvents:       [],
+    topPlayers:         [],
+    ...overrides,
+  };
+}
+
+/** Intercept POST /api/stores/:id/background and return the given store dto. */
+export async function mockUploadStoreBackground(page: Page, storeId: number, response: StoreDto): Promise<void> {
+  await page.route(`**/api/stores/${storeId}/background`, route => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export function makeStoreEventSummaryDto(overrides: Partial<StoreEventSummaryDto> = {}): StoreEventSummaryDto {
+  return {
+    eventId:   1,
+    eventName: 'Friday Night Commander',
+    date:      '2026-04-01T00:00:00Z',
+    status:    'Registration',
+    ...overrides,
+  };
+}
+
+export function makeStorePublicTopPlayerDto(overrides: Partial<StorePublicTopPlayerDto> = {}): StorePublicTopPlayerDto {
+  return {
+    playerId:          1,
+    name:              'Alice',
+    conservativeScore: 18.5,
+    avatarUrl:         null,
     ...overrides,
   };
 }

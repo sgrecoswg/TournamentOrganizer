@@ -11,7 +11,7 @@ import { PlayerService } from '../../core/services/player.service';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
-import { PlayerProfile, PlayerDto, CommanderStatDto, ScryfallCard, RatingSnapshotDto, RatingHistoryDto } from '../../core/models/api.models';
+import { PlayerProfile, PlayerDto, CommanderStatDto, ScryfallCard, RatingSnapshotDto, RatingHistoryDto, PlayerBadgeDto } from '../../core/models/api.models';
 
 describe('PlayerProfileComponent (smoke)', () => {
   const profileStub: PlayerProfile = {
@@ -849,5 +849,123 @@ describe('PlayerProfileComponent — Rating History', () => {
     const comp = fixture.componentInstance;
     const dataset = comp.ratingChartData.datasets[0];
     expect(dataset.data).toEqual([3.5, 7.2]);
+  });
+});
+
+// ── Badges ────────────────────────────────────────────────────────────────────
+
+describe('PlayerProfileComponent — Badges', () => {
+  const PLAYER_ID = 1;
+
+  function makeProfileWithBadges(badges?: PlayerBadgeDto[]): PlayerProfile {
+    return {
+      id: PLAYER_ID, name: 'Alice', email: 'alice@test.com',
+      mu: 25, sigma: 8.333, conservativeScore: 0,
+      isRanked: true, 
+      placementGamesLeft: 0,
+      isActive: true,
+      gameHistory: [],
+      eventRegistrations: [],
+      badges,
+    };
+  }
+  function makeBadge(overrides: Partial<PlayerBadgeDto> = {}): PlayerBadgeDto {
+    return { badgeKey: 'first_win', displayName: 'First Win', awardedAt: '2026-01-01T00:00:00Z', eventId: null, ...overrides };
+  }
+
+  function makeProfile(badges?: PlayerBadgeDto[]): PlayerProfile {
+    return {
+      id: PLAYER_ID, name: 'Alice', email: 'alice@test.com',
+      mu: 25, sigma: 8.333, conservativeScore: 0,
+      isRanked: false, placementGamesLeft: 5, isActive: true,
+      gameHistory: [], eventRegistrations: [],
+      badges,
+    };
+  }
+
+  async function setup(profile: PlayerProfile) {
+    const mockPlayerService = {
+      getProfile:   jest.fn().mockReturnValue(of(profile)),
+      updatePlayer: jest.fn().mockReturnValue(of(profile)),
+    };
+    const mockApi = {
+      getWishlist:        jest.fn().mockReturnValue(of([])),
+      getWishlistSupply:  jest.fn().mockReturnValue(of([])),
+      getTradeList:       jest.fn().mockReturnValue(of([])),
+      getSuggestedTrades: jest.fn().mockReturnValue(of([])),
+      getTradeDemand:     jest.fn().mockReturnValue(of([])),
+      getCommanderStats:  jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, commanders: [] })),
+      getRatingHistory:   jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, history: [] })),
+    };
+    const mockCtx  = { players: { getById: jest.fn().mockReturnValue(null), getAll: jest.fn().mockReturnValue([]) } };
+    const mockAuth = { currentUser: null };
+
+    await TestBed.configureTestingModule({
+      imports: [PlayerProfileComponent],
+      providers: [
+        provideRouter([]),
+        provideAnimationsAsync(),
+        { provide: ActivatedRoute,      useValue: { snapshot: { paramMap: { get: () => String(PLAYER_ID) } } } },
+        { provide: PlayerService,       useValue: mockPlayerService },
+        { provide: ApiService,          useValue: mockApi },
+        { provide: LocalStorageContext, useValue: mockCtx },
+        { provide: AuthService,         useValue: mockAuth },
+        { provide: MatDialog,           useValue: { open: jest.fn().mockReturnValue({ afterClosed: () => of(false) }) } },
+        { provide: MatSnackBar,         useValue: { open: jest.fn() } },
+      ],
+    }).compileComponents();
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('renders Achievements section when profile.badges is non-empty', async () => {
+    const badge = makeBadge();
+    await setup(makeProfile([badge]));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('Achievements');
+  });
+
+  it('renders badge chip with display name', async () => {
+    const badge = makeBadge({ badgeKey: 'veteran', displayName: 'Veteran' });
+    await setup(makeProfile([badge]));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('Veteran');
+  });
+
+  it('Achievements section is absent when badges is empty array', async () => {
+    await setup(makeProfile([]));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).not.toContain('Achievements');
+  });
+
+  it('Achievements section is absent when badges is undefined', async () => {
+    await setup(makeProfile(undefined));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).not.toContain('Achievements');
+  });
+
+  it('each badge chip shows correct icon for known badge key', async () => {
+    const badge = makeBadge({ badgeKey: 'first_win', displayName: 'First Win' });
+    await setup(makeProfile([badge]));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.badgeIcon('first_win')).toBe('emoji_events');
+    expect(fixture.componentInstance.badgeIcon('veteran')).toBe('shield');
+    expect(fixture.componentInstance.badgeIcon('tournament_winner')).toBe('workspace_premium');
+  });
+
+  it('badgeIcon returns grade for unknown key', async () => {
+    await setup(makeProfile([]));
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.badgeIcon('unknown_key')).toBe('grade');
   });
 });

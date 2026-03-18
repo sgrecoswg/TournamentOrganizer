@@ -14,6 +14,7 @@ import {
   LicenseDto, CreateLicenseDto, UpdateLicenseDto,
   BulkRegisterConfirmDto, BulkRegisterResultDto,
   EventTemplateDto, CreateEventTemplateDto,
+  StorePublicDto,
 } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -239,6 +240,12 @@ export class ApiService {
     return this.http.post<StoreDto>(`${this.base}/stores/${storeId}/logo`, form);
   }
 
+  uploadStoreBackground(storeId: number, file: File): Observable<StoreDto> {
+    const fd = new FormData();
+    fd.append('background', file);
+    return this.http.post<StoreDto>(`${this.base}/stores/${storeId}/background`, fd);
+  }
+
   getSuggestedTrades(playerId: number): Observable<SuggestedTradeDto[]> {
     return this.http.get<SuggestedTradeDto[]>(`${this.base}/players/${playerId}/trades/suggestions`);
   }
@@ -284,6 +291,10 @@ export class ApiService {
 
   getCommanderMeta(storeId: number, period: string = '30d'): Observable<CommanderMetaReportDto> {
     return this.http.get<CommanderMetaReportDto>(`${this.base}/stores/${storeId}/meta`, { params: { period } });
+  }
+
+  getStorePublicPage(slug: string): Observable<StorePublicDto> {
+    return this.http.get<StorePublicDto>(`${this.base}/stores/public/${slug}`);
   }
 
   bulkRegisterConfirm(eventId: number, dto: BulkRegisterConfirmDto): Observable<BulkRegisterResultDto> {

@@ -19,6 +19,8 @@ public class DiscordWebhookServiceTests
         public Task<Store?> GetByIdWithEventsAsync(int id) => Task.FromResult(StoreToReturn);
         public Task<Store> AddAsync(Store s) => Task.FromResult(s);
         public Task UpdateAsync(Store s) => Task.CompletedTask;
+        public Task<Store?> GetBySlugAsync(string slug) => throw new NotImplementedException();
+        public Task<bool> SlugExistsAsync(string slug, int? excludeStoreId = null) => throw new NotImplementedException();
     }
 
     private sealed class FakeStoreEventRepository : IStoreEventRepository

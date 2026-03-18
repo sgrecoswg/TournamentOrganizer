@@ -147,6 +147,12 @@ public class StoreEventTests
         public Task PostTestMessageAsync(int storeId) => Task.CompletedTask;
     }
 
+    private sealed class StubBadgeService : IBadgeService
+    {
+        public Task CheckAndAwardAsync(int playerId, BadgeTrigger trigger, int? eventId = null) => Task.CompletedTask;
+        public Task<List<PlayerBadgeDto>> GetBadgesAsync(int playerId) => Task.FromResult(new List<PlayerBadgeDto>());
+    }
+
     // ── Fake StoreRepository for StoresService tests ─────────────────────
 
     private sealed class FakeStoreRepository : IStoreRepository
@@ -161,6 +167,8 @@ public class StoreEventTests
             Task.FromResult(_stores.FirstOrDefault(s => s.Id == id));
         public Task<Store> AddAsync(Store store) { _stores.Add(store); return Task.FromResult(store); }
         public Task UpdateAsync(Store store) => Task.CompletedTask;
+        public Task<Store?> GetBySlugAsync(string slug) => throw new NotImplementedException();
+        public Task<bool> SlugExistsAsync(string slug, int? excludeStoreId = null) => throw new NotImplementedException();
     }
 
     private sealed class StubStoreSettingsRepository : IStoreSettingsRepository
@@ -182,7 +190,8 @@ public class StoreEventTests
             new StubPodService(),
             new StubTrueSkillService(),
             storeEventRepo ?? new FakeStoreEventRepository(),
-            new StubDiscordWebhookService());
+            new StubDiscordWebhookService(),
+            new StubBadgeService());
 
     // ── Tests ─────────────────────────────────────────────────────────────
 

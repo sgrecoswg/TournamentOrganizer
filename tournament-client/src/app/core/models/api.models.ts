@@ -55,6 +55,14 @@ export interface PlayerProfile {
   gameHistory: PlayerGameHistory[];
   eventRegistrations: PlayerEventRegistration[];
   avatarUrl?: string | null;
+  badges?: PlayerBadgeDto[];
+}
+
+export interface PlayerBadgeDto {
+  badgeKey: string;
+  displayName: string;
+  awardedAt: string;
+  eventId?: number | null;
 }
 
 export interface PlayerGameHistory {
@@ -243,11 +251,21 @@ export interface ThemeDto {
 }
 
 // Stores
+export interface StoreEventSummaryDto {
+  eventId: number;
+  eventName: string;
+  date: string;
+  status: string;
+}
+
 export interface StoreDto {
   id: number;
   storeName: string;
   isActive: boolean;
   logoUrl?: string | null;
+  slug?: string | null;
+  location?: string | null;
+  backgroundImageUrl?: string | null;
 }
 
 export interface StoreDetailDto {
@@ -259,8 +277,29 @@ export interface StoreDetailDto {
   themeId?: number | null;
   themeCssClass?: string | null;
   logoUrl?: string | null;
+  backgroundImageUrl?: string | null;
   hasDiscordWebhook?: boolean;
   sellerPortalUrl?: string | null;
+  slug?: string | null;
+}
+
+export interface StorePublicTopPlayerDto {
+  playerId: number;
+  name: string;
+  conservativeScore: number;
+  avatarUrl?: string | null;
+}
+
+export interface StorePublicDto {
+  id: number;
+  storeName: string;
+  slug?: string | null;
+  location?: string | null;
+  logoUrl?: string | null;
+  backgroundImageUrl?: string | null;
+  upcomingEvents: StoreEventSummaryDto[];
+  recentEvents: StoreEventSummaryDto[];
+  topPlayers: StorePublicTopPlayerDto[];
 }
 
 export interface CreateStoreDto {

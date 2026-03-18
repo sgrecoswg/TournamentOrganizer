@@ -57,8 +57,14 @@ public class CommanderStatsTests
         public Task<List<GameResult>> GetPlayerGamesForRatingReplayAsync(int pid) => Task.FromResult(new List<GameResult>());
     }
 
+    private sealed class StubBadgeService : Api.Services.Interfaces.IBadgeService
+    {
+        public Task CheckAndAwardAsync(int playerId, Api.Services.Interfaces.BadgeTrigger trigger, int? eventId = null) => Task.CompletedTask;
+        public Task<List<Api.DTOs.PlayerBadgeDto>> GetBadgesAsync(int playerId) => Task.FromResult(new List<Api.DTOs.PlayerBadgeDto>());
+    }
+
     private static PlayerService BuildService(FakePlayerRepository playerRepo, FakeGameRepository gameRepo) =>
-        new(playerRepo, gameRepo);
+        new(playerRepo, gameRepo, new StubBadgeService());
 
     private static Player MakePlayer(int id) =>
         new() { Id = id, Name = $"Player{id}", Mu = 25, Sigma = 8.333 };

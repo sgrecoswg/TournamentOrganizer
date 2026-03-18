@@ -147,6 +147,12 @@ public class EventCheckInTests
         public Task PostTestMessageAsync(int storeId) => Task.CompletedTask;
     }
 
+    private sealed class StubBadgeService : IBadgeService
+    {
+        public Task CheckAndAwardAsync(int playerId, BadgeTrigger trigger, int? eventId = null) => Task.CompletedTask;
+        public Task<List<PlayerBadgeDto>> GetBadgesAsync(int playerId) => Task.FromResult(new List<PlayerBadgeDto>());
+    }
+
     private sealed class StubStoreEventRepository : IStoreEventRepository
     {
         public Task AddAsync(StoreEvent se) => Task.CompletedTask;
@@ -186,7 +192,8 @@ public class EventCheckInTests
             podService ?? new CapturingPodService(),
             new StubTrueSkillService(),
             new StubStoreEventRepository(),
-            new StubDiscordWebhookService());
+            new StubDiscordWebhookService(),
+            new StubBadgeService());
     }
 
     // ── SetCheckInAsync tests ─────────────────────────────────────────────

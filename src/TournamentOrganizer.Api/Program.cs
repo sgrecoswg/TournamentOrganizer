@@ -74,6 +74,7 @@ builder.Services.AddScoped<IStoreEventRepository, StoreEventRepository>();
 builder.Services.AddScoped<ILicenseRepository, LicenseRepository>();
 builder.Services.AddScoped<IThemeRepository, ThemeRepository>();
 builder.Services.AddScoped<IEventTemplateRepository, EventTemplateRepository>();
+builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
 
 // Services
 builder.Services.AddScoped<ITrueSkillService, TrueSkillService>();
@@ -90,6 +91,7 @@ builder.Services.AddScoped<IDiscordWebhookService, DiscordWebhookService>();
 builder.Services.AddScoped<IEventTemplateService, EventTemplateService>();
 builder.Services.AddScoped<IAppUserRepository, AppUserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IBadgeService, BadgeService>();
 
 // Card price (Scryfall) — typed HttpClient with 1h in-memory cache
 builder.Services.AddMemoryCache();
@@ -162,6 +164,14 @@ app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(avatarsPath),
     RequestPath  = "/avatars"
+});
+
+var backgroundsPath = Path.Combine(wwwrootPath, "backgrounds");
+Directory.CreateDirectory(backgroundsPath);
+app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(backgroundsPath),
+    RequestPath  = "/backgrounds"
 });
 
 app.UseAuthentication();

@@ -94,6 +94,12 @@ public class EventPairingsTests
         public Task PostTestMessageAsync(int storeId) => Task.CompletedTask;
     }
 
+    private sealed class StubBadgeService : IBadgeService
+    {
+        public Task CheckAndAwardAsync(int playerId, BadgeTrigger trigger, int? eventId = null) => Task.CompletedTask;
+        public Task<List<PlayerBadgeDto>> GetBadgesAsync(int playerId) => Task.FromResult(new List<PlayerBadgeDto>());
+    }
+
     private sealed class StubStoreEventRepository : IStoreEventRepository
     {
         public Task AddAsync(StoreEvent se) => Task.CompletedTask;
@@ -110,7 +116,7 @@ public class EventPairingsTests
 
     private static EventService BuildService(FakeEventRepository eventRepo) =>
         new(eventRepo, new StubPlayerRepository(), new StubGameRepository(),
-            new StubPodService(), new StubTrueSkillService(), new StubStoreEventRepository(), new StubDiscordWebhookService());
+            new StubPodService(), new StubTrueSkillService(), new StubStoreEventRepository(), new StubDiscordWebhookService(), new StubBadgeService());
 
     private static Round MakeRound(int eventId, int roundNumber, List<(Player Player, string? Commander)> players)
     {
