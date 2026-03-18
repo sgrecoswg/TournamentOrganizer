@@ -91,6 +91,7 @@ export interface PlayerEventRegistration {
   decklistUrl: string | null;
   commanders: string | null;
   storeName: string | null;
+  art_crop : string | null;
 }
 
 export interface CommanderStatDto {
@@ -512,6 +513,7 @@ export interface StandingsEntry {
 export interface ScryfallCardImageUris {
   normal: string;
   large: string;
+  art_crop : string;
 }
 
 export interface ScryfallCard {

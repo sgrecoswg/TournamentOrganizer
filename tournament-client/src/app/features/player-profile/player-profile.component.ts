@@ -18,7 +18,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatDialog } from '@angular/material/dialog';
 import { Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 import { CardDemandDialogComponent } from './dialogs/card-demand-dialog.component';
 import { ApiService } from '../../core/services/api.service';
 import { ScryfallService } from '../../core/services/scryfall.service';
@@ -193,8 +193,15 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
                       </td>
                     </ng-container>
                     <ng-container matColumnDef="commander">
-                      <th mat-header-cell *matHeaderCellDef>Commander(s)</th>
-                      <td mat-cell *matCellDef="let row">{{ row.commanders ?? '—' }}</td>
+                      <th mat-header-cell *matHeaderCellDef>Commander(s)</th>                      
+                      <td mat-cell *matCellDef="let row">
+                          @if (row.commanders && row.commanders !== "") {                             
+                            <img width="50" [src]="row.art_crop!" class="avatar-thumb" [alt]="row.commanders" />
+                            <span>  {{ row.commanders }}</span>
+                          } @else {
+                           <span>-</span>
+                          }
+                        </td>
                     </ng-container>
                     <ng-container matColumnDef="store">
                       <th mat-header-cell *matHeaderCellDef>Store</th>
@@ -545,6 +552,7 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
     .player-avatar { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 2px solid var(--mat-sys-outline-variant, #ccc); }
     .player-avatar-placeholder { display: flex; align-items: center; justify-content: center; background: var(--mat-sys-surface-variant, #e0e0e0); }
     .player-avatar-placeholder mat-icon { font-size: 48px; width: 48px; height: 48px; }
+    .avatar-thumb { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 8px; }
     .avatar-actions { display: flex; gap: 4px; }
     .profile-header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
     .name-row { display: flex; align-items: center; justify-content: space-between; }
@@ -744,6 +752,22 @@ export class PlayerProfileComponent implements OnInit {
         if (p.avatarUrl && !p.avatarUrl.includes('?t=')) {
           p.avatarUrl = `${p.avatarUrl}?t=${Date.now()}`;
         }
+        
+        for (let index = 0; index < p.eventRegistrations.length; index++) {
+          const event = p.eventRegistrations[index];
+          if (event.commanders && event.commanders !== "") {
+            this.scryfallService.getCard(event.commanders).subscribe({
+            next: card => {
+              event.art_crop = card?.image_uris?.art_crop ?? "";
+            },
+            error: () => {
+                            // this.selectedCardLoading = false;
+                            // this.cdr.detectChanges();
+              }
+            });
+          }              
+        }      
+
         this.profile = p;
         this.cdr.detectChanges();
         this.loadWishlist(id);
@@ -752,7 +776,7 @@ export class PlayerProfileComponent implements OnInit {
         this.loadSuggestedTrades(id);
         this.loadTradeDemand(id);
         this.loadCommanderStats(id);
-        this.loadRatingHistory(id);
+        this.loadRatingHistory(id);        
       },
       error: () => {
         this.apiOnline = false;
@@ -766,6 +790,22 @@ export class PlayerProfileComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+  mapCroppedImageUrl(p: PlayerProfile) {
+    for (let index = 0; index < p.eventRegistrations.length; index++) {
+      const event = p.eventRegistrations[index];
+      if (event.commanders && event.commanders !== "") {
+        this.scryfallService.getCard(event.commanders).subscribe({
+        next: card => {
+          event.art_crop = card?.image_uris?.art_crop ?? "";
+        },
+        error: () => {
+                        // this.selectedCardLoading = false;
+                        // this.cdr.detectChanges();
+          }
+        });
+      }              
+    }              
   }
 
   private loadCommanderStats(playerId: number) {
@@ -1009,7 +1049,7 @@ export class PlayerProfileComponent implements OnInit {
       return this.selectedCard.card_faces[0].image_uris.normal;
     }
     return this.selectedCard.image_uris?.normal ?? null;
-  }
+  }  
 
   getManapoolUrl(cardName: string): string {
     return `https://www.manapool.com/en/search?q=${encodeURIComponent(cardName)}`;
