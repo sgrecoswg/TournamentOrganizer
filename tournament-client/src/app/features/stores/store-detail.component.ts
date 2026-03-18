@@ -96,6 +96,16 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
                     <span matSuffix>%</span>
                   </mat-form-field>
                   @if (authService.isStoreManager) {
+                    @if (store.slug) {
+                      <mat-form-field>
+                        <mat-label>Your Public Page URL</mat-label>
+                        <input matInput [value]="publicPageUrl" readonly>
+                        <button matSuffix mat-icon-button (click)="copyPublicUrl()" aria-label="Copy URL">
+                          <mat-icon>content_copy</mat-icon>
+                        </button>
+                        <mat-hint>Share this link so players can find your events without logging in.</mat-hint>
+                      </mat-form-field>
+                    }
                     <mat-form-field>
                       <mat-label>Theme</mat-label>
                       <mat-select [(ngModel)]="selectedThemeId" (ngModelChange)="previewTheme($event)"
@@ -619,6 +629,15 @@ export class StoreDetailComponent implements OnInit {
   }
 
   // ── Settings ──────────────────────────────────────────────────────────────
+
+  get publicPageUrl(): string {
+    return `${window.location.origin}/stores/public/${this.store!.slug}`;
+  }
+
+  copyPublicUrl() {
+    navigator.clipboard.writeText(this.publicPageUrl);
+    this.snackBar.open('URL copied!', 'OK', { duration: 2000 });
+  }
 
   previewTheme(themeId: number) {
     const t = this.themes.find(x => x.id === themeId);
