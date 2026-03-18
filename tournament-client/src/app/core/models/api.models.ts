@@ -257,6 +257,7 @@ export interface StoreDto {
   logoUrl?: string | null;
   slug?: string | null;
   location?: string | null;
+  backgroundImageUrl?: string | null;
 }
 
 export interface StoreDetailDto {
@@ -268,6 +269,7 @@ export interface StoreDetailDto {
   themeId?: number | null;
   themeCssClass?: string | null;
   logoUrl?: string | null;
+  backgroundImageUrl?: string | null;
   hasDiscordWebhook?: boolean;
   sellerPortalUrl?: string | null;
   slug?: string | null;
@@ -286,6 +288,7 @@ export interface StorePublicDto {
   slug?: string | null;
   location?: string | null;
   logoUrl?: string | null;
+  backgroundImageUrl?: string | null;
   upcomingEvents: StoreEventSummaryDto[];
   recentEvents: StoreEventSummaryDto[];
   topPlayers: StorePublicTopPlayerDto[];

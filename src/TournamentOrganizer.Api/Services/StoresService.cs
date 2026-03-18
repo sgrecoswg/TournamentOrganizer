@@ -20,7 +20,7 @@ public class StoresService : IStoresService
     public async Task<List<StoreDto>> GetAllAsync()
     {
         var stores = await _storeRepo.GetAllAsync();
-        return stores.Select(s => new StoreDto(s.Id, s.StoreName, s.IsActive, s.LogoUrl, s.Slug, s.Location)).ToList();
+        return stores.Select(s => new StoreDto(s.Id, s.StoreName, s.IsActive, s.LogoUrl, s.Slug, s.Location, s.BackgroundImageUrl)).ToList();
     }
 
     public async Task<StoreDetailDto?> GetByIdAsync(int id)
@@ -31,7 +31,7 @@ public class StoresService : IStoresService
         var themeId = store.Settings?.ThemeId;
         var themeCssClass = store.Settings?.Theme?.CssClass;
         var sellerPortalUrl = store.Settings?.SellerPortalUrl;
-        return new StoreDetailDto(store.Id, store.StoreName, store.IsActive, differential, BuildEventSummaries(store), MapLicense(store), themeId, themeCssClass, store.LogoUrl, store.DiscordWebhookUrl != null, sellerPortalUrl, store.Slug);
+        return new StoreDetailDto(store.Id, store.StoreName, store.IsActive, differential, BuildEventSummaries(store), MapLicense(store), themeId, themeCssClass, store.LogoUrl, store.DiscordWebhookUrl != null, sellerPortalUrl, store.Slug, store.BackgroundImageUrl);
     }
 
     public async Task<StoreDto> CreateAsync(CreateStoreDto dto)
@@ -44,7 +44,7 @@ public class StoresService : IStoresService
             StoreId = store.Id,
             AllowableTradeDifferential = 10m
         });
-        return new StoreDto(store.Id, store.StoreName, store.IsActive, store.LogoUrl, store.Slug, store.Location);
+        return new StoreDto(store.Id, store.StoreName, store.IsActive, store.LogoUrl, store.Slug, store.Location, store.BackgroundImageUrl);
     }
 
     public async Task<StoreDetailDto?> UpdateAsync(int id, UpdateStoreDto dto)
@@ -75,7 +75,7 @@ public class StoresService : IStoresService
         var themeId = updatedStore?.Settings?.ThemeId;
         var themeCssClass = updatedStore?.Settings?.Theme?.CssClass;
         var updatedPortalUrl = updatedStore?.Settings?.SellerPortalUrl;
-        return new StoreDetailDto(store.Id, store.StoreName, store.IsActive, differential, BuildEventSummaries(updatedStore), MapLicense(updatedStore), themeId, themeCssClass, store.LogoUrl, store.DiscordWebhookUrl != null, updatedPortalUrl, store.Slug);
+        return new StoreDetailDto(store.Id, store.StoreName, store.IsActive, differential, BuildEventSummaries(updatedStore), MapLicense(updatedStore), themeId, themeCssClass, store.LogoUrl, store.DiscordWebhookUrl != null, updatedPortalUrl, store.Slug, store.BackgroundImageUrl);
     }
 
     public async Task<StoreDto> UpdateLogoUrlAsync(int storeId, string? logoUrl)
@@ -85,7 +85,17 @@ public class StoresService : IStoresService
         store.LogoUrl = logoUrl;
         store.UpdatedOn = DateTime.UtcNow;
         await _storeRepo.UpdateAsync(store);
-        return new StoreDto(store.Id, store.StoreName, store.IsActive, store.LogoUrl, store.Slug, store.Location);
+        return new StoreDto(store.Id, store.StoreName, store.IsActive, store.LogoUrl, store.Slug, store.Location, store.BackgroundImageUrl);
+    }
+
+    public async Task<StoreDto> UpdateBackgroundImageUrlAsync(int storeId, string? backgroundImageUrl)
+    {
+        var store = await _storeRepo.GetByIdWithSettingsAsync(storeId);
+        if (store == null) throw new InvalidOperationException($"Store {storeId} not found");
+        store.BackgroundImageUrl = backgroundImageUrl;
+        store.UpdatedOn = DateTime.UtcNow;
+        await _storeRepo.UpdateAsync(store);
+        return new StoreDto(store.Id, store.StoreName, store.IsActive, store.LogoUrl, store.Slug, store.Location, store.BackgroundImageUrl);
     }
 
     public async Task<StorePublicDto?> GetPublicPageAsync(string slug)
@@ -123,7 +133,7 @@ public class StoresService : IStoresService
             .ToList();
 
         return new StorePublicDto(store.Id, store.StoreName, store.Slug, store.Location,
-            store.LogoUrl, upcoming, recent, topPlayers);
+            store.LogoUrl, upcoming, recent, topPlayers, store.BackgroundImageUrl);
     }
 
     private static string GenerateSlug(string name)

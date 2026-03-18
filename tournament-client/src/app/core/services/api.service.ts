@@ -240,6 +240,12 @@ export class ApiService {
     return this.http.post<StoreDto>(`${this.base}/stores/${storeId}/logo`, form);
   }
 
+  uploadStoreBackground(storeId: number, file: File): Observable<StoreDto> {
+    const fd = new FormData();
+    fd.append('background', file);
+    return this.http.post<StoreDto>(`${this.base}/stores/${storeId}/background`, fd);
+  }
+
   getSuggestedTrades(playerId: number): Observable<SuggestedTradeDto[]> {
     return this.http.get<SuggestedTradeDto[]>(`${this.base}/players/${playerId}/trades/suggestions`);
   }

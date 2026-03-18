@@ -13,5 +13,10 @@
     "target": "http://localhost:5021",
     "secure": false,
     "changeOrigin": true
+  },
+  "/backgrounds": {
+    "target": "http://localhost:5021",
+    "secure": false,
+    "changeOrigin": true
   }
 }

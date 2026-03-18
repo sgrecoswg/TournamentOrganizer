@@ -11,6 +11,7 @@ import {
   makeStorePublicTopPlayerDto,
 } from '../helpers/api-mock';
 
+
 // Route registration order matters: Playwright evaluates routes in LIFO order
 // (last registered = first evaluated). Always register stubUnmatchedApi FIRST
 // so specific mocks registered afterwards take priority over it.
@@ -118,6 +119,30 @@ test.describe('Store Public Page — 404', () => {
     await mockGetStorePublicPageNotFound(page, SLUG);
     await page.goto(`/stores/public/${SLUG}`);
     await expect(page.getByText('Store not found')).toBeVisible();
+  });
+});
+
+// ── Store Public Page — background image ──────────────────────────────────────
+
+test.describe('Store Public Page — background image', () => {
+  test('store-header has background-image style when backgroundImageUrl is set', async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await mockGetStorePublicPage(page, SLUG, makeStorePublicDto({ backgroundImageUrl: '/backgrounds/1.png' }));
+    await page.goto(`/stores/public/${SLUG}`);
+    const header = page.locator('.store-header');
+    await expect(header).toBeVisible();
+    const bgImage = await header.evaluate((el: HTMLElement) => el.style.backgroundImage);
+    expect(bgImage).toContain('/backgrounds/1.png');
+  });
+
+  test('store-header has no background-image style when backgroundImageUrl is null', async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await mockGetStorePublicPage(page, SLUG, makeStorePublicDto({ backgroundImageUrl: null }));
+    await page.goto(`/stores/public/${SLUG}`);
+    const header = page.locator('.store-header');
+    await expect(header).toBeVisible();
+    const bgImage = await header.evaluate((el: HTMLElement) => el.style.backgroundImage);
+    expect(bgImage).toBeFalsy();
   });
 });
 

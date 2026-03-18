@@ -36,7 +36,8 @@ import { StorePublicDto } from '../../core/models/api.models';
       </div>
     } @else if (page) {
       <!-- Store Header -->
-      <div class="store-header">
+      <div class="store-header"
+           [style.backgroundImage]="backgroundUrl ? 'url(' + backgroundUrl + ')' : null">
         @if (logoUrl) {
           <img [src]="logoUrl" alt="{{ page.storeName }} logo" class="store-logo" />
         }
@@ -131,7 +132,7 @@ import { StorePublicDto } from '../../core/models/api.models';
     :host { display: block; max-width: 960px; margin: 0 auto; padding: 24px 16px; }
     .loading-container, .not-found { text-align: center; padding: 48px 0; }
     .not-found mat-icon { font-size: 64px; height: 64px; width: 64px; opacity: 0.4; }
-    .store-header { display: flex; align-items: center; gap: 20px; padding: 24px 0; }
+    .store-header { display: flex; align-items: center; gap: 20px; padding: 24px; background-size: cover; background-position: center; border-radius: 8px; min-height: 160px; }
     .store-logo { width: 80px; height: 80px; object-fit: contain; border-radius: 8px; }
     .store-header-text h1 { margin: 0; }
     .store-location { display: flex; align-items: center; gap: 4px; margin: 4px 0 0; color: #666; }
@@ -155,6 +156,12 @@ export class StorePublicPageComponent implements OnInit {
 
   get logoUrl(): string | null {
     const url = this.page?.logoUrl;
+    if (!url) return null;
+    return url.includes('?t=') ? url : `${url}?t=${this.sessionTs}`;
+  }
+
+  get backgroundUrl(): string | null {
+    const url = this.page?.backgroundImageUrl;
     if (!url) return null;
     return url.includes('?t=') ? url : `${url}?t=${this.sessionTs}`;
   }

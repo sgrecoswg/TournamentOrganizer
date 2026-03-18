@@ -35,16 +35,17 @@ describe('StoreDetailComponent', () => {
   const empStub: AppUserDto = { id: 1, name: 'Alice', email: 'alice@test.com', role: 'StoreEmployee' };
 
   let mockApi: {
-    getThemes:            jest.Mock;
-    getStore:             jest.Mock;
-    updateStore:          jest.Mock;
-    getStoreEmployees:    jest.Mock;
-    addStoreEmployee:     jest.Mock;
-    removeStoreEmployee:  jest.Mock;
-    updateLicense:        jest.Mock;
-    createLicense:        jest.Mock;
-    uploadStoreLogo:      jest.Mock;
-    testDiscordWebhook:   jest.Mock;
+    getThemes:              jest.Mock;
+    getStore:               jest.Mock;
+    updateStore:            jest.Mock;
+    getStoreEmployees:      jest.Mock;
+    addStoreEmployee:       jest.Mock;
+    removeStoreEmployee:    jest.Mock;
+    updateLicense:          jest.Mock;
+    createLicense:          jest.Mock;
+    uploadStoreLogo:        jest.Mock;
+    uploadStoreBackground:  jest.Mock;
+    testDiscordWebhook:     jest.Mock;
   };
 
   let mockCtx: {
@@ -118,8 +119,9 @@ describe('StoreDetailComponent', () => {
       removeStoreEmployee: jest.fn().mockReturnValue(of(undefined)),
       updateLicense:       jest.fn().mockReturnValue(of(null)),
       createLicense:       jest.fn().mockReturnValue(of(null)),
-      uploadStoreLogo:     jest.fn().mockReturnValue(of({ id: STORE_ID, storeName: 'Test Store', isActive: true, logoUrl: '/logos/5.png' })),
-      testDiscordWebhook:  jest.fn().mockReturnValue(of(undefined)),
+      uploadStoreLogo:        jest.fn().mockReturnValue(of({ id: STORE_ID, storeName: 'Test Store', isActive: true, logoUrl: '/logos/5.png' })),
+      uploadStoreBackground:  jest.fn().mockReturnValue(of({ id: STORE_ID, storeName: 'Test Store', isActive: true, backgroundImageUrl: '/backgrounds/5.png' })),
+      testDiscordWebhook:     jest.fn().mockReturnValue(of(undefined)),
     };
 
     mockCtx = {
@@ -736,6 +738,70 @@ describe('StoreDetailComponent', () => {
         STORE_ID,
         expect.objectContaining({ discordWebhookUrl: null })
       );
+    });
+  });
+
+  // ── Upload Background ──────────────────────────────────────────────────────
+
+  describe('Upload Background', () => {
+    it('"Upload Background" button is visible for StoreManager', async () => {
+      await setup({ isStoreManager: true });
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.textContent).toContain('Background');
+    });
+
+    it('"Upload Background" button is NOT visible for Player role', async () => {
+      await setup({ isStoreManager: false, isStoreEmployee: false });
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.textContent).not.toContain('Upload Background');
+      expect(el.textContent).not.toContain('Change Background');
+    });
+
+    it('onBackgroundSelected calls apiService.uploadStoreBackground', async () => {
+      mockApi.uploadStoreBackground = jest.fn().mockReturnValue(
+        of({ id: STORE_ID, storeName: 'Test Store', isActive: true, backgroundImageUrl: '/backgrounds/5.png' })
+      );
+      await setup({ isStoreManager: true });
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      const file = new File(['data'], 'bg.png', { type: 'image/png' });
+      const event = { target: { files: [file] } } as unknown as Event;
+      comp.onBackgroundSelected(event);
+      expect(mockApi.uploadStoreBackground).toHaveBeenCalledWith(STORE_ID, file);
+    });
+
+    it('on success, store.backgroundImageUrl is updated', async () => {
+      mockApi.uploadStoreBackground = jest.fn().mockReturnValue(
+        of({ id: STORE_ID, storeName: 'Test Store', isActive: true, backgroundImageUrl: '/backgrounds/5.png' })
+      );
+      await setup({ isStoreManager: true });
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      const file = new File(['data'], 'bg.png', { type: 'image/png' });
+      const event = { target: { files: [file] } } as unknown as Event;
+      comp.onBackgroundSelected(event);
+      expect(comp.store?.backgroundImageUrl).toContain('/backgrounds/5.png');
+    });
+
+    it('on error, snackbar shows "Background upload failed"', async () => {
+      mockApi.uploadStoreBackground = jest.fn().mockReturnValue(
+        throwError(() => new Error('upload failed'))
+      );
+      await setup({ isStoreManager: true });
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      const snackBarSpy = jest.spyOn((comp as any).snackBar, 'open').mockReturnValue({} as any);
+      const file = new File(['data'], 'bg.png', { type: 'image/png' });
+      const event = { target: { files: [file] } } as unknown as Event;
+      comp.onBackgroundSelected(event);
+      expect(snackBarSpy).toHaveBeenCalledWith('Background upload failed', 'Close', expect.any(Object));
     });
   });
 });

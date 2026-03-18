@@ -22,6 +22,7 @@ describe('StorePublicPageComponent', () => {
     slug: 'top-deck-games',
     location: '42 Card St, Portland OR',
     logoUrl: null,
+    backgroundImageUrl: null,
     upcomingEvents: [],
     recentEvents: [],
     topPlayers: [],
@@ -148,5 +149,29 @@ describe('StorePublicPageComponent', () => {
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
     expect(el.textContent).toContain('Store not found');
+  });
+
+  // ── Background image ────────────────────────────────────────────────────────
+
+  describe('Background image', () => {
+    it('store-header has background-image style when backgroundImageUrl is set', () => {
+      mockApi.getStorePublicPage.mockReturnValue(
+        of(makeDto({ backgroundImageUrl: '/backgrounds/1.png' }))
+      );
+      const fixture = TestBed.createComponent(StorePublicPageComponent);
+      fixture.detectChanges();
+      const header: HTMLElement | null = fixture.nativeElement.querySelector('.store-header');
+      expect(header).not.toBeNull();
+      expect(header!.style.backgroundImage).toContain('/backgrounds/1.png');
+    });
+
+    it('store-header has no background-image style when backgroundImageUrl is null', () => {
+      mockApi.getStorePublicPage.mockReturnValue(of(makeDto({ backgroundImageUrl: null })));
+      const fixture = TestBed.createComponent(StorePublicPageComponent);
+      fixture.detectChanges();
+      const header: HTMLElement | null = fixture.nativeElement.querySelector('.store-header');
+      expect(header).not.toBeNull();
+      expect(header!.style.backgroundImage).toBeFalsy();
+    });
   });
 });
