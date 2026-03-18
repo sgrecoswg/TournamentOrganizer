@@ -1,7 +1,7 @@
 Pick a "Ready" item from the GitHub project board and implement it end-to-end.
 
 ## Current project state
-- Ready items: !`gh project item-list 2 --owner sgrecoswg --format json | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); d.items.filter(i=>i.status==='Ready').forEach(i=>console.log('#'+i.content.number+' | '+i.title))"`
+- Ready items: !`gh project item-list 2 --owner sgrecoswg --format json | jq -r '.items[] | select(.status == "Ready") | "#" + (.content.number | tostring) + " | " + .title'`
 - Current branch: !`git branch --show-current`
 - Today's date: !`date +%Y-%m-%d`
 
