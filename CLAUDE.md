@@ -31,10 +31,33 @@ All work follows a **feature branch → PR → dev** flow:
    ```
 
 **Rules:**
-- Never commit directly to `dev` or `main`.
+- **NEVER commit directly to `dev` or `main`.** GitHub branch-protection policies will reject direct pushes to these branches. A PR is the only path in.
 - Never push to `main` — `main` is updated only via PR from `dev`.
 - Bug fixes discovered during a task go on the **same branch** as the task (additional commits), not a new branch.
 - The remote is named `TournamentOrganizer` (not `origin`).
+
+### Recovery: accidentally on `dev` or `main`
+
+If you discover you are on `dev` or `main` with uncommitted (or committed-but-not-pushed) changes, **do not commit or push**. Instead:
+
+```bash
+# 1. Create a new feature branch from the current state
+git checkout -b feature/<task-name>
+
+# 2. Commit your changes there
+git add <files>
+git commit -m "..."
+
+# 3. Push the feature branch
+git push -u TournamentOrganizer feature/<task-name>
+
+# 4. Check for an existing PR; create one only if none exists
+gh pr list --head feature/<task-name> --base dev --json number --jq '.[0].number'
+# → no output: gh pr create --base dev --title "..." --body "..."
+# → has a number: push already updated the existing PR, nothing more to do
+```
+
+This applies to sub-agents running in isolated worktrees as well — **all worktree agents must start from a feature branch, never from `dev` or `main`**.
 
 ### Backlog item status (when a prompt file has a GitHub Issue link)
 
