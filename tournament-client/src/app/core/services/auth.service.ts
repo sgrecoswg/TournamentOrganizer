@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { CurrentUser } from '../models/api.models';
+import { CurrentUser, LicenseTier } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -73,6 +73,19 @@ export class AuthService {
     return this.currentUser?.role === 'Administrator';
   }
 
+  get licenseTier(): LicenseTier {
+    if (this.isAdmin) return 'Tier2';  // admins always have full access
+    return this.currentUser?.licenseTier ?? 'Free';
+  }
+
+  get isTier1(): boolean {
+    return this.licenseTier === 'Tier1' || this.licenseTier === 'Tier2';
+  }
+
+  get isTier2(): boolean {
+    return this.licenseTier === 'Tier2';
+  }
+
   login(): void {
     // Navigate directly to the backend — bypassing the Angular dev proxy.
     // The OAuth CSRF state cookie is set by the backend and must remain on the
@@ -89,6 +102,7 @@ export class AuthService {
       role: payload.role,
       playerId: payload.playerId != null ? +payload.playerId : undefined,
       storeId: payload.storeId != null ? +payload.storeId : undefined,
+      licenseTier: payload.licenseTier ?? undefined,
     };
   }
 }

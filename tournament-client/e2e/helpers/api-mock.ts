@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, PairingsDto, PlayerBadgeDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, StoreDto, StoreDetailDto, StoreEventSummaryDto, StorePublicDto, StorePublicTopPlayerDto, ThemeDto } from '../../src/app/core/models/api.models';
+import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, LicenseDto, PairingsDto, PlayerBadgeDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, StoreDto, StoreDetailDto, StoreEventSummaryDto, StorePublicDto, StorePublicTopPlayerDto, ThemeDto } from '../../src/app/core/models/api.models';
 
 /** Intercept GET /api/events and return the given list. */
 export async function mockGetEvents(page: Page, events: EventDto[]): Promise<void> {
@@ -464,6 +464,21 @@ export function makeBulkRegisterResultDto(overrides: Partial<BulkRegisterResultD
     registered: 0,
     created: 0,
     errors: [],
+    ...overrides,
+  };
+}
+
+// ── License ────────────────────────────────────────────────────────────────────
+
+export function makeLicenseDto(overrides: Partial<LicenseDto> = {}): LicenseDto {
+  return {
+    id:            1,
+    storeId:       1,
+    appKey:        'TEST-KEY-1234',
+    isActive:      true,
+    availableDate: '2026-01-01T00:00:00Z',
+    expiresDate:   '2027-01-01T00:00:00Z',
+    tier:          'Tier2',
     ...overrides,
   };
 }

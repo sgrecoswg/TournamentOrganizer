@@ -17,7 +17,7 @@ export type Role = 'Administrator' | 'StoreManager' | 'StoreEmployee' | 'Player'
 export async function loginAs(
   page: Page,
   role: Role,
-  opts: { id?: number; storeId?: number; playerId?: number } = {}
+  opts: { id?: number; storeId?: number; playerId?: number; licenseTier?: 'Free' | 'Tier1' | 'Tier2' } = {}
 ): Promise<void> {
   const exp   = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
   const token = makeJwt({
@@ -26,8 +26,9 @@ export async function loginAs(
     name:     `Test ${role}`,
     role,
     exp,
-    ...(opts.storeId  != null ? { storeId:  opts.storeId  } : {}),
-    ...(opts.playerId != null ? { playerId: opts.playerId } : {}),
+    ...(opts.storeId     != null ? { storeId:     opts.storeId     } : {}),
+    ...(opts.playerId    != null ? { playerId:    opts.playerId    } : {}),
+    ...(opts.licenseTier != null ? { licenseTier: opts.licenseTier } : {}),
   });
 
   await page.addInitScript((t: string) => {

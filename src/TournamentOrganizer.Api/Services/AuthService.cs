@@ -13,12 +13,18 @@ public class AuthService : IAuthService
     private readonly IAppUserRepository _userRepo;
     private readonly IPlayerRepository _playerRepo;
     private readonly IConfiguration _config;
+    private readonly ILicenseTierService _licenseTierService;
 
-    public AuthService(IAppUserRepository userRepo, IPlayerRepository playerRepo, IConfiguration config)
+    public AuthService(
+        IAppUserRepository userRepo,
+        IPlayerRepository playerRepo,
+        IConfiguration config,
+        ILicenseTierService licenseTierService)
     {
         _userRepo = userRepo;
         _playerRepo = playerRepo;
         _config = config;
+        _licenseTierService = licenseTierService;
     }
 
     public async Task<AppUser> FindOrCreateUserAsync(string email, string name, string googleId)
@@ -76,7 +82,7 @@ public class AuthService : IAuthService
         return await _userRepo.CreateAsync(newUser);
     }
 
-    public string GenerateJwt(AppUser user)
+    public async Task<string> GenerateJwtAsync(AppUser user)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -95,6 +101,14 @@ public class AuthService : IAuthService
 
         if (user.StoreId.HasValue)
             claims.Add(new Claim("storeId", user.StoreId.Value.ToString()));
+
+        // Embed licenseTier claim for store employees/managers (not for Admins — they always bypass)
+        if (user.StoreId.HasValue &&
+            (user.Role == AppUserRole.StoreEmployee || user.Role == AppUserRole.StoreManager))
+        {
+            var tier = await _licenseTierService.GetEffectiveTierAsync(user.StoreId.Value);
+            claims.Add(new Claim("licenseTier", tier.ToString()));
+        }
 
         var token = new JwtSecurityToken(
             issuer: _config["Jwt:Issuer"],

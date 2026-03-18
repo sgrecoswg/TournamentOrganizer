@@ -28,7 +28,7 @@ const ALICE_DTO     = makePlayerDto({ id: 1, name: 'Alice', email: 'alice@test.c
 
 test.describe('Player Profile — online', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
+    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier2' });
     await stubUnmatchedApi(page);
     await mockGetPlayerProfile(page, ALICE_PROFILE);
     await page.goto('/players/1');

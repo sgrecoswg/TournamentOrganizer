@@ -99,7 +99,7 @@ describe('PlayerProfileComponent — tab visibility by API state', () => {
     getRatingHistory:   jest.Mock;
   };
   let mockCtx: { players: { getById: jest.Mock; getAll: jest.Mock } };
-  let mockAuth: { currentUser: null };
+  let mockAuth: { currentUser: null; isTier2: boolean };
   let mockDialog: { open: jest.Mock };
   let mockSnackBar: { open: jest.Mock };
 
@@ -120,7 +120,7 @@ describe('PlayerProfileComponent — tab visibility by API state', () => {
       getRatingHistory:   jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, history: [] })),
     };
     mockCtx     = { players: { getById: jest.fn().mockReturnValue(cachedPlayer), getAll: jest.fn().mockReturnValue([]) } };
-    mockAuth    = { currentUser: null };
+    mockAuth    = { currentUser: null, isTier2: true };
     mockDialog  = { open: jest.fn().mockReturnValue({ afterClosed: () => of(false) }) };
     mockSnackBar = { open: jest.fn() };
 
@@ -849,6 +849,72 @@ describe('PlayerProfileComponent — Rating History', () => {
     const comp = fixture.componentInstance;
     const dataset = comp.ratingChartData.datasets[0];
     expect(dataset.data).toEqual([3.5, 7.2]);
+  });
+});
+
+// ── Tier gate — wishlist/trade visibility ──────────────────────────────────────
+
+describe('PlayerProfileComponent — tier gate: wishlist/trade visibility', () => {
+  const PLAYER_ID = 1;
+
+  const profileStub: PlayerProfile = {
+    id: PLAYER_ID, name: 'Alice', email: 'alice@test.com',
+    mu: 25, sigma: 8.333, conservativeScore: 0,
+    isRanked: true, placementGamesLeft: 0, isActive: true,
+    gameHistory: [], eventRegistrations: [],
+  };
+
+  function makeMockApi() {
+    return {
+      getWishlist:        jest.fn().mockReturnValue(of([])),
+      getWishlistSupply:  jest.fn().mockReturnValue(of([])),
+      getTradeList:       jest.fn().mockReturnValue(of([])),
+      getSuggestedTrades: jest.fn().mockReturnValue(of([])),
+      getTradeDemand:     jest.fn().mockReturnValue(of([])),
+      getCommanderStats:  jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, commanders: [] })),
+      getRatingHistory:   jest.fn().mockReturnValue(of({ playerId: PLAYER_ID, history: [] })),
+    };
+  }
+
+  async function setup(isTier2: boolean) {
+    const mockAuth = { currentUser: null, isAdmin: false, isStoreManager: false, isTier1: isTier2, isTier2 };
+    await TestBed.configureTestingModule({
+      imports: [PlayerProfileComponent],
+      providers: [
+        provideRouter([]),
+        provideAnimationsAsync(),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => String(PLAYER_ID) } } } },
+        { provide: PlayerService, useValue: { getProfile: jest.fn().mockReturnValue(of(profileStub)), updatePlayer: jest.fn().mockReturnValue(of(profileStub)) } },
+        { provide: ApiService, useValue: makeMockApi() },
+        { provide: LocalStorageContext, useValue: { players: { getById: jest.fn().mockReturnValue(null), getAll: jest.fn().mockReturnValue([]) } } },
+        { provide: AuthService, useValue: mockAuth },
+        { provide: MatDialog, useValue: { open: jest.fn().mockReturnValue({ afterClosed: () => of(false) }) } },
+        { provide: MatSnackBar, useValue: { open: jest.fn() } },
+      ],
+    }).compileComponents();
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('isTier2=true → wishlist/trade sections rendered', async () => {
+    await setup(true);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    // The Trading tab should be visible when isTier2
+    const tabs = Array.from<Element>(el.querySelectorAll('[role="tab"]'));
+    const labels = tabs.map(t => t.textContent?.trim());
+    expect(labels).toContain('Trading');
+  });
+
+  it('isTier2=false → wishlist/trade sections NOT rendered', async () => {
+    await setup(false);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    // Wishlist/trade sections should be hidden
+    expect(el.querySelector('[data-testid="wishlist-section"]')).toBeFalsy();
+    expect(el.querySelector('[data-testid="trade-section"]')).toBeFalsy();
   });
 });
 

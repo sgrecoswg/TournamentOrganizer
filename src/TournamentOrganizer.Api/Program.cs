@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TournamentOrganizer.Api.Data;
+using TournamentOrganizer.Api.Models;
 using TournamentOrganizer.Api.Repositories;
 using TournamentOrganizer.Api.Repositories.Interfaces;
 using TournamentOrganizer.Api.Services;
@@ -60,7 +62,19 @@ builder.Services.AddAuthorization(options =>
         ctx.User.HasClaim("role", "Administrator")));
     options.AddPolicy("Administrator", p =>
         p.RequireClaim("role", "Administrator"));
+    options.AddPolicy("Tier1Required", p => p.RequireAssertion(ctx =>
+        ctx.User.HasClaim("role", "Administrator") ||
+        TierAtLeast(ctx.User, LicenseTier.Tier1)));
+    options.AddPolicy("Tier2Required", p => p.RequireAssertion(ctx =>
+        ctx.User.HasClaim("role", "Administrator") ||
+        TierAtLeast(ctx.User, LicenseTier.Tier2)));
 });
+
+static bool TierAtLeast(ClaimsPrincipal user, LicenseTier required)
+{
+    var raw = user.FindFirstValue("licenseTier");
+    return Enum.TryParse<LicenseTier>(raw, out var t) && t >= required;
+}
 
 // Repositories
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
@@ -91,6 +105,7 @@ builder.Services.AddScoped<IDiscordWebhookService, DiscordWebhookService>();
 builder.Services.AddScoped<IEventTemplateService, EventTemplateService>();
 builder.Services.AddScoped<IAppUserRepository, AppUserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ILicenseTierService, LicenseTierService>();
 builder.Services.AddScoped<IBadgeService, BadgeService>();
 
 // Card price (Scryfall) — typed HttpClient with 1h in-memory cache

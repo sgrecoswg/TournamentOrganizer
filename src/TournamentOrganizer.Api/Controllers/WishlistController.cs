@@ -23,7 +23,7 @@ public class WishlistController : ControllerBase
         => Ok(await _service.GetWishlistSupplyAsync(playerId));
 
     [HttpPost]
-    [Authorize]
+    [Authorize(Policy = "Tier2Required")]
     public async Task<ActionResult<WishlistEntryDto>> Add(int playerId, CreateCardEntryDto dto)
     {
         if (!OwnsPlayer(playerId)) return Forbid();
@@ -32,7 +32,7 @@ public class WishlistController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [Authorize]
+    [Authorize(Policy = "Tier2Required")]
     public async Task<IActionResult> Delete(int playerId, int id)
     {
         if (!OwnsPlayer(playerId)) return Forbid();
@@ -41,7 +41,7 @@ public class WishlistController : ControllerBase
     }
 
     [HttpPost("bulkupload")]
-    [Authorize]
+    [Authorize(Policy = "Tier2Required")]
     public async Task<ActionResult<BulkUploadResultDto>> BulkUpload(int playerId, IFormFile file)
     {
         if (!OwnsPlayer(playerId)) return Forbid();
@@ -51,7 +51,7 @@ public class WishlistController : ControllerBase
     }
 
     [HttpDelete("removeall")]
-    [Authorize]
+    [Authorize(Policy = "Tier2Required")]
     public async Task<IActionResult> RemoveAll(int playerId)
     {
         if (!OwnsPlayer(playerId)) return Forbid();

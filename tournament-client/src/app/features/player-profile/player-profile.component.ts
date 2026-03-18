@@ -221,14 +221,14 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
         }
 
         <!-- Trading tab -->
-        @if (apiOnline) {
+        @if (apiOnline && authService.isTier2) {
         <mat-tab label="Trading">
           <div class="tab-content">
             <mat-tab-group>
 
               <!-- Wishlist sub-tab -->
               <mat-tab label="Wishlist ({{ wishlist.length }})">
-                <div class="tab-content" (click)="dismissCard()">
+                <div class="tab-content" data-testid="wishlist-section" (click)="dismissCard()">
                   @if (canEditProfile) {
                     <div class="add-card-form">
                       <mat-form-field>
@@ -352,7 +352,7 @@ import { PlacementBadgeComponent } from '../../shared/components/placement-badge
 
               <!-- For Trade sub-tab -->
               <mat-tab label="For Trade ({{ tradeList.length }})">
-                <div class="tab-content demand-legend">
+                <div class="tab-content demand-legend" data-testid="trade-section">
                   <span class="legend-item"><mat-icon style="color:#9e9e9e;font-size:18px;vertical-align:middle">check_circle</mat-icon> &lt;10%</span>
                   <span class="legend-item"><mat-icon style="color:#1976d2;font-size:18px;vertical-align:middle">trending_up</mat-icon> 10–49%</span>
                   <span class="legend-item"><mat-icon style="color:#ff9800;font-size:18px;vertical-align:middle">bolt</mat-icon> 50–99%</span>
@@ -656,7 +656,7 @@ export class PlayerProfileComponent implements OnInit {
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog,
-    private authService: AuthService,
+    public  authService: AuthService,
     private ctx: LocalStorageContext,
     private scryfallService: ScryfallService,
   ) {}

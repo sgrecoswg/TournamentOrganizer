@@ -26,6 +26,8 @@ import { ThemeService } from '../../core/services/theme.service';
 import { StoreDetailDto, AppUserDto, LicenseDto, ThemeDto, EventTemplateDto, CreateEventTemplateDto } from '../../core/models/api.models';
 import { StoreContextService } from '../../core/services/store-context.service';
 import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
+import { TierUpgradePromptComponent } from '../../shared/components/tier-upgrade-prompt.component';
+import { MatChipsModule } from '@angular/material/chips';
 
 @Component({
   selector: 'app-store-detail',
@@ -35,7 +37,8 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
     MatFormFieldModule, MatInputModule, MatSnackBarModule,
     MatTabsModule, MatTableModule, MatSelectModule,
     MatDatepickerModule, MatNativeDateModule, MatSlideToggleModule,
-    MatDialogModule, MatDividerModule
+    MatDialogModule, MatDividerModule, MatChipsModule,
+    TierUpgradePromptComponent
   ],
   template: `
     <div class="page-header">
@@ -63,13 +66,15 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
         } @else {
           <mat-icon class="store-logo-placeholder">store</mat-icon>
         }
-        @if (authService.isStoreEmployee) {
-          <button mat-stroked-button (click)="logoInput.click()">
+        @if (authService.isStoreEmployee && authService.isTier1) {
+          <button mat-stroked-button (click)="logoInput.click()" data-testid="upload-logo-btn">
             <mat-icon>upload</mat-icon> Change Logo
           </button>
           <input #logoInput type="file" accept=".png,.jpg,.jpeg,.gif"
                  style="display:none"
                  (change)="onLogoSelected($event)">
+        } @else if (authService.isStoreEmployee && !authService.isTier1) {
+          <app-tier-upgrade-prompt feature="Logo upload" requiredTier="Tier 1"></app-tier-upgrade-prompt>
         }
       </div>
 
@@ -156,7 +161,7 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
                   }
                 </div>
               </mat-card-content>
-              @if (authService.isStoreManager) {
+              @if (authService.isStoreManager && authService.isTier1) {
                 <mat-card-actions>
                   <button mat-raised-button color="primary" (click)="save()" [disabled]="!editStoreName.trim()">
                     <mat-icon>save</mat-icon> Save
@@ -258,16 +263,30 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
                     </mat-card-subtitle>
                   </mat-card-header>
                   <mat-card-content>
+                    @if (daysUntilExpiry !== null && daysUntilExpiry <= 30) {
+                      <div class="expiry-warning" data-testid="expiry-warning">
+                        <mat-icon>warning</mat-icon>
+                        License expires in {{ daysUntilExpiry }} days
+                      </div>
+                    }
                     <div class="form-column">
+                      @if (!authService.isAdmin) {
+                        <div class="tier-chip-row">
+                          <span class="tier-label">Tier:</span>
+                          <mat-chip-set>
+                            <mat-chip data-testid="tier-chip">{{ license.tier }}</mat-chip>
+                          </mat-chip-set>
+                        </div>
+                      }
                       <mat-form-field>
                         <mat-label>App Key</mat-label>
-                        <input matInput [(ngModel)]="editLicenseKey" [readonly]="!authService.isStoreManager">
+                        <input matInput [(ngModel)]="editLicenseKey" [readonly]="!authService.isAdmin">
                       </mat-form-field>
                       <mat-form-field>
                         <mat-label>Available Date</mat-label>
                         <input matInput [matDatepicker]="availPicker" [(ngModel)]="editAvailableDate"
-                               [readonly]="!authService.isStoreManager">
-                        @if (authService.isStoreManager) {
+                               [readonly]="!authService.isAdmin">
+                        @if (authService.isAdmin) {
                           <mat-datepicker-toggle matIconSuffix [for]="availPicker"></mat-datepicker-toggle>
                         }
                         <mat-datepicker #availPicker></mat-datepicker>
@@ -275,18 +294,26 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
                       <mat-form-field>
                         <mat-label>Expires Date</mat-label>
                         <input matInput [matDatepicker]="expPicker" [(ngModel)]="editExpiresDate"
-                               [readonly]="!authService.isStoreManager">
-                        @if (authService.isStoreManager) {
+                               [readonly]="!authService.isAdmin">
+                        @if (authService.isAdmin) {
                           <mat-datepicker-toggle matIconSuffix [for]="expPicker"></mat-datepicker-toggle>
                         }
                         <mat-datepicker #expPicker></mat-datepicker>
                       </mat-form-field>
-                      @if (authService.isStoreManager) {
+                      @if (authService.isAdmin) {
+                        <mat-form-field>
+                          <mat-label>Tier</mat-label>
+                          <mat-select [(ngModel)]="editLicenseTier" data-testid="license-tier-select">
+                            <mat-option value="Free">Free</mat-option>
+                            <mat-option value="Tier1">Tier 1</mat-option>
+                            <mat-option value="Tier2">Tier 2</mat-option>
+                          </mat-select>
+                        </mat-form-field>
                         <mat-slide-toggle [(ngModel)]="editLicenseActive">Active</mat-slide-toggle>
                       }
                     </div>
                   </mat-card-content>
-                  @if (authService.isStoreManager) {
+                  @if (authService.isAdmin) {
                     <mat-card-actions>
                       <button mat-raised-button color="primary" (click)="saveLicense()">
                         <mat-icon>save</mat-icon> Save License
@@ -516,6 +543,9 @@ import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
     .short-field { width: 160px; }
     .background-section { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
     .background-preview { width: 100%; max-width: 480px; height: 120px; object-fit: cover; border-radius: 8px; }
+    .expiry-warning { display: flex; align-items: center; gap: 8px; color: #e65100; background: #fff3e0; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 0.875rem; }
+    .tier-chip-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+    .tier-label { font-size: 0.875rem; color: #666; }
   `]
 })
 export class StoreDetailComponent implements OnInit {
@@ -554,6 +584,13 @@ export class StoreDetailComponent implements OnInit {
   editAvailableDate: Date | null = null;
   editExpiresDate: Date | null = null;
   editLicenseActive = true;
+  editLicenseTier: string = 'Tier2';
+
+  get daysUntilExpiry(): number | null {
+    if (!this.license?.expiresDate) return null;
+    const ms = new Date(this.license.expiresDate).getTime() - Date.now();
+    return Math.ceil(ms / (1000 * 60 * 60 * 24));
+  }
 
   // Data Management
   private get storeSettingsPendingKey(): string {
@@ -616,6 +653,7 @@ export class StoreDetailComponent implements OnInit {
           this.editAvailableDate = new Date(store.license.availableDate);
           this.editExpiresDate = new Date(store.license.expiresDate);
           this.editLicenseActive = store.license.isActive;
+          this.editLicenseTier = store.license.tier ?? 'Tier2';
         }
         this.cdr.detectChanges();
         // Only load employees and templates after confirming the API is reachable.
@@ -865,7 +903,8 @@ export class StoreDetailComponent implements OnInit {
       appKey:        this.editLicenseKey.trim(),
       isActive:      this.editLicenseActive,
       availableDate: this.editAvailableDate.toISOString(),
-      expiresDate:   this.editExpiresDate.toISOString()
+      expiresDate:   this.editExpiresDate.toISOString(),
+      tier:          this.editLicenseTier as any
     }).subscribe({
       next: updated => {
         this.license = updated;

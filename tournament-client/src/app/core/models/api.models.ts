@@ -1,3 +1,6 @@
+// License Tier
+export type LicenseTier = 'Free' | 'Tier1' | 'Tier2';
+
 // Auth DTOs
 export interface CurrentUser {
   id: number;
@@ -6,6 +9,7 @@ export interface CurrentUser {
   role: 'Player' | 'StoreEmployee' | 'StoreManager' | 'Administrator';
   playerId?: number;
   storeId?: number;
+  licenseTier?: LicenseTier;
 }
 
 // Player DTOs
@@ -266,6 +270,7 @@ export interface StoreDto {
   slug?: string | null;
   location?: string | null;
   backgroundImageUrl?: string | null;
+  tier?: LicenseTier | null;
 }
 
 export interface StoreDetailDto {
@@ -369,12 +374,21 @@ export interface LicenseDto {
   isActive: boolean;
   availableDate: string;
   expiresDate: string;
+  tier: LicenseTier;
+}
+
+export interface StoreTierDto {
+  storeId: number;
+  tier: LicenseTier;
+  isActive: boolean;
+  expiresDate: string | null;
 }
 
 export interface CreateLicenseDto {
   appKey: string;
   availableDate: string;
   expiresDate: string;
+  tier?: LicenseTier;
 }
 
 export interface UpdateLicenseDto {
@@ -382,6 +396,7 @@ export interface UpdateLicenseDto {
   isActive: boolean;
   availableDate: string;
   expiresDate: string;
+  tier?: LicenseTier;
 }
 
 // Commander Meta Report

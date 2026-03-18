@@ -55,6 +55,12 @@ public class StoreLogoTests
         public Task PostTestMessageAsync(int storeId) => Task.CompletedTask;
     }
 
+    private sealed class StubLicenseTierService : ILicenseTierService
+    {
+        public Task<TournamentOrganizer.Api.Models.LicenseTier> GetEffectiveTierAsync(int storeId)
+            => Task.FromResult(TournamentOrganizer.Api.Models.LicenseTier.Tier2);
+    }
+
     // ── Fake IWebHostEnvironment ─────────────────────────────────────────
 
     private sealed class FakeWebHostEnvironment : IWebHostEnvironment
@@ -89,7 +95,7 @@ public class StoreLogoTests
         bool isAdmin = false,
         int jwtStoreId = 1)
     {
-        var controller = new StoresController(service, env, new StubCommanderMetaService(), new StubDiscordWebhookService());
+        var controller = new StoresController(service, env, new StubCommanderMetaService(), new StubDiscordWebhookService(), new StubLicenseTierService());
         var claims = new List<Claim>
         {
             new("sub", "user-1"),

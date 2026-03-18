@@ -35,6 +35,7 @@ public class LicenseController : ControllerBase
             IsActive = true,
             AvailableDate = dto.AvailableDate,
             ExpiresDate = dto.ExpiresDate,
+            Tier = dto.Tier,
             CreatedOn = DateTime.UtcNow,
             UpdatedOn = DateTime.UtcNow,
             CreatedBy = User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Email) ?? "admin",
@@ -56,6 +57,7 @@ public class LicenseController : ControllerBase
             IsActive = dto.IsActive,
             AvailableDate = dto.AvailableDate,
             ExpiresDate = dto.ExpiresDate,
+            Tier = dto.Tier,
         });
         return updated == null ? NotFound() : Ok(ToDto(updated));
     }
@@ -68,5 +70,5 @@ public class LicenseController : ControllerBase
     }
 
     private static LicenseDto ToDto(License l) =>
-        new(l.Id, l.StoreId, l.AppKey, l.IsActive, l.AvailableDate, l.ExpiresDate);
+        new(l.Id, l.StoreId, l.AppKey, l.IsActive, l.AvailableDate, l.ExpiresDate, l.Tier);
 }
