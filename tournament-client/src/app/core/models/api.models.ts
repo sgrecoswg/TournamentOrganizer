@@ -243,11 +243,20 @@ export interface ThemeDto {
 }
 
 // Stores
+export interface StoreEventSummaryDto {
+  eventId: number;
+  eventName: string;
+  date: string;
+  status: string;
+}
+
 export interface StoreDto {
   id: number;
   storeName: string;
   isActive: boolean;
   logoUrl?: string | null;
+  slug?: string | null;
+  location?: string | null;
 }
 
 export interface StoreDetailDto {
@@ -261,6 +270,25 @@ export interface StoreDetailDto {
   logoUrl?: string | null;
   hasDiscordWebhook?: boolean;
   sellerPortalUrl?: string | null;
+  slug?: string | null;
+}
+
+export interface StorePublicTopPlayerDto {
+  playerId: number;
+  name: string;
+  conservativeScore: number;
+  avatarUrl?: string | null;
+}
+
+export interface StorePublicDto {
+  id: number;
+  storeName: string;
+  slug?: string | null;
+  location?: string | null;
+  logoUrl?: string | null;
+  upcomingEvents: StoreEventSummaryDto[];
+  recentEvents: StoreEventSummaryDto[];
+  topPlayers: StorePublicTopPlayerDto[];
 }
 
 export interface CreateStoreDto {

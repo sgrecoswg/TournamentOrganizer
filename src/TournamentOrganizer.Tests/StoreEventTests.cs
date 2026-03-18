@@ -161,6 +161,8 @@ public class StoreEventTests
             Task.FromResult(_stores.FirstOrDefault(s => s.Id == id));
         public Task<Store> AddAsync(Store store) { _stores.Add(store); return Task.FromResult(store); }
         public Task UpdateAsync(Store store) => Task.CompletedTask;
+        public Task<Store?> GetBySlugAsync(string slug) => throw new NotImplementedException();
+        public Task<bool> SlugExistsAsync(string slug, int? excludeStoreId = null) => throw new NotImplementedException();
     }
 
     private sealed class StubStoreSettingsRepository : IStoreSettingsRepository

@@ -48,8 +48,9 @@ If the prompt file for the current task contains a `> **GitHub Issue:** [#N ...]
 
 ```bash
 # 1. Find the project item ID for issue #N (replace 99 with the actual issue number)
+# NOTE: jq and python3 are NOT available in this shell. Use gh's built-in --jq flag.
 ITEM_ID=$(gh project item-list 2 --owner sgrecoswg --format json \
-  | jq -r '.items[] | select(.content.number == 99) | .id')
+  --jq '.items[] | select(.content.number == 99) | .id')
 
 # 2. Set Status — use the appropriate option ID:
 #   Backlog     → f75ad846

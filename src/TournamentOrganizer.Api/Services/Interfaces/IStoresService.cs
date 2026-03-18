@@ -9,4 +9,5 @@ public interface IStoresService
     Task<StoreDto> CreateAsync(CreateStoreDto dto);
     Task<StoreDetailDto?> UpdateAsync(int id, UpdateStoreDto dto);
     Task<StoreDto> UpdateLogoUrlAsync(int storeId, string? logoUrl);
+    Task<StorePublicDto?> GetPublicPageAsync(string slug);
 }

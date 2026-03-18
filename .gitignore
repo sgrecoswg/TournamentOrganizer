@@ -1,5 +1,7 @@
 # Claude Code local project settings and memory
 .claude/
+!.claude/commands/
+!.claude/commands/**
 
 # .NET build output
 bin/

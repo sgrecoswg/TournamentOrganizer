@@ -9,4 +9,6 @@ public interface IStoreRepository
     Task<Store?> GetByIdWithEventsAsync(int id);
     Task<Store> AddAsync(Store store);
     Task UpdateAsync(Store store);
+    Task<Store?> GetBySlugAsync(string slug);
+    Task<bool> SlugExistsAsync(string slug, int? excludeStoreId = null);
 }

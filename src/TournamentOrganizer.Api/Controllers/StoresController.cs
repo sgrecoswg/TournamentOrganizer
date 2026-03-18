@@ -115,4 +115,12 @@ public class StoresController : ControllerBase
         }
         return Ok(await _commanderMetaService.GetStoreMetaAsync(id, period));
     }
+
+    [HttpGet("public/{slug}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<StorePublicDto>> GetPublicPage(string slug)
+    {
+        var page = await _service.GetPublicPageAsync(slug);
+        return page == null ? NotFound() : Ok(page);
+    }
 }

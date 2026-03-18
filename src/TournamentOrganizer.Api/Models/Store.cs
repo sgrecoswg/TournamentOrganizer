@@ -12,6 +12,8 @@ public class Store
     public string UpdatedBy { get; set; } = "system";
     public string? LogoUrl { get; set; }
     public string? DiscordWebhookUrl { get; set; }
+    public string? Slug { get; set; }
+    public string? Location { get; set; }
 
     public License? License { get; set; }
     public StoreSettings? Settings { get; set; }

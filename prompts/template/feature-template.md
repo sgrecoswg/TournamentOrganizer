@@ -6,6 +6,43 @@
 
 ---
 
+## Dependencies
+
+<!-- List GitHub issues that MUST be merged to `dev` before this feature can start.
+     Use "None" if there are no blockers. Be specific about what is needed (model, migration, endpoint, etc.). -->
+
+- None
+
+<!-- Example:
+- **#43 — AddSlugToStore**: `Store.Slug` column must exist (migration) before this feature's queries run.
+- **#45 — StorePublicPage**: `GET /api/stores/{slug}` endpoint must exist before the frontend can consume it.
+-->
+
+---
+
+## Files Modified
+
+<!-- List every file that will be created or changed.
+     Used to detect merge conflicts when running tasks in parallel.
+     Mark (new) for files being created, leave unmarked for modified files. -->
+
+**Created:**
+- *(none yet)*
+
+**Modified:**
+- *(none yet)*
+
+<!-- Common modified files — include whichever apply:
+- `src/TournamentOrganizer.Api/Data/AppDbContext.cs`
+- `src/TournamentOrganizer.Api/Program.cs`
+- `tournament-client/src/app/core/services/api.service.ts`
+- `tournament-client/src/app/core/models/api.models.ts`
+- `tournament-client/src/app/app.routes.ts`
+- `tournament-client/src/app/app.html`
+-->
+
+---
+
 ## Requirements
 
 <!-- Bullet list of the concrete behaviour this feature must deliver. Be specific about roles, UI text, field names, API contracts, and edge cases. Vague requirements cause wasted planning. -->

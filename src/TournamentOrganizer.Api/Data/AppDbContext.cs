@@ -135,6 +135,9 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Store>(entity =>
         {
             entity.Property(s => s.StoreName).HasMaxLength(200).IsRequired();
+            entity.Property(s => s.Slug).HasMaxLength(120);
+            entity.Property(s => s.Location).HasMaxLength(300);
+            entity.HasIndex(s => s.Slug).IsUnique().HasFilter("[Slug] IS NOT NULL");
             entity.HasOne(s => s.License)
                 .WithMany()
                 .HasForeignKey(s => s.LicenseId)

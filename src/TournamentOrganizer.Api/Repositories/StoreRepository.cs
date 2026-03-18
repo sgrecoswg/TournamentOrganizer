@@ -40,4 +40,18 @@ public class StoreRepository : IStoreRepository
         _db.Stores.Update(store);
         await _db.SaveChangesAsync();
     }
+
+    public async Task<Store?> GetBySlugAsync(string slug)
+        => await _db.Stores
+            .Include(s => s.StoreEvents)
+                .ThenInclude(se => se.Event)
+                    .ThenInclude(e => e.Registrations)
+                        .ThenInclude(er => er.Player)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Slug == slug);
+
+    public async Task<bool> SlugExistsAsync(string slug, int? excludeStoreId = null)
+        => await _db.Stores.AnyAsync(s =>
+               s.Slug == slug &&
+               (excludeStoreId == null || s.Id != excludeStoreId));
 }

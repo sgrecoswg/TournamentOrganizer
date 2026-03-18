@@ -41,6 +41,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/tournament/game-result.component').then(m => m.GameResultComponent)
   },
   {
+    path: 'stores/public/:slug',
+    loadComponent: () => import('./features/stores/store-public-page.component').then(m => m.StorePublicPageComponent)
+  },
+  {
     path: 'stores',
     canActivate: [authGuard],
     loadComponent: () => import('./features/stores/store-list.component').then(m => m.StoreListComponent)

@@ -14,6 +14,7 @@ import {
   LicenseDto, CreateLicenseDto, UpdateLicenseDto,
   BulkRegisterConfirmDto, BulkRegisterResultDto,
   EventTemplateDto, CreateEventTemplateDto,
+  StorePublicDto,
 } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -284,6 +285,10 @@ export class ApiService {
 
   getCommanderMeta(storeId: number, period: string = '30d'): Observable<CommanderMetaReportDto> {
     return this.http.get<CommanderMetaReportDto>(`${this.base}/stores/${storeId}/meta`, { params: { period } });
+  }
+
+  getStorePublicPage(slug: string): Observable<StorePublicDto> {
+    return this.http.get<StorePublicDto>(`${this.base}/stores/public/${slug}`);
   }
 
   bulkRegisterConfirm(eventId: number, dto: BulkRegisterConfirmDto): Observable<BulkRegisterResultDto> {

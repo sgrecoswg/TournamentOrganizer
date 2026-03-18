@@ -37,6 +37,7 @@ public class StoreLogoTests
         public Task<StoreDetailDto?> GetByIdAsync(int id) => throw new NotImplementedException();
         public Task<StoreDto> CreateAsync(CreateStoreDto dto) => throw new NotImplementedException();
         public Task<StoreDetailDto?> UpdateAsync(int id, UpdateStoreDto dto) => throw new NotImplementedException();
+        public Task<StorePublicDto?> GetPublicPageAsync(string slug) => throw new NotImplementedException();
     }
 
     private sealed class StubCommanderMetaService : ICommanderMetaService
