@@ -81,8 +81,14 @@ public class PlayerAvatarTests
         public Task<List<GameResult>> GetPlayerGamesForRatingReplayAsync(int pid) => Task.FromResult(new List<GameResult>());
     }
 
+    private sealed class StubBadgeService : Api.Services.Interfaces.IBadgeService
+    {
+        public Task CheckAndAwardAsync(int playerId, Api.Services.Interfaces.BadgeTrigger trigger, int? eventId = null) => Task.CompletedTask;
+        public Task<List<Api.DTOs.PlayerBadgeDto>> GetBadgesAsync(int playerId) => Task.FromResult(new List<Api.DTOs.PlayerBadgeDto>());
+    }
+
     private static PlayerService BuildService(params Player[] players)
-        => new PlayerService(new FakePlayerRepository(players), new FakeGameRepository());
+        => new PlayerService(new FakePlayerRepository(players), new FakeGameRepository(), new StubBadgeService());
 
     // ── UpdateAvatarUrlAsync ─────────────────────────────────────────────
 

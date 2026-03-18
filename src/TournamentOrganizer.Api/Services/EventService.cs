@@ -14,6 +14,7 @@ public class EventService : IEventService
     private readonly ITrueSkillService _trueSkillService;
     private readonly IStoreEventRepository _storeEventRepo;
     private readonly IDiscordWebhookService _discordService;
+    private readonly IBadgeService _badgeService;
 
     public EventService(
         IEventRepository eventRepo,
@@ -22,7 +23,8 @@ public class EventService : IEventService
         IPodService podService,
         ITrueSkillService trueSkillService,
         IStoreEventRepository storeEventRepo,
-        IDiscordWebhookService discordService)
+        IDiscordWebhookService discordService,
+        IBadgeService badgeService)
     {
         _eventRepo = eventRepo;
         _playerRepo = playerRepo;
@@ -31,6 +33,7 @@ public class EventService : IEventService
         _trueSkillService = trueSkillService;
         _storeEventRepo = storeEventRepo;
         _discordService = discordService;
+        _badgeService = badgeService;
     }
 
     public async Task<EventDto> CreateAsync(CreateEventDto dto)
@@ -594,7 +597,29 @@ public class EventService : IEventService
         }
 
         if (newStatus == EventStatus.Completed)
+        {
             await _discordService.PostEventCompletedAsync(eventId);
+
+            // Award event-completion badges for all registered players
+            var registrations = await _eventRepo.GetRegistrationsWithPlayersAsync(eventId);
+            var activePlayers = registrations
+                .Where(r => !r.IsDropped && !r.IsDisqualified)
+                .ToList();
+
+            // Get standings to find the tournament winner
+            var completedStandings = await GetStandingsAsync(eventId);
+            var winnerId = completedStandings.OrderBy(s => s.Rank).FirstOrDefault()?.PlayerId;
+
+            foreach (var reg in activePlayers)
+            {
+                // Check undefeated_swiss and veteran for every participant
+                await _badgeService.CheckAndAwardAsync(reg.PlayerId, BadgeTrigger.EventCompleted, eventId);
+            }
+
+            // Award tournament_winner only to rank 1 player
+            if (winnerId.HasValue)
+                await _badgeService.CheckAndAwardAsync(winnerId.Value, BadgeTrigger.TournamentWinner, eventId);
+        }
 
         var players = await _eventRepo.GetRegisteredPlayersAsync(eventId);
         var (storeId, storeName) = await _storeEventRepo.GetStoreInfoForEventAsync(eventId);

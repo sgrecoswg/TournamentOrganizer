@@ -118,6 +118,12 @@ public class CommanderDeclarationTests
         public Task PostTestMessageAsync(int storeId) => Task.CompletedTask;
     }
 
+    private sealed class StubBadgeService : IBadgeService
+    {
+        public Task CheckAndAwardAsync(int playerId, BadgeTrigger trigger, int? eventId = null) => Task.CompletedTask;
+        public Task<List<PlayerBadgeDto>> GetBadgesAsync(int playerId) => Task.FromResult(new List<PlayerBadgeDto>());
+    }
+
     private sealed class StubStoreEventRepo : IStoreEventRepository
     {
         public Task AddAsync(StoreEvent se) => Task.CompletedTask;
@@ -127,7 +133,7 @@ public class CommanderDeclarationTests
     }
 
     private static EventService BuildService(FakeEventRepository repo, StubPlayerRepo? playerRepo = null) =>
-        new(repo, playerRepo ?? new StubPlayerRepo(), new StubGameRepo(), new StubPodService(), new StubTrueSkillService(), new StubStoreEventRepo(), new StubDiscordWebhookService());
+        new(repo, playerRepo ?? new StubPlayerRepo(), new StubGameRepo(), new StubPodService(), new StubTrueSkillService(), new StubStoreEventRepo(), new StubDiscordWebhookService(), new StubBadgeService());
 
     private static Player MakePlayer(int id) =>
         new() { Id = id, Name = $"Player{id}", Mu = 25, Sigma = 8.333 };

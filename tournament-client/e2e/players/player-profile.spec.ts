@@ -10,6 +10,7 @@ import {
   mockScryfallAutocomplete,
   mockPlayerProfileSubApis,
   makePlayerProfile,
+  makePlayerBadgeDto,
   makePlayerDto,
   makeCommanderStatDto,
   makeRatingSnapshotDto,
@@ -461,5 +462,81 @@ test.describe('Player Profile — Rating History: hidden when empty', () => {
 
   test('canvas is NOT present with empty history', async ({ page }) => {
     await expect(page.locator('.rating-history-section canvas')).not.toBeVisible();
+  });
+});
+
+// ── Badges ─────────────────────────────────────────────────────────────────────
+
+test.describe('Player Profile — Badges: display', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player');
+    await stubUnmatchedApi(page);
+    await mockGetPlayerProfile(page, makePlayerProfile({
+      id: PLAYER_ID,
+      badges: [makePlayerBadgeDto({ badgeKey: 'first_win', displayName: 'First Win', awardedAt: '2026-01-01T00:00:00Z' })],
+    }));
+    await page.goto(`/players/${PLAYER_ID}`);
+  });
+
+  test('"Achievements" heading is visible when badges present', async ({ page }) => {
+    await expect(page.getByText('Achievements')).toBeVisible();
+  });
+
+  test('"First Win" badge chip is shown', async ({ page }) => {
+    await expect(page.locator('.badge-chip').filter({ hasText: 'First Win' })).toBeVisible();
+  });
+});
+
+test.describe('Player Profile — Badges: multiple badges', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player');
+    await stubUnmatchedApi(page);
+    await mockGetPlayerProfile(page, makePlayerProfile({
+      id: PLAYER_ID,
+      badges: [
+        makePlayerBadgeDto({ badgeKey: 'first_win',    displayName: 'First Win' }),
+        makePlayerBadgeDto({ badgeKey: 'veteran',      displayName: 'Veteran' }),
+        makePlayerBadgeDto({ badgeKey: 'undefeated_swiss', displayName: 'Flawless' }),
+      ],
+    }));
+    await page.goto(`/players/${PLAYER_ID}`);
+  });
+
+  test('all 3 badge chips are rendered', async ({ page }) => {
+    await expect(page.locator('.badge-chip').filter({ hasText: 'First Win' })).toBeVisible();
+    await expect(page.locator('.badge-chip').filter({ hasText: 'Veteran' })).toBeVisible();
+    await expect(page.locator('.badge-chip').filter({ hasText: 'Flawless' })).toBeVisible();
+  });
+});
+
+test.describe('Player Profile — Badges: no badges', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player');
+    await stubUnmatchedApi(page);
+    await mockGetPlayerProfile(page, makePlayerProfile({ id: PLAYER_ID, badges: [] }));
+    await page.goto(`/players/${PLAYER_ID}`);
+  });
+
+  test('"Achievements" section is NOT visible when badges is empty', async ({ page }) => {
+    await expect(page.getByText('Achievements')).not.toBeVisible();
+  });
+});
+
+test.describe('Player Profile — Badges: tooltip', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player');
+    await stubUnmatchedApi(page);
+    await mockGetPlayerProfile(page, makePlayerProfile({
+      id: PLAYER_ID,
+      badges: [makePlayerBadgeDto({ badgeKey: 'veteran', displayName: 'Veteran', awardedAt: '2026-01-15T00:00:00Z' })],
+    }));
+    await page.goto(`/players/${PLAYER_ID}`);
+  });
+
+  test('tooltip on badge chip shows badge name', async ({ page }) => {
+    const chip = page.locator('.badge-chip').first();
+    await chip.hover();
+    // The matTooltip renders as a tooltip panel; check it contains 'Veteran'
+    await expect(page.locator('mat-tooltip-component, .mdc-tooltip')).toContainText('Veteran', { timeout: 3000 });
   });
 });

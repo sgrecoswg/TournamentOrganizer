@@ -16,4 +16,5 @@ public class Player
 
     public ICollection<EventRegistration> EventRegistrations { get; set; } = new List<EventRegistration>();
     public ICollection<GameResult> GameResults { get; set; } = new List<GameResult>();
+    public ICollection<PlayerBadge> Badges { get; set; } = new List<PlayerBadge>();
 }

@@ -20,7 +20,8 @@ public record PlayerProfileDto(
     bool IsActive,
     List<PlayerGameHistoryDto> GameHistory,
     List<PlayerEventRegistrationDto> EventRegistrations,
-    string? AvatarUrl = null
+    string? AvatarUrl = null,
+    List<PlayerBadgeDto>? Badges = null
 );
 
 public record PlayerGameHistoryDto(
@@ -70,3 +71,5 @@ public record HeadToHeadEntryDto(
 public record RatingSnapshotDto(DateTime Date, double ConservativeScore, string EventName, int RoundNumber);
 
 public record RatingHistoryDto(int PlayerId, List<RatingSnapshotDto> History);
+
+public record PlayerBadgeDto(string BadgeKey, string DisplayName, DateTime AwardedAt, int? EventId);

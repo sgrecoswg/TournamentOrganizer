@@ -24,6 +24,7 @@ public class AppDbContext : DbContext
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<Theme> Themes => Set<Theme>();
     public DbSet<EventTemplate> EventTemplates => Set<EventTemplate>();
+    public DbSet<PlayerBadge> PlayerBadges => Set<PlayerBadge>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -176,6 +177,16 @@ public class AppDbContext : DbContext
             new Theme { Id = 3, Name = "Forest",  CssClass = "theme-forest",  IsActive = true, CreatedOn = seedDate, CreatedBy = "seed", UpdatedOn = seedDate, UpdatedBy = "seed" },
             new Theme { Id = 4, Name = "Ocean",   CssClass = "theme-ocean",   IsActive = true, CreatedOn = seedDate, CreatedBy = "seed", UpdatedOn = seedDate, UpdatedBy = "seed" }
         );
+
+        modelBuilder.Entity<PlayerBadge>(entity =>
+        {
+            entity.HasOne(pb => pb.Player)
+                .WithMany(p => p.Badges)
+                .HasForeignKey(pb => pb.PlayerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(pb => new { pb.PlayerId, pb.BadgeKey }).IsUnique();
+            entity.Property(pb => pb.BadgeKey).HasMaxLength(50).IsRequired();
+        });
 
         modelBuilder.Entity<EventTemplate>(entity =>
         {

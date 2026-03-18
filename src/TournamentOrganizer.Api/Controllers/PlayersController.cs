@@ -12,11 +12,13 @@ public class PlayersController : ControllerBase
 {
     private readonly IPlayerService _playerService;
     private readonly IWebHostEnvironment _env;
+    private readonly IBadgeService _badgeService;
 
-    public PlayersController(IPlayerService playerService, IWebHostEnvironment env)
+    public PlayersController(IPlayerService playerService, IWebHostEnvironment env, IBadgeService badgeService)
     {
         _playerService = playerService;
         _env = env;
+        _badgeService = badgeService;
     }
 
     [HttpGet]
@@ -134,5 +136,13 @@ public class PlayersController : ControllerBase
         var result = await _playerService.GetRatingHistoryAsync(id);
         if (result == null) return NotFound();
         return Ok(result);
+    }
+
+    [HttpGet("{id}/badges")]
+    [AllowAnonymous]
+    public async Task<ActionResult<List<PlayerBadgeDto>>> GetBadges(int id)
+    {
+        var badges = await _badgeService.GetBadgesAsync(id);
+        return Ok(badges);
     }
 }
