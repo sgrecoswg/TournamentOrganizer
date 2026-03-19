@@ -32,6 +32,7 @@ public class LicenseRepository : ILicenseRepository
         existing.IsActive = license.IsActive;
         existing.AvailableDate = license.AvailableDate;
         existing.ExpiresDate = license.ExpiresDate;
+        existing.Tier = license.Tier;
         existing.UpdatedOn = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         return existing;

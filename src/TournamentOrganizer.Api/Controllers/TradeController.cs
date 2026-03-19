@@ -19,7 +19,7 @@ public class TradeController : ControllerBase
         => Ok(await _service.GetByPlayerAsync(playerId));
 
     [HttpPost]
-    [Authorize]
+    [Authorize(Policy = "Tier2Required")]
     public async Task<ActionResult<TradeEntryDto>> Add(int playerId, CreateCardEntryDto dto)
     {
         if (!OwnsPlayer(playerId)) return Forbid();
@@ -28,7 +28,7 @@ public class TradeController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [Authorize]
+    [Authorize(Policy = "Tier2Required")]
     public async Task<IActionResult> Delete(int playerId, int id)
     {
         if (!OwnsPlayer(playerId)) return Forbid();
@@ -37,7 +37,7 @@ public class TradeController : ControllerBase
     }
 
     [HttpPost("bulkupload")]
-    [Authorize]
+    [Authorize(Policy = "Tier2Required")]
     public async Task<ActionResult<BulkUploadResultDto>> BulkUpload(int playerId, IFormFile file)
     {
         if (!OwnsPlayer(playerId)) return Forbid();
@@ -47,7 +47,7 @@ public class TradeController : ControllerBase
     }
 
     [HttpDelete("removeall")]
-    [Authorize]
+    [Authorize(Policy = "Tier2Required")]
     public async Task<IActionResult> RemoveAll(int playerId)
     {
         if (!OwnsPlayer(playerId)) return Forbid();

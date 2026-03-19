@@ -18,6 +18,7 @@ public class AppUsersController : ControllerBase
 
     [HttpGet("api/stores/{storeId}/employees")]
     [Authorize(Policy = "StoreManager")]
+    [Authorize(Policy = "Tier1Required")]
     public async Task<ActionResult<List<AppUserDto>>> GetStoreEmployees(int storeId)
     {
         if (!CanAccessStore(storeId)) return Forbid();
@@ -27,6 +28,7 @@ public class AppUsersController : ControllerBase
 
     [HttpPost("api/stores/{storeId}/employees")]
     [Authorize(Policy = "StoreManager")]
+    [Authorize(Policy = "Tier1Required")]
     public async Task<ActionResult<AppUserDto>> AddStoreEmployee(int storeId, AssignEmployeeDto dto)
     {
         if (!CanAccessStore(storeId)) return Forbid();
@@ -59,6 +61,7 @@ public class AppUsersController : ControllerBase
 
     [HttpDelete("api/stores/{storeId}/employees/{userId}")]
     [Authorize(Policy = "StoreManager")]
+    [Authorize(Policy = "Tier1Required")]
     public async Task<IActionResult> RemoveStoreEmployee(int storeId, int userId)
     {
         if (!CanAccessStore(storeId)) return Forbid();

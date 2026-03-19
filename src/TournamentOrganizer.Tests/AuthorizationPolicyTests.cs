@@ -77,8 +77,8 @@ public class TournamentOrganizerFactory : WebApplicationFactory<Program>
         });
     }
 
-    /// <summary>Creates a signed JWT for the given role, with optional storeId / playerId claims.</summary>
-    public string MakeToken(string role, int? storeId = null, int? playerId = null)
+    /// <summary>Creates a signed JWT for the given role, with optional storeId / playerId / licenseTier claims.</summary>
+    public string MakeToken(string role, int? storeId = null, int? playerId = null, string? licenseTier = null)
     {
         var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -90,8 +90,9 @@ public class TournamentOrganizerFactory : WebApplicationFactory<Program>
             new(JwtRegisteredClaimNames.Name,  "Test User"),
             new("role", role),
         };
-        if (storeId.HasValue)  claims.Add(new("storeId",  storeId.Value.ToString()));
-        if (playerId.HasValue) claims.Add(new("playerId", playerId.Value.ToString()));
+        if (storeId.HasValue)    claims.Add(new("storeId",  storeId.Value.ToString()));
+        if (playerId.HasValue)   claims.Add(new("playerId", playerId.Value.ToString()));
+        if (licenseTier != null) claims.Add(new("licenseTier", licenseTier));
 
         var token = new JwtSecurityToken(
             issuer:             JwtIssuer,
@@ -104,11 +105,11 @@ public class TournamentOrganizerFactory : WebApplicationFactory<Program>
     }
 
     /// <summary>Returns an HttpClient with a Bearer token for the specified role.</summary>
-    public HttpClient ClientAs(string role, int? storeId = null, int? playerId = null)
+    public HttpClient ClientAs(string role, int? storeId = null, int? playerId = null, string? licenseTier = null)
     {
         var client = CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", MakeToken(role, storeId, playerId));
+            new AuthenticationHeaderValue("Bearer", MakeToken(role, storeId, playerId, licenseTier));
         return client;
     }
 }
@@ -256,7 +257,7 @@ public class AuthorizationPolicyTests(TournamentOrganizerFactory factory)
     [Fact]
     public async Task StoreManager_UpdateOwnStore_IsAllowed()
     {
-        var client = factory.ClientAs("StoreManager", storeId: 1);
+        var client = factory.ClientAs("StoreManager", storeId: 1, licenseTier: "Tier1");
         var response = await client.PutAsJsonAsync("/api/stores/1", new { name = "test" });
         AssertAllowed(response);
     }
@@ -288,7 +289,7 @@ public class AuthorizationPolicyTests(TournamentOrganizerFactory factory)
     [Fact]
     public async Task StoreManager_GetOwnStoreEmployees_IsAllowed()
     {
-        var client = factory.ClientAs("StoreManager", storeId: 1);
+        var client = factory.ClientAs("StoreManager", storeId: 1, licenseTier: "Tier1");
         var response = await client.GetAsync("/api/stores/1/employees");
         AssertAllowed(response);
     }

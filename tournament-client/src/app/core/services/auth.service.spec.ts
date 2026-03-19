@@ -302,4 +302,44 @@ describe('AuthService', () => {
       });
     });
   });
+
+  // ─── licenseTier / isTier1 / isTier2 getters ────────────────────────────
+
+  describe('licenseTier / isTier1 / isTier2 getters', () => {
+    it('JWT with licenseTier="Tier1" → isTier1=true, isTier2=false', () => {
+      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role: 'StoreEmployee', storeId: '1', licenseTier: 'Tier1' });
+      localStorage.setItem('auth_token', token);
+      const service = createService();
+      expect(service.isTier1).toBe(true);
+      expect(service.isTier2).toBe(false);
+      expect(service.licenseTier).toBe('Tier1');
+    });
+
+    it('JWT with licenseTier="Tier2" → isTier1=true, isTier2=true', () => {
+      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role: 'StoreEmployee', storeId: '1', licenseTier: 'Tier2' });
+      localStorage.setItem('auth_token', token);
+      const service = createService();
+      expect(service.isTier1).toBe(true);
+      expect(service.isTier2).toBe(true);
+      expect(service.licenseTier).toBe('Tier2');
+    });
+
+    it('JWT with no licenseTier → isTier1=false, isTier2=false, licenseTier==="Free"', () => {
+      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role: 'StoreEmployee', storeId: '1' });
+      localStorage.setItem('auth_token', token);
+      const service = createService();
+      expect(service.isTier1).toBe(false);
+      expect(service.isTier2).toBe(false);
+      expect(service.licenseTier).toBe('Free');
+    });
+
+    it('Admin role → isTier1=true, isTier2=true regardless of licenseTier claim', () => {
+      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role: 'Administrator' });
+      localStorage.setItem('auth_token', token);
+      const service = createService();
+      expect(service.isTier1).toBe(true);
+      expect(service.isTier2).toBe(true);
+      expect(service.licenseTier).toBe('Tier2');
+    });
+  });
 });

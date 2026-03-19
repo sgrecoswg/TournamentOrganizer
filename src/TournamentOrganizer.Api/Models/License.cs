@@ -13,5 +13,7 @@ public class License
     public DateTime UpdatedOn { get; set; } = DateTime.UtcNow;
     public string UpdatedBy { get; set; } = "system";
 
+    public LicenseTier Tier { get; set; } = LicenseTier.Tier2;
+
     public Store Store { get; set; } = null!;
 }

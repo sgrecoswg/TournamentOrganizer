@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TournamentOrganizer.Api.Services.Interfaces;
 
@@ -12,6 +13,7 @@ public class SuggestedTradeController : ControllerBase
     public SuggestedTradeController(ISuggestedTradeService service) => _service = service;
 
     [HttpGet("suggestions")]
+    [Authorize(Policy = "Tier2Required")]
     public async Task<IActionResult> GetSuggestions(int playerId)
     {
         var result = await _service.GetSuggestionsAsync(playerId);
@@ -19,6 +21,7 @@ public class SuggestedTradeController : ControllerBase
     }
 
     [HttpGet("demand")]
+    [Authorize(Policy = "Tier2Required")]
     public async Task<IActionResult> GetDemand(int playerId)
     {
         var result = await _service.GetDemandAsync(playerId);
