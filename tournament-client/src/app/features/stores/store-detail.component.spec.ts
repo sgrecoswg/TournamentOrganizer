@@ -937,4 +937,73 @@ describe('StoreDetailComponent', () => {
       expect(snackBarSpy).toHaveBeenCalledWith('Background upload failed', 'Close', expect.any(Object));
     });
   });
+
+  // ── License expiry warning banner ───────────────────────────────────────────
+
+  function daysFromNow(days: number): string {
+    const d = new Date(Date.now() + days * 86400000);
+    return d.toISOString();
+  }
+
+  it('banner visible when expiresDate is 15 days away (within 30-day threshold)', async () => {
+    mockApi.getStore.mockReturnValue(of({
+      ...storeStub,
+      license: { id: 1, storeId: STORE_ID, startDate: '2026-01-01', expiresDate: daysFromNow(15), tier: 'Tier1' },
+    }));
+    await setup({ isStoreManager: true, isAdmin: false });
+    const fixture = TestBed.createComponent(StoreDetailComponent);
+    fixture.detectChanges();
+    const comp = fixture.componentInstance;
+    expect(comp.daysUntilExpiry).toBe(15);
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.expiry-banner')).not.toBeNull();
+  });
+
+  it('banner absent when expiresDate is 45 days away', async () => {
+    mockApi.getStore.mockReturnValue(of({
+      ...storeStub,
+      license: { id: 1, storeId: STORE_ID, startDate: '2026-01-01', expiresDate: daysFromNow(45), tier: 'Tier1' },
+    }));
+    await setup({ isStoreManager: true });
+    const fixture = TestBed.createComponent(StoreDetailComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.expiry-banner')).toBeNull();
+  });
+
+  it('banner absent for Free tier store (no expiresDate)', async () => {
+    mockApi.getStore.mockReturnValue(of({
+      ...storeStub,
+      license: null,
+    }));
+    await setup({ isStoreManager: true });
+    const fixture = TestBed.createComponent(StoreDetailComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.expiry-banner')).toBeNull();
+  });
+
+  it('banner has expiry-critical class when daysUntilExpiry <= 7', async () => {
+    mockApi.getStore.mockReturnValue(of({
+      ...storeStub,
+      license: { id: 1, storeId: STORE_ID, startDate: '2026-01-01', expiresDate: daysFromNow(5), tier: 'Tier1' },
+    }));
+    await setup({ isStoreManager: true });
+    const fixture = TestBed.createComponent(StoreDetailComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.expiry-banner.expiry-critical')).not.toBeNull();
+  });
+
+  it('banner absent for Player role even when within threshold', async () => {
+    mockApi.getStore.mockReturnValue(of({
+      ...storeStub,
+      license: { id: 1, storeId: STORE_ID, startDate: '2026-01-01', expiresDate: daysFromNow(10), tier: 'Tier1' },
+    }));
+    await setup({ isStoreManager: false, isAdmin: false, isStoreEmployee: false });
+    const fixture = TestBed.createComponent(StoreDetailComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.expiry-banner')).toBeNull();
+  });
 });

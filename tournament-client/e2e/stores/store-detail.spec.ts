@@ -72,7 +72,7 @@ test.describe('Store Detail — Settings tab (Player / read-only)', () => {
 
 test.describe('Store Detail — Settings tab (StoreManager / editable)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
     await mockGetThemes(page, []);
     await mockGetStore(page, STORE);
@@ -251,7 +251,7 @@ const THEMES = [
 
 test.describe('Store Detail — theme selector', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
     await mockGetThemes(page, THEMES);
     await mockGetStore(page, STORE);
@@ -298,7 +298,7 @@ test.describe('Store Detail — theme selector', () => {
 
 test.describe('Store Detail — logo: placeholder shown when no logo', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
+    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop' }));
     await page.goto('/stores/1');
@@ -332,7 +332,7 @@ test.describe('Store Detail — logo: image shown when logoUrl is set', () => {
 
 test.describe('Store Detail — logo: upload updates the image', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee', { storeId: 1 });
+    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop' }));
     await mockUploadStoreLogo(page, 1, makeStoreDto({ id: 1, storeName: 'Downtown Game Shop', logoUrl: '/logos/1.png' }));
@@ -365,7 +365,7 @@ test.describe('Store Detail — logo: upload updates the image', () => {
 
 test.describe('Store Detail — Discord: connected', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', hasDiscordWebhook: true }));
@@ -423,7 +423,7 @@ test.describe('Store Detail — Discord: URL masked', () => {
 
 test.describe('Store Detail — Discord: save webhook', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', hasDiscordWebhook: false }));
@@ -451,7 +451,7 @@ test.describe('Store Detail — Discord: save webhook', () => {
 
 test.describe('Store Detail — Discord: test button', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager', { storeId: 1 });
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
     await mockGetThemes(page, []);
     await mockGetStore(page, makeStoreDetailDto({ id: 1, storeName: 'Downtown Game Shop', hasDiscordWebhook: true }));
@@ -606,6 +606,102 @@ test.describe('Store Detail — Upload Background (Player)', () => {
   test('"Upload Background" button is NOT visible for Player role', async ({ page }) => {
     await expect(page.getByRole('button', { name: /Upload Background/ })).not.toBeVisible();
     await expect(page.getByRole('button', { name: /Change Background/ })).not.toBeVisible();
+  });
+});
+
+// ── License expiry warning banner ─────────────────────────────────────────────
+
+function daysFromNow(days: number): string {
+  return new Date(Date.now() + days * 86400000).toISOString();
+}
+
+function makeTier1License(overrides: Partial<{ expiresDate: string }> = {}) {
+  return {
+    id: 1, storeId: 1, appKey: 'key', isActive: true,
+    startDate: '2026-01-01T00:00:00Z',
+    availableDate: '2026-01-01T00:00:00Z',
+    expiresDate: daysFromNow(90),
+    tier: 'Tier1' as const,
+    ...overrides,
+  };
+}
+
+test.describe('Store Detail — expiry warning: within 30 days', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTier1License({ expiresDate: daysFromNow(15) }) }));
+    await mockGetEmployees(page, 1, []);
+    await page.goto('/stores/1');
+  });
+
+  test('banner with "expires in 15 days" is visible', async ({ page }) => {
+    await expect(page.locator('.expiry-banner')).toBeVisible();
+    await expect(page.locator('.expiry-banner')).toContainText('expires in 15 days');
+  });
+
+  test('banner does NOT have expiry-critical class', async ({ page }) => {
+    await expect(page.locator('.expiry-banner.expiry-critical')).not.toBeVisible();
+  });
+});
+
+test.describe('Store Detail — expiry warning: critical (≤7 days)', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTier1License({ expiresDate: daysFromNow(5) }) }));
+    await mockGetEmployees(page, 1, []);
+    await page.goto('/stores/1');
+  });
+
+  test('banner has expiry-critical class', async ({ page }) => {
+    await expect(page.locator('.expiry-banner.expiry-critical')).toBeVisible();
+  });
+});
+
+test.describe('Store Detail — expiry warning: not shown >30 days', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTier1License({ expiresDate: daysFromNow(45) }) }));
+    await mockGetEmployees(page, 1, []);
+    await page.goto('/stores/1');
+  });
+
+  test('banner NOT visible when expiry is more than 30 days away', async ({ page }) => {
+    await expect(page.locator('.expiry-banner')).not.toBeVisible();
+  });
+});
+
+test.describe('Store Detail — expiry warning: hidden for Player', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player');
+    await stubUnmatchedApi(page);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTier1License({ expiresDate: daysFromNow(10) }) }));
+    await page.goto('/stores/1');
+  });
+
+  test('banner NOT visible for Player role', async ({ page }) => {
+    await expect(page.locator('.expiry-banner')).not.toBeVisible();
+  });
+});
+
+test.describe('Store Detail — expiry warning: expired', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTier1License({ expiresDate: daysFromNow(-1) }) }));
+    await mockGetEmployees(page, 1, []);
+    await page.goto('/stores/1');
+  });
+
+  test('"Your license has expired" text is visible', async ({ page }) => {
+    await expect(page.locator('.expiry-banner')).toBeVisible();
+    await expect(page.locator('.expiry-banner')).toContainText('Your license has expired');
   });
 });
 

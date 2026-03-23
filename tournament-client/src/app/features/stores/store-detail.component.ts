@@ -78,6 +78,19 @@ import { MatChipsModule } from '@angular/material/chips';
         }
       </div>
 
+      @if (daysUntilExpiry !== null && daysUntilExpiry <= EXPIRY_WARN_DAYS
+           && (authService.isStoreManager || authService.isAdmin)) {
+        <div class="expiry-banner" [class.expiry-critical]="daysUntilExpiry <= 7">
+          <mat-icon>warning</mat-icon>
+          @if (daysUntilExpiry > 0) {
+            Your license expires in {{ daysUntilExpiry }} day{{ daysUntilExpiry === 1 ? '' : 's' }}.
+            Contact your administrator to renew.
+          } @else {
+            Your license has expired. Contact your administrator to renew.
+          }
+        </div>
+      }
+
       <mat-tab-group>
 
         <!-- ── Tab 1: Settings ───────────────────────────────── -->
@@ -544,6 +557,10 @@ import { MatChipsModule } from '@angular/material/chips';
     .background-section { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
     .background-preview { width: 100%; max-width: 480px; height: 120px; object-fit: cover; border-radius: 8px; }
     .expiry-warning { display: flex; align-items: center; gap: 8px; color: #e65100; background: #fff3e0; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 0.875rem; }
+    .expiry-banner { display: flex; align-items: center; gap: 8px; padding: 12px 16px; margin-bottom: 16px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; }
+    .expiry-banner mat-icon { color: #856404; }
+    .expiry-banner.expiry-critical { background: #f8d7da; border-left-color: #dc3545; }
+    .expiry-banner.expiry-critical mat-icon { color: #842029; }
     .tier-chip-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
     .tier-label { font-size: 0.875rem; color: #666; }
   `]
@@ -560,6 +577,7 @@ export class StoreDetailComponent implements OnInit {
   newEmployeeEmail = '';
   newEmployeeRole: 'StoreEmployee' | 'StoreManager' = 'StoreEmployee';
   readonly employeeCols = ['name', 'email', 'role', 'actions'];
+  readonly EXPIRY_WARN_DAYS = 30;
 
   // Theme
   themes: ThemeDto[] = [];
