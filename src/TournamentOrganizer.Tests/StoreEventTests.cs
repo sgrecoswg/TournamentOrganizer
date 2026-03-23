@@ -179,6 +179,16 @@ public class StoreEventTests
 
     // ── Helper ───────────────────────────────────────────────────────────
 
+    private sealed class StubLicenseTierService : ILicenseTierService
+    {
+        public Task<TournamentOrganizer.Api.Models.LicenseTier> GetEffectiveTierAsync(int storeId) =>
+            Task.FromResult(TournamentOrganizer.Api.Models.LicenseTier.Tier1);
+        public Task<(bool IsInTrial, DateTime? TrialExpiresDate)> GetTrialStatusAsync(int storeId) =>
+            Task.FromResult((false, (DateTime?)null));
+        public Task<(bool IsInGracePeriod, DateTime? GracePeriodEndsDate)> GetGracePeriodStatusAsync(int storeId) =>
+            Task.FromResult((false, (DateTime?)null));
+    }
+
     private static EventService BuildEventService(
         List<Event> events,
         List<StoreEvent> storeEvents,
@@ -191,7 +201,8 @@ public class StoreEventTests
             new StubTrueSkillService(),
             storeEventRepo ?? new FakeStoreEventRepository(),
             new StubDiscordWebhookService(),
-            new StubBadgeService());
+            new StubBadgeService(),
+            new StubLicenseTierService());
 
     // ── Tests ─────────────────────────────────────────────────────────────
 

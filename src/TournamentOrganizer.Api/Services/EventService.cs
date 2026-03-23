@@ -1,3 +1,4 @@
+using TournamentOrganizer.Api.Constants;
 using TournamentOrganizer.Api.DTOs;
 using TournamentOrganizer.Api.Models;
 using TournamentOrganizer.Api.Repositories.Interfaces;
@@ -15,6 +16,7 @@ public class EventService : IEventService
     private readonly IStoreEventRepository _storeEventRepo;
     private readonly IDiscordWebhookService _discordService;
     private readonly IBadgeService _badgeService;
+    private readonly ILicenseTierService _licenseTierService;
 
     public EventService(
         IEventRepository eventRepo,
@@ -24,7 +26,8 @@ public class EventService : IEventService
         ITrueSkillService trueSkillService,
         IStoreEventRepository storeEventRepo,
         IDiscordWebhookService discordService,
-        IBadgeService badgeService)
+        IBadgeService badgeService,
+        ILicenseTierService licenseTierService)
     {
         _eventRepo = eventRepo;
         _playerRepo = playerRepo;
@@ -34,17 +37,30 @@ public class EventService : IEventService
         _storeEventRepo = storeEventRepo;
         _discordService = discordService;
         _badgeService = badgeService;
+        _licenseTierService = licenseTierService;
     }
 
     public async Task<EventDto> CreateAsync(CreateEventDto dto)
     {
         var pointSystem = Enum.TryParse<PointSystem>(dto.PointSystem, true, out var ps) ? ps : PointSystem.ScoreBased;
+
+        // Clamp MaxPlayers for Free-tier stores
+        var maxPlayers = dto.MaxPlayers;
+        if (dto.StoreId.HasValue)
+        {
+            var tier = await _licenseTierService.GetEffectiveTierAsync(dto.StoreId.Value);
+            if (tier == LicenseTier.Free)
+                maxPlayers = maxPlayers.HasValue
+                    ? Math.Min(maxPlayers.Value, LicenseLimits.FreeMaxPlayersPerEvent)
+                    : LicenseLimits.FreeMaxPlayersPerEvent;
+        }
+
         var evt = new Event
         {
             Name = dto.Name,
             Date = dto.Date,
             DefaultRoundTimeMinutes = dto.DefaultRoundTimeMinutes,
-            MaxPlayers = dto.MaxPlayers,
+            MaxPlayers = maxPlayers,
             PointSystem = pointSystem
         };
         await _eventRepo.CreateAsync(evt);
@@ -111,6 +127,21 @@ public class EventService : IEventService
             existing.Commanders = commanders;
             await _eventRepo.UpdateRegistrationAsync(existing);
             return;
+        }
+
+        // Enforce Free-tier player cap
+        var storeId = await _storeEventRepo.GetStoreIdForEventAsync(eventId);
+        if (storeId.HasValue)
+        {
+            var tier = await _licenseTierService.GetEffectiveTierAsync(storeId.Value);
+            if (tier == LicenseTier.Free)
+            {
+                var allRegs = await _eventRepo.GetRegistrationsWithPlayersAsync(eventId);
+                var activeCount = allRegs.Count(r => !r.IsWaitlisted && !r.IsDropped && !r.IsDisqualified);
+                if (activeCount >= LicenseLimits.FreeMaxPlayersPerEvent)
+                    throw new InvalidOperationException(
+                        $"Free tier events are limited to {LicenseLimits.FreeMaxPlayersPerEvent} players. Upgrade to Tier 1 to remove this limit.");
+            }
         }
 
         bool isWaitlisted = false;

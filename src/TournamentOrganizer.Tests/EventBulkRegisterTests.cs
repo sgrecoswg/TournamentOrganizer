@@ -131,8 +131,18 @@ public class EventBulkRegisterTests
         public Task<List<StoreEvent>> GetByStoreIdAsync(int storeId) => Task.FromResult(new List<StoreEvent>());
     }
 
+    private sealed class StubLicenseTierService : ILicenseTierService
+    {
+        public Task<TournamentOrganizer.Api.Models.LicenseTier> GetEffectiveTierAsync(int storeId) =>
+            Task.FromResult(TournamentOrganizer.Api.Models.LicenseTier.Tier1);
+        public Task<(bool IsInTrial, DateTime? TrialExpiresDate)> GetTrialStatusAsync(int storeId) =>
+            Task.FromResult((false, (DateTime?)null));
+        public Task<(bool IsInGracePeriod, DateTime? GracePeriodEndsDate)> GetGracePeriodStatusAsync(int storeId) =>
+            Task.FromResult((false, (DateTime?)null));
+    }
+
     private static EventService BuildService(FakeEventRepository eventRepo, FakePlayerRepository playerRepo) =>
-        new(eventRepo, playerRepo, new StubGameRepo(), new StubPodService(), new StubTrueSkillService(), new StubStoreEventRepo(), new StubDiscordWebhookService(), new StubBadgeService());
+        new(eventRepo, playerRepo, new StubGameRepo(), new StubPodService(), new StubTrueSkillService(), new StubStoreEventRepo(), new StubDiscordWebhookService(), new StubBadgeService(), new StubLicenseTierService());
 
     private static Player MakePlayer(int id, string email) =>
         new() { Id = id, Name = $"Player{id}", Email = email, Mu = 25, Sigma = 8.333 };

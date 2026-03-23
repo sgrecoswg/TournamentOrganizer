@@ -132,8 +132,18 @@ public class EventWaitlistTests
         public Task<List<StoreEvent>> GetByStoreIdAsync(int storeId) => Task.FromResult(new List<StoreEvent>());
     }
 
+    private sealed class StubLicenseTierService : ILicenseTierService
+    {
+        public Task<TournamentOrganizer.Api.Models.LicenseTier> GetEffectiveTierAsync(int storeId) =>
+            Task.FromResult(TournamentOrganizer.Api.Models.LicenseTier.Tier1);
+        public Task<(bool IsInTrial, DateTime? TrialExpiresDate)> GetTrialStatusAsync(int storeId) =>
+            Task.FromResult((false, (DateTime?)null));
+        public Task<(bool IsInGracePeriod, DateTime? GracePeriodEndsDate)> GetGracePeriodStatusAsync(int storeId) =>
+            Task.FromResult((false, (DateTime?)null));
+    }
+
     private static EventService BuildService(FakeEventRepository repo, StubPlayerRepo? playerRepo = null) =>
-        new(repo, playerRepo ?? new StubPlayerRepo(), new StubGameRepo(), new StubPodService(), new StubTrueSkillService(), new StubStoreEventRepo(), new StubDiscordWebhookService(), new StubBadgeService());
+        new(repo, playerRepo ?? new StubPlayerRepo(), new StubGameRepo(), new StubPodService(), new StubTrueSkillService(), new StubStoreEventRepo(), new StubDiscordWebhookService(), new StubBadgeService(), new StubLicenseTierService());
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
