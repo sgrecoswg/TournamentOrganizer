@@ -163,6 +163,22 @@ gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \
 
 Report the PR URL to the user.
 
+## Step 8 — Record token usage
+
+Ask the user to check the token count shown at the bottom of the Claude Code terminal for this session, then post it as a comment on the issue:
+
+```bash
+gh issue comment ISSUE_NUMBER --repo sgrecoswg/TournamentOrganizer \
+  --body "**Token usage** (session)
+- Input tokens: <user provides>
+- Output tokens: <user provides>
+- Total: <user provides>
+
+Story points: <SP estimated in Step 3>"
+```
+
+This data is collected to benchmark and improve prompt efficiency over time.
+
 ## Rules
 - Never commit directly to `dev` or `main`
 - The remote is named `TournamentOrganizer` (not `origin`)
