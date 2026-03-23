@@ -12,7 +12,7 @@ public class StoreRepository : IStoreRepository
     public StoreRepository(AppDbContext db) => _db = db;
 
     public async Task<List<Store>> GetAllAsync()
-        => await _db.Stores.AsNoTracking().ToListAsync();
+        => await _db.Stores.AsNoTracking().Include(s => s.License).ToListAsync();
 
     public async Task<Store?> GetByIdWithSettingsAsync(int id)
         => await _db.Stores

@@ -9,17 +9,18 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatChipsModule } from '@angular/material/chips';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
-import { StoreDto } from '../../core/models/api.models';
+import { LicenseTier, StoreDto } from '../../core/models/api.models';
 
 @Component({
   selector: 'app-store-list',
   imports: [
     CommonModule, FormsModule, RouterLink,
     MatCardModule, MatTableModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatSnackBarModule
+    MatFormFieldModule, MatInputModule, MatSnackBarModule, MatChipsModule
   ],
   template: `
     <h2>Stores</h2>
@@ -63,6 +64,17 @@ import { StoreDto } from '../../core/models/api.models';
                 }
               </td>
             </ng-container>
+            <ng-container matColumnDef="tier">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let row">
+                @if (authService.isAdmin) {
+                  <mat-chip class="tier-badge"
+                            [color]="tierColor(row.tier)" highlighted>
+                    {{ tierLabel(row.tier) }}
+                  </mat-chip>
+                }
+              </td>
+            </ng-container>
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let row">
@@ -90,7 +102,23 @@ export class StoreListComponent implements OnInit {
   stores: StoreDto[] = [];
   newStoreName = '';
   apiOnline = true;
-  readonly columns = ['storeName', 'isActive', 'actions'];
+  readonly columns = ['storeName', 'isActive', 'tier', 'actions'];
+
+  tierLabel(tier: LicenseTier | null | undefined): string {
+    switch (tier) {
+      case 'Tier1': return 'Tier 1';
+      case 'Tier2': return 'Tier 2';
+      default:      return 'Free';
+    }
+  }
+
+  tierColor(tier: LicenseTier | null | undefined): string {
+    switch (tier) {
+      case 'Tier1': return 'primary';
+      case 'Tier2': return 'accent';
+      default:      return '';
+    }
+  }
 
   constructor(
     private apiService: ApiService,

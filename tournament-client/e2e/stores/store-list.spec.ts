@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../helpers/auth';
 import { mockGetStores, stubUnmatchedApi, makeStoreDto } from '../helpers/api-mock';
+import { LicenseTier } from '../../src/app/core/models/api.models';
 
 // ─── Store List (/stores) ─────────────────────────────────────────────────────
 //
@@ -139,5 +140,77 @@ test.describe('Store List page (/stores)', () => {
     await expect(page.getByRole('cell', { name: 'Brand New Shop' })).toBeVisible();
     // Input is cleared
     await expect(page.getByLabel('Store Name')).toHaveValue('');
+  });
+});
+
+// ── Tier Badges ───────────────────────────────────────────────────────────────
+
+const tier2Store = makeStoreDto({ id: 1, storeName: 'Tier2 Shop', tier: 'Tier2' as LicenseTier });
+const tier1Store = makeStoreDto({ id: 2, storeName: 'Tier1 Shop', tier: 'Tier1' as LicenseTier });
+const freeStore  = makeStoreDto({ id: 3, storeName: 'Free Shop',  tier: null });
+
+test.describe('Store List — tier badges: Admin', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Administrator');
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, [tier2Store, freeStore]);
+    await page.goto('/stores');
+  });
+
+  test('Tier2 store shows "Tier 2" chip', async ({ page }) => {
+    const row = page.locator('tr').filter({ hasText: 'Tier2 Shop' });
+    await expect(row.locator('.tier-badge')).toBeVisible();
+    await expect(row.locator('.tier-badge')).toContainText('Tier 2');
+  });
+
+  test('store with null tier shows "Free" chip', async ({ page }) => {
+    const row = page.locator('tr').filter({ hasText: 'Free Shop' });
+    await expect(row.locator('.tier-badge')).toBeVisible();
+    await expect(row.locator('.tier-badge')).toContainText('Free');
+  });
+});
+
+test.describe('Store List — tier badges: chip colors', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Administrator');
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, [tier1Store, tier2Store]);
+    await page.goto('/stores');
+  });
+
+  test('Tier1 chip has primary color class', async ({ page }) => {
+    const row = page.locator('tr').filter({ hasText: 'Tier1 Shop' });
+    await expect(row.locator('.tier-badge.mat-primary')).toBeVisible();
+  });
+
+  test('Tier2 chip has accent color class', async ({ page }) => {
+    const row = page.locator('tr').filter({ hasText: 'Tier2 Shop' });
+    await expect(row.locator('.tier-badge.mat-accent')).toBeVisible();
+  });
+});
+
+test.describe('Store List — tier badges: Player hidden', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player');
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, [tier2Store]);
+    await page.goto('/stores');
+  });
+
+  test('tier chip NOT visible for Player', async ({ page }) => {
+    await expect(page.locator('.tier-badge')).not.toBeVisible();
+  });
+});
+
+test.describe('Store List — tier badges: StoreEmployee hidden', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: 1, licenseTier: 'Tier1' });
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, [tier1Store]);
+    await page.goto('/stores');
+  });
+
+  test('tier chip NOT visible for StoreEmployee', async ({ page }) => {
+    await expect(page.locator('.tier-badge')).not.toBeVisible();
   });
 });

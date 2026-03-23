@@ -20,7 +20,7 @@ public class StoresService : IStoresService
     public async Task<List<StoreDto>> GetAllAsync()
     {
         var stores = await _storeRepo.GetAllAsync();
-        return stores.Select(s => new StoreDto(s.Id, s.StoreName, s.IsActive, s.LogoUrl, s.Slug, s.Location, s.BackgroundImageUrl)).ToList();
+        return stores.Select(s => new StoreDto(s.Id, s.StoreName, s.IsActive, s.LogoUrl, s.Slug, s.Location, s.BackgroundImageUrl, ComputeTier(s.License))).ToList();
     }
 
     public async Task<StoreDetailDto?> GetByIdAsync(int id)
@@ -157,6 +157,19 @@ public class StoresService : IStoresService
             .Select(se => new StoreEventSummaryDto(se.EventId, se.Event.Name, se.Event.Date, se.Event.Status.ToString()))
             .OrderByDescending(e => e.Date)
             .ToList() ?? [];
+
+    private static LicenseTier ComputeTier(License? license)
+    {
+        if (license == null) return LicenseTier.Free;
+        if (license.TrialExpiresDate != null && license.TrialExpiresDate > DateTime.UtcNow)
+            return LicenseTier.Tier2;
+        if (license.ExpiresDate < DateTime.UtcNow)
+        {
+            var gracePeriodEnd = license.ExpiresDate.AddDays(license.GracePeriodDays);
+            return DateTime.UtcNow <= gracePeriodEnd ? license.Tier : LicenseTier.Free;
+        }
+        return license.Tier;
+    }
 
     private static LicenseDto? MapLicense(Store? store) =>
         store?.License is { } l

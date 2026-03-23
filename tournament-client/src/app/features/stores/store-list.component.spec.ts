@@ -166,3 +166,58 @@ describe('StoreListComponent — Create button disabled when API offline', () =>
     expect(fixture.componentInstance.apiOnline).toBe(false);
   });
 });
+
+describe('StoreListComponent — tier badges', () => {
+  const tier2Store: StoreDto = { id: 1, storeName: 'Tier2 Shop', isActive: true, tier: 'Tier2' };
+  const freeStore:  StoreDto = { id: 2, storeName: 'Free Shop',  isActive: true, tier: null };
+  const tier1Store: StoreDto = { id: 1, storeName: 'Tier1 Shop', isActive: true, tier: 'Tier1' };
+
+  function buildModule(isAdmin: boolean, stores: StoreDto[]) {
+    return TestBed.configureTestingModule({
+      imports: [StoreListComponent],
+      providers: [
+        provideRouter([]),
+        provideAnimationsAsync(),
+        { provide: ApiService,         useValue: { getStores: jest.fn().mockReturnValue(of(stores)) } },
+        { provide: AuthService,        useValue: { isAdmin, currentUser: null } },
+        { provide: LocalStorageContext, useValue: { stores: { getAll: jest.fn().mockReturnValue(stores), seed: jest.fn() } } },
+        { provide: MatSnackBar,         useValue: { open: jest.fn() } },
+      ],
+    }).compileComponents();
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('Admin role: tier chip shows "Tier 2" for a Tier2 store', async () => {
+    await buildModule(true, [tier2Store]);
+    const fixture = TestBed.createComponent(StoreListComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('Tier 2');
+  });
+
+  it('Admin role: tier chip shows "Free" for store with null tier', async () => {
+    await buildModule(true, [freeStore]);
+    const fixture = TestBed.createComponent(StoreListComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.tier-badge')).not.toBeNull();
+    expect(el.textContent).toContain('Free');
+  });
+
+  it('Admin role: tier chip shows "Tier 1" for a Tier1 store', async () => {
+    await buildModule(true, [tier1Store]);
+    const fixture = TestBed.createComponent(StoreListComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('Tier 1');
+  });
+
+  it('Player role: tier chip is absent', async () => {
+    await buildModule(false, [tier2Store]);
+    const fixture = TestBed.createComponent(StoreListComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.tier-badge')).toBeNull();
+  });
+});
