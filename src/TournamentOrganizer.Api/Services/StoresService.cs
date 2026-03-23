@@ -160,6 +160,8 @@ public class StoresService : IStoresService
 
     private static LicenseDto? MapLicense(Store? store) =>
         store?.License is { } l
-            ? new LicenseDto(l.Id, l.StoreId, l.AppKey, l.IsActive, l.AvailableDate, l.ExpiresDate)
+            ? new LicenseDto(l.Id, l.StoreId, l.AppKey, l.IsActive, l.AvailableDate, l.ExpiresDate, l.Tier,
+                IsInTrial: l.TrialExpiresDate != null && l.TrialExpiresDate > DateTime.UtcNow,
+                TrialExpiresDate: l.TrialExpiresDate)
             : null;
 }

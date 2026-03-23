@@ -78,6 +78,13 @@ import { MatChipsModule } from '@angular/material/chips';
         }
       </div>
 
+      @if (license?.isInTrial && (authService.isStoreManager || authService.isAdmin)) {
+        <div class="trial-banner" data-testid="trial-badge">
+          <mat-icon>science</mat-icon>
+          Trial — {{ trialDaysRemaining }} day{{ trialDaysRemaining === 1 ? '' : 's' }} remaining.
+          Contact your administrator to upgrade.
+        </div>
+      }
       @if (daysUntilExpiry !== null && daysUntilExpiry <= EXPIRY_WARN_DAYS
            && (authService.isStoreManager || authService.isAdmin)) {
         <div class="expiry-banner" [class.expiry-critical]="daysUntilExpiry <= 7">
@@ -314,6 +321,13 @@ import { MatChipsModule } from '@angular/material/chips';
                         <mat-datepicker #expPicker></mat-datepicker>
                       </mat-form-field>
                       @if (authService.isAdmin) {
+                        <mat-form-field>
+                          <mat-label>Trial Expires Date</mat-label>
+                          <input matInput [matDatepicker]="trialPicker" [(ngModel)]="editTrialExpiresDate"
+                                 data-testid="trial-expiry-input">
+                          <mat-datepicker-toggle matIconSuffix [for]="trialPicker"></mat-datepicker-toggle>
+                          <mat-datepicker #trialPicker></mat-datepicker>
+                        </mat-form-field>
                         <mat-form-field>
                           <mat-label>Tier</mat-label>
                           <mat-select [(ngModel)]="editLicenseTier" data-testid="license-tier-select">
@@ -557,6 +571,8 @@ import { MatChipsModule } from '@angular/material/chips';
     .background-section { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
     .background-preview { width: 100%; max-width: 480px; height: 120px; object-fit: cover; border-radius: 8px; }
     .expiry-warning { display: flex; align-items: center; gap: 8px; color: #e65100; background: #fff3e0; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 0.875rem; }
+    .trial-banner { display: flex; align-items: center; gap: 8px; padding: 12px 16px; margin-bottom: 16px; background: #e8f5e9; border-left: 4px solid #43a047; border-radius: 4px; }
+    .trial-banner mat-icon { color: #2e7d32; }
     .expiry-banner { display: flex; align-items: center; gap: 8px; padding: 12px 16px; margin-bottom: 16px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; }
     .expiry-banner mat-icon { color: #856404; }
     .expiry-banner.expiry-critical { background: #f8d7da; border-left-color: #dc3545; }
@@ -601,6 +617,7 @@ export class StoreDetailComponent implements OnInit {
   editLicenseKey = '';
   editAvailableDate: Date | null = null;
   editExpiresDate: Date | null = null;
+  editTrialExpiresDate: Date | null = null;
   editLicenseActive = true;
   editLicenseTier: string = 'Tier2';
 
@@ -608,6 +625,12 @@ export class StoreDetailComponent implements OnInit {
     if (!this.license?.expiresDate) return null;
     const ms = new Date(this.license.expiresDate).getTime() - Date.now();
     return Math.ceil(ms / (1000 * 60 * 60 * 24));
+  }
+
+  get trialDaysRemaining(): number | null {
+    if (!this.license?.trialExpiresDate) return null;
+    const ms = new Date(this.license.trialExpiresDate).getTime() - Date.now();
+    return Math.ceil(ms / 86400000);
   }
 
   // Data Management
@@ -670,6 +693,8 @@ export class StoreDetailComponent implements OnInit {
           this.editLicenseKey = store.license.appKey;
           this.editAvailableDate = new Date(store.license.availableDate);
           this.editExpiresDate = new Date(store.license.expiresDate);
+          this.editTrialExpiresDate = store.license.trialExpiresDate
+            ? new Date(store.license.trialExpiresDate) : null;
           this.editLicenseActive = store.license.isActive;
           this.editLicenseTier = store.license.tier ?? 'Tier2';
         }
@@ -918,11 +943,12 @@ export class StoreDetailComponent implements OnInit {
   saveLicense() {
     if (!this.license || !this.editAvailableDate || !this.editExpiresDate) return;
     this.apiService.updateLicense(this.storeId, this.license.id, {
-      appKey:        this.editLicenseKey.trim(),
-      isActive:      this.editLicenseActive,
-      availableDate: this.editAvailableDate.toISOString(),
-      expiresDate:   this.editExpiresDate.toISOString(),
-      tier:          this.editLicenseTier as any
+      appKey:           this.editLicenseKey.trim(),
+      isActive:         this.editLicenseActive,
+      availableDate:    this.editAvailableDate.toISOString(),
+      expiresDate:      this.editExpiresDate.toISOString(),
+      tier:             this.editLicenseTier as any,
+      trialExpiresDate: this.editTrialExpiresDate?.toISOString() ?? null,
     }).subscribe({
       next: updated => {
         this.license = updated;

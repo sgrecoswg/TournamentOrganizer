@@ -167,8 +167,7 @@ public class StoresController : ControllerBase
     public async Task<ActionResult<StoreTierDto>> GetStoreTier(int storeId)
     {
         var tier = await _licenseTierService.GetEffectiveTierAsync(storeId);
-        // We need to also return whether it's active and expiry date
-        // For simplicity, delegate fully to the tier service for tier, and check license separately
-        return Ok(new StoreTierDto(storeId, tier, tier != LicenseTier.Free, null));
+        var (isInTrial, trialExpiresDate) = await _licenseTierService.GetTrialStatusAsync(storeId);
+        return Ok(new StoreTierDto(storeId, tier, tier != LicenseTier.Free, null, isInTrial, trialExpiresDate));
     }
 }

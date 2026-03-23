@@ -14,6 +14,7 @@ public class License
     public string UpdatedBy { get; set; } = "system";
 
     public LicenseTier Tier { get; set; } = LicenseTier.Tier2;
+    public DateTime? TrialExpiresDate { get; set; }
 
     public Store Store { get; set; } = null!;
 }

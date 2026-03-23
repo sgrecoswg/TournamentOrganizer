@@ -1006,4 +1006,47 @@ describe('StoreDetailComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.expiry-banner')).toBeNull();
   });
+
+  // ── License trial badge ──────────────────────────────────────────────────────
+
+  describe('License tab: trial badge', () => {
+    it('trial badge visible and shows days remaining when isInTrial = true', async () => {
+      const trialDate = daysFromNow(20);
+      await setup({ isStoreManager: true, isAdmin: false });
+      mockApi.getStore.mockReturnValue(of({
+        ...storeStub,
+        license: {
+          id: 1, storeId: STORE_ID, appKey: 'key', isActive: true,
+          availableDate: '2026-01-01', expiresDate: daysFromNow(365), tier: 'Tier2',
+          isInTrial: true, trialExpiresDate: trialDate,
+        },
+      }));
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const comp = fixture.componentInstance;
+      expect(comp.license?.isInTrial).toBe(true);
+      expect(comp.trialDaysRemaining).toBeGreaterThan(0);
+      expect(comp.trialDaysRemaining).toBeLessThanOrEqual(20);
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('[data-testid="trial-badge"]')).not.toBeNull();
+    });
+
+    it('trial badge absent when isInTrial = false', async () => {
+      await setup({ isStoreManager: true, isAdmin: false });
+      mockApi.getStore.mockReturnValue(of({
+        ...storeStub,
+        license: {
+          id: 1, storeId: STORE_ID, appKey: 'key', isActive: true,
+          availableDate: '2026-01-01', expiresDate: daysFromNow(365), tier: 'Tier2',
+          isInTrial: false, trialExpiresDate: null,
+        },
+      }));
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('[data-testid="trial-badge"]')).toBeNull();
+    });
+  });
 });

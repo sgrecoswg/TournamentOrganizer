@@ -20,10 +20,23 @@ public class LicenseTierService : ILicenseTierService
         if (license == null)
             return LicenseTier.Free;
 
+        // Active trial → always Tier2 regardless of License.Tier
+        if (license.TrialExpiresDate != null && license.TrialExpiresDate > DateTime.UtcNow)
+            return LicenseTier.Tier2;
+
         // Expired license → downgrade to Free (data preserved, features locked)
         if (license.ExpiresDate < DateTime.UtcNow)
             return LicenseTier.Free;
 
         return license.Tier;
+    }
+
+    public async Task<(bool IsInTrial, DateTime? TrialExpiresDate)> GetTrialStatusAsync(int storeId)
+    {
+        var license = await _licenseRepo.GetByStoreAsync(storeId);
+        if (license?.TrialExpiresDate == null)
+            return (false, null);
+        var isActive = license.TrialExpiresDate > DateTime.UtcNow;
+        return (isActive, license.TrialExpiresDate);
     }
 }

@@ -36,6 +36,7 @@ public class LicenseController : ControllerBase
             AvailableDate = dto.AvailableDate,
             ExpiresDate = dto.ExpiresDate,
             Tier = dto.Tier,
+            TrialExpiresDate = dto.TrialExpiresDate,
             CreatedOn = DateTime.UtcNow,
             UpdatedOn = DateTime.UtcNow,
             CreatedBy = User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Email) ?? "admin",
@@ -58,6 +59,7 @@ public class LicenseController : ControllerBase
             AvailableDate = dto.AvailableDate,
             ExpiresDate = dto.ExpiresDate,
             Tier = dto.Tier,
+            TrialExpiresDate = dto.TrialExpiresDate,
         });
         return updated == null ? NotFound() : Ok(ToDto(updated));
     }
@@ -70,5 +72,7 @@ public class LicenseController : ControllerBase
     }
 
     private static LicenseDto ToDto(License l) =>
-        new(l.Id, l.StoreId, l.AppKey, l.IsActive, l.AvailableDate, l.ExpiresDate, l.Tier);
+        new(l.Id, l.StoreId, l.AppKey, l.IsActive, l.AvailableDate, l.ExpiresDate, l.Tier,
+            IsInTrial: l.TrialExpiresDate != null && l.TrialExpiresDate > DateTime.UtcNow,
+            TrialExpiresDate: l.TrialExpiresDate);
 }

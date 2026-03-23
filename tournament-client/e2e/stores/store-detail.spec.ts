@@ -510,7 +510,7 @@ test.describe('Store Detail — Event Templates: list', () => {
   });
 
   test('template format and max players are shown', async ({ page }) => {
-    await expect(page.getByText('Commander')).toBeVisible();
+    await expect(page.getByText('Commander', { exact: true })).toBeVisible();
     await expect(page.getByText('16')).toBeVisible();
   });
 });
@@ -702,6 +702,69 @@ test.describe('Store Detail — expiry warning: expired', () => {
   test('"Your license has expired" text is visible', async ({ page }) => {
     await expect(page.locator('.expiry-banner')).toBeVisible();
     await expect(page.locator('.expiry-banner')).toContainText('Your license has expired');
+  });
+});
+
+// ── License trial banner ───────────────────────────────────────────────────────
+
+function makeTrialLicense(overrides: Partial<ReturnType<typeof makeTier1License>> & { isInTrial?: boolean; trialExpiresDate?: string } = {}) {
+  const { isInTrial, trialExpiresDate, ...rest } = overrides;
+  return {
+    ...makeTier1License({ expiresDate: daysFromNow(365) }),
+    tier: 'Tier2' as const,
+    isInTrial: isInTrial ?? true,
+    trialExpiresDate: trialExpiresDate ?? daysFromNow(20),
+    ...rest,
+  };
+}
+
+test.describe('Store Detail — License tab: trial active', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier2' });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTrialLicense() }));
+    await mockGetEmployees(page, 1, []);
+    await page.goto('/stores/1');
+  });
+
+  test('trial banner is visible', async ({ page }) => {
+    await expect(page.locator('[data-testid="trial-badge"]')).toBeVisible();
+  });
+
+  test('trial banner shows days remaining', async ({ page }) => {
+    await expect(page.locator('[data-testid="trial-badge"]')).toContainText('days remaining');
+  });
+});
+
+test.describe('Store Detail — License tab: trial inactive', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier2' });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTrialLicense({ isInTrial: false, trialExpiresDate: undefined }) }));
+    await mockGetEmployees(page, 1, []);
+    await page.goto('/stores/1');
+  });
+
+  test('trial banner absent when isInTrial = false', async ({ page }) => {
+    await expect(page.locator('[data-testid="trial-badge"]')).not.toBeVisible();
+  });
+});
+
+test.describe('Store Detail — License tab: Admin trial controls', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Administrator');
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTrialLicense() }));
+    await mockGetEmployees(page, 1, []);
+    await page.goto('/stores/1');
+  });
+
+  test('trial expiry date picker is visible in License tab for Admin', async ({ page }) => {
+    await page.getByRole('tab', { name: 'License' }).click();
+    await expect(page.locator('[data-testid="trial-expiry-input"]')).toBeVisible();
   });
 });
 

@@ -376,6 +376,8 @@ export interface LicenseDto {
   availableDate: string;
   expiresDate: string;
   tier: LicenseTier;
+  isInTrial?: boolean;
+  trialExpiresDate?: string | null;
 }
 
 export interface StoreTierDto {
@@ -383,6 +385,8 @@ export interface StoreTierDto {
   tier: LicenseTier;
   isActive: boolean;
   expiresDate: string | null;
+  isInTrial?: boolean;
+  trialExpiresDate?: string | null;
 }
 
 export interface CreateLicenseDto {
@@ -390,6 +394,7 @@ export interface CreateLicenseDto {
   availableDate: string;
   expiresDate: string;
   tier?: LicenseTier;
+  trialExpiresDate?: string | null;
 }
 
 export interface UpdateLicenseDto {
@@ -398,6 +403,7 @@ export interface UpdateLicenseDto {
   availableDate: string;
   expiresDate: string;
   tier?: LicenseTier;
+  trialExpiresDate?: string | null;
 }
 
 // Commander Meta Report
