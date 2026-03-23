@@ -422,7 +422,7 @@ test.describe('Commander Declaration: edit (StoreEmployee)', () => {
 
   test('clicking edit shows input; saving updates commander name', async ({ page }) => {
     await page.getByTitle('Edit commander').first().click();
-    const input = page.locator('.commander-input').first();
+    const input = page.getByPlaceholder('Commander name');
     await expect(input).toBeVisible();
     await input.fill('Atraxa');
     await page.getByTitle('Save').first().click();
@@ -486,6 +486,7 @@ test.describe('Bulk Register: upload file — visibility', () => {
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, []);
     await page.goto(`/events/${EVENT_ID}`);
+    await page.getByRole('button', { name: /Bulk Register Players/i }).click();
   });
 
   test('Upload File button is visible for StoreEmployee during Registration', async ({ page }) => {
@@ -518,6 +519,7 @@ test.describe('Bulk Register: upload file — preview panel', () => {
     });
 
     await page.goto(`/events/${EVENT_ID}`);
+    await page.getByRole('button', { name: /Bulk Register Players/i }).click();
 
     // Trigger file selection by dispatching a synthetic change event via evaluate
     await page.locator('input[type="file"][accept=".txt,.csv"]').evaluate((input: HTMLInputElement) => {
@@ -559,6 +561,7 @@ test.describe('Bulk Register: confirm', () => {
     });
 
     await page.goto(`/events/${EVENT_ID}`);
+    await page.getByRole('button', { name: /Bulk Register Players/i }).click();
 
     await page.locator('input[type="file"][accept=".txt,.csv"]').evaluate((input: HTMLInputElement) => {
       const content = (window as any).__fakeFileContent ?? '';
@@ -595,6 +598,7 @@ test.describe('Bulk Register: cancel', () => {
     });
 
     await page.goto(`/events/${EVENT_ID}`);
+    await page.getByRole('button', { name: /Bulk Register Players/i }).click();
 
     await page.locator('input[type="file"][accept=".txt,.csv"]').evaluate((input: HTMLInputElement) => {
       const content = (window as any).__fakeFileContent ?? '';
@@ -606,9 +610,9 @@ test.describe('Bulk Register: cancel', () => {
     });
   });
 
-  test('clicking Cancel hides the preview panel', async ({ page }) => {
+  test('clicking Back hides the preview panel', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Preview Registration', level: 3 })).toBeVisible();
-    await page.getByRole('button', { name: 'Cancel' }).click();
+    await page.getByRole('button', { name: 'Back' }).click();
     await expect(page.getByRole('heading', { name: 'Preview Registration', level: 3 })).not.toBeVisible();
   });
 });
@@ -622,17 +626,17 @@ test.describe('Bulk Register: multi-select', () => {
     await mockGetEvent(page, REG_EVENT);
     await mockGetEventPlayers(page, EVENT_ID, []);
     await page.goto(`/events/${EVENT_ID}`);
+    await page.getByRole('button', { name: /Bulk Register Players/i }).click();
   });
 
-  test('Select All button checks all players and enables Register Selected', async ({ page }) => {
+  test('Select All button checks all players and enables Preview Registration', async ({ page }) => {
     await page.getByRole('button', { name: 'Select All', exact: true }).click();
-    // Register Selected should now be enabled
-    await expect(page.getByRole('button', { name: 'Register Selected' })).not.toBeDisabled();
+    await expect(page.getByRole('button', { name: /Preview Registration/i })).not.toBeDisabled();
   });
 
-  test('clicking Register Selected shows preview panel', async ({ page }) => {
+  test('clicking Preview Registration shows preview panel', async ({ page }) => {
     await page.getByRole('button', { name: 'Select All', exact: true }).click();
-    await page.getByRole('button', { name: 'Register Selected' }).click();
+    await page.getByRole('button', { name: /Preview Registration/i }).click();
     await expect(page.getByRole('heading', { name: 'Preview Registration', level: 3 })).toBeVisible();
   });
 });
@@ -652,6 +656,7 @@ test.describe('Bulk Register: already registered', () => {
     });
 
     await page.goto(`/events/${EVENT_ID}`);
+    await page.getByRole('button', { name: /Bulk Register Players/i }).click();
 
     await page.locator('input[type="file"][accept=".txt,.csv"]').evaluate((input: HTMLInputElement) => {
       const content = (window as any).__fakeFileContent ?? '';
@@ -703,12 +708,13 @@ test.describe('Bulk Register: capacity guard — over capacity', () => {
     await mockGetEventPlayers(page, EVENT_ID, []);
     await seedStorePlayers(page, [ALICE_STORE_PLAYER, BOB_STORE_PLAYER]);
     await page.goto(`/events/${EVENT_ID}`);
+    await page.getByRole('button', { name: /Bulk Register Players/i }).click();
   });
 
   test('capacity warning is shown when selection exceeds available slots', async ({ page }) => {
     // Select both players (2 > 1 available slot)
     await page.getByRole('button', { name: 'Select All', exact: true }).click();
-    await page.getByRole('button', { name: /Register Selected/i }).click();
+    await page.getByRole('button', { name: /Preview Registration/i }).click();
 
     await expect(page.locator('.capacity-warning')).toBeVisible();
     await expect(page.locator('.capacity-warning')).toContainText('1 remaining');
@@ -716,14 +722,14 @@ test.describe('Bulk Register: capacity guard — over capacity', () => {
 
   test('Confirm Registration button is disabled when over capacity', async ({ page }) => {
     await page.getByRole('button', { name: 'Select All', exact: true }).click();
-    await page.getByRole('button', { name: /Register Selected/i }).click();
+    await page.getByRole('button', { name: /Preview Registration/i }).click();
 
     await expect(page.getByRole('button', { name: /Confirm Registration/i })).toBeDisabled();
   });
 
   test('warning disappears and Confirm is enabled after deselecting to fit capacity', async ({ page }) => {
     await page.getByRole('button', { name: 'Select All', exact: true }).click();
-    await page.getByRole('button', { name: /Register Selected/i }).click();
+    await page.getByRole('button', { name: /Preview Registration/i }).click();
 
     // Uncheck one player to bring count within the 1 available slot
     const checkboxes = page.locator('.bulk-preview-panel mat-checkbox');
@@ -746,11 +752,12 @@ test.describe('Bulk Register: capacity guard — within capacity', () => {
     await mockGetEventPlayers(page, EVENT_ID, []);
     await seedStorePlayers(page, [ALICE_STORE_PLAYER, BOB_STORE_PLAYER]);
     await page.goto(`/events/${EVENT_ID}`);
+    await page.getByRole('button', { name: /Bulk Register Players/i }).click();
   });
 
   test('no capacity warning when event has no maxPlayers', async ({ page }) => {
     await page.getByRole('button', { name: 'Select All', exact: true }).click();
-    await page.getByRole('button', { name: /Register Selected/i }).click();
+    await page.getByRole('button', { name: /Preview Registration/i }).click();
 
     await expect(page.locator('.capacity-warning')).not.toBeVisible();
     await expect(page.getByRole('button', { name: /Confirm Registration/i })).toBeEnabled();
