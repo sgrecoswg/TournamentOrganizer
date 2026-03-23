@@ -97,6 +97,13 @@ import { MatChipsModule } from '@angular/material/chips';
           }
         </div>
       }
+      @if (isInGracePeriod && (authService.isStoreManager || authService.isAdmin)) {
+        <div class="grace-warning" data-testid="grace-warning">
+          <mat-icon>warning</mat-icon>
+          License expired. Grace period ends {{ gracePeriodEndsDate | date:'mediumDate' }}.
+          Renew now to avoid losing access.
+        </div>
+      }
 
       <mat-tab-group>
 
@@ -271,7 +278,7 @@ import { MatChipsModule } from '@angular/material/chips';
         }
 
         <!-- ── Tab 3: License (StoreManager+) ───────────────── -->
-        @if (authService.isStoreManager) {
+        @if (authService.isStoreManager || authService.isAdmin) {
           <mat-tab label="License">
             <div class="tab-content">
               @if (license) {
@@ -335,6 +342,12 @@ import { MatChipsModule } from '@angular/material/chips';
                             <mat-option value="Tier1">Tier 1</mat-option>
                             <mat-option value="Tier2">Tier 2</mat-option>
                           </mat-select>
+                        </mat-form-field>
+                        <mat-form-field>
+                          <mat-label>Grace Period (days)</mat-label>
+                          <input matInput type="number" [(ngModel)]="editGracePeriodDays"
+                                 min="0" data-testid="grace-period-input">
+                          <mat-hint>Days after expiry before features are locked (0 = immediate)</mat-hint>
                         </mat-form-field>
                         <mat-slide-toggle [(ngModel)]="editLicenseActive">Active</mat-slide-toggle>
                       }
@@ -571,6 +584,7 @@ import { MatChipsModule } from '@angular/material/chips';
     .background-section { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
     .background-preview { width: 100%; max-width: 480px; height: 120px; object-fit: cover; border-radius: 8px; }
     .expiry-warning { display: flex; align-items: center; gap: 8px; color: #e65100; background: #fff3e0; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 0.875rem; }
+    .grace-warning { display: flex; align-items: center; gap: 8px; color: #842029; background: #f8d7da; border-left: 4px solid #dc3545; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 0.875rem; }
     .trial-banner { display: flex; align-items: center; gap: 8px; padding: 12px 16px; margin-bottom: 16px; background: #e8f5e9; border-left: 4px solid #43a047; border-radius: 4px; }
     .trial-banner mat-icon { color: #2e7d32; }
     .expiry-banner { display: flex; align-items: center; gap: 8px; padding: 12px 16px; margin-bottom: 16px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; }
@@ -620,6 +634,7 @@ export class StoreDetailComponent implements OnInit {
   editTrialExpiresDate: Date | null = null;
   editLicenseActive = true;
   editLicenseTier: string = 'Tier2';
+  editGracePeriodDays = 0;
 
   get daysUntilExpiry(): number | null {
     if (!this.license?.expiresDate) return null;
@@ -631,6 +646,19 @@ export class StoreDetailComponent implements OnInit {
     if (!this.license?.trialExpiresDate) return null;
     const ms = new Date(this.license.trialExpiresDate).getTime() - Date.now();
     return Math.ceil(ms / 86400000);
+  }
+
+  get isInGracePeriod(): boolean {
+    if (!this.license?.expiresDate || !this.license.gracePeriodDays) return false;
+    const expired = new Date(this.license.expiresDate).getTime() < Date.now();
+    if (!expired) return false;
+    const graceEnd = new Date(this.license.expiresDate).getTime() + this.license.gracePeriodDays * 86400000;
+    return Date.now() <= graceEnd;
+  }
+
+  get gracePeriodEndsDate(): Date | null {
+    if (!this.license?.expiresDate || !this.license.gracePeriodDays) return null;
+    return new Date(new Date(this.license.expiresDate).getTime() + this.license.gracePeriodDays * 86400000);
   }
 
   // Data Management
@@ -697,6 +725,7 @@ export class StoreDetailComponent implements OnInit {
             ? new Date(store.license.trialExpiresDate) : null;
           this.editLicenseActive = store.license.isActive;
           this.editLicenseTier = store.license.tier ?? 'Tier2';
+          this.editGracePeriodDays = store.license.gracePeriodDays ?? 0;
         }
         this.cdr.detectChanges();
         // Only load employees and templates after confirming the API is reachable.
@@ -949,6 +978,7 @@ export class StoreDetailComponent implements OnInit {
       expiresDate:      this.editExpiresDate.toISOString(),
       tier:             this.editLicenseTier as any,
       trialExpiresDate: this.editTrialExpiresDate?.toISOString() ?? null,
+      gracePeriodDays:  this.editGracePeriodDays,
     }).subscribe({
       next: updated => {
         this.license = updated;

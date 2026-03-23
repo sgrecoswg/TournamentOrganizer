@@ -378,6 +378,7 @@ export interface LicenseDto {
   tier: LicenseTier;
   isInTrial?: boolean;
   trialExpiresDate?: string | null;
+  gracePeriodDays?: number;
 }
 
 export interface StoreTierDto {
@@ -387,6 +388,8 @@ export interface StoreTierDto {
   expiresDate: string | null;
   isInTrial?: boolean;
   trialExpiresDate?: string | null;
+  isInGracePeriod?: boolean;
+  gracePeriodEndsDate?: string | null;
 }
 
 export interface CreateLicenseDto {
@@ -395,6 +398,7 @@ export interface CreateLicenseDto {
   expiresDate: string;
   tier?: LicenseTier;
   trialExpiresDate?: string | null;
+  gracePeriodDays?: number;
 }
 
 export interface UpdateLicenseDto {
@@ -404,6 +408,7 @@ export interface UpdateLicenseDto {
   expiresDate: string;
   tier?: LicenseTier;
   trialExpiresDate?: string | null;
+  gracePeriodDays?: number;
 }
 
 // Commander Meta Report

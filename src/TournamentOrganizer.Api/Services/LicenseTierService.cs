@@ -24,9 +24,14 @@ public class LicenseTierService : ILicenseTierService
         if (license.TrialExpiresDate != null && license.TrialExpiresDate > DateTime.UtcNow)
             return LicenseTier.Tier2;
 
-        // Expired license → downgrade to Free (data preserved, features locked)
+        // Expired license — check grace period before downgrading
         if (license.ExpiresDate < DateTime.UtcNow)
+        {
+            var gracePeriodEnd = license.ExpiresDate.AddDays(license.GracePeriodDays);
+            if (DateTime.UtcNow <= gracePeriodEnd)
+                return license.Tier;  // still within grace window
             return LicenseTier.Free;
+        }
 
         return license.Tier;
     }
@@ -38,5 +43,21 @@ public class LicenseTierService : ILicenseTierService
             return (false, null);
         var isActive = license.TrialExpiresDate > DateTime.UtcNow;
         return (isActive, license.TrialExpiresDate);
+    }
+
+    public async Task<(bool IsInGracePeriod, DateTime? GracePeriodEndsDate)> GetGracePeriodStatusAsync(int storeId)
+    {
+        var license = await _licenseRepo.GetByStoreAsync(storeId);
+        if (license == null || license.GracePeriodDays <= 0)
+            return (false, null);
+
+        if (license.ExpiresDate >= DateTime.UtcNow)
+            return (false, null);  // not expired yet, no grace needed
+
+        var gracePeriodEnd = license.ExpiresDate.AddDays(license.GracePeriodDays);
+        if (DateTime.UtcNow <= gracePeriodEnd)
+            return (true, gracePeriodEnd);
+
+        return (false, null);
     }
 }

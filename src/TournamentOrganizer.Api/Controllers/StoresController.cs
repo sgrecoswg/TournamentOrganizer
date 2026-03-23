@@ -168,6 +168,7 @@ public class StoresController : ControllerBase
     {
         var tier = await _licenseTierService.GetEffectiveTierAsync(storeId);
         var (isInTrial, trialExpiresDate) = await _licenseTierService.GetTrialStatusAsync(storeId);
-        return Ok(new StoreTierDto(storeId, tier, tier != LicenseTier.Free, null, isInTrial, trialExpiresDate));
+        var (isInGracePeriod, gracePeriodEndsDate) = await _licenseTierService.GetGracePeriodStatusAsync(storeId);
+        return Ok(new StoreTierDto(storeId, tier, tier != LicenseTier.Free, null, isInTrial, trialExpiresDate, isInGracePeriod, gracePeriodEndsDate));
     }
 }

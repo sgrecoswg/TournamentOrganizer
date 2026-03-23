@@ -15,6 +15,7 @@ public class License
 
     public LicenseTier Tier { get; set; } = LicenseTier.Tier2;
     public DateTime? TrialExpiresDate { get; set; }
+    public int GracePeriodDays { get; set; } = 0;
 
     public Store Store { get; set; } = null!;
 }

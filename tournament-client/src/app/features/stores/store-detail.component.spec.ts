@@ -1049,4 +1049,76 @@ describe('StoreDetailComponent', () => {
       expect(el.querySelector('[data-testid="trial-badge"]')).toBeNull();
     });
   });
+
+  // ── Grace period warning ──────────────────────────────────────────────────────
+
+  describe('License tab: grace period warning', () => {
+    it('grace warning visible when license is expired but within grace period', async () => {
+      await setup({ isStoreManager: true, isAdmin: false });
+      mockApi.getStore.mockReturnValue(of({
+        ...storeStub,
+        license: {
+          id: 1, storeId: STORE_ID, appKey: 'key', isActive: true,
+          availableDate: '2026-01-01', expiresDate: daysFromNow(-3), tier: 'Tier1',
+          gracePeriodDays: 7,
+        },
+      }));
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('[data-testid="grace-warning"]')).not.toBeNull();
+    });
+
+    it('grace warning absent when license is not expired', async () => {
+      await setup({ isStoreManager: true, isAdmin: false });
+      mockApi.getStore.mockReturnValue(of({
+        ...storeStub,
+        license: {
+          id: 1, storeId: STORE_ID, appKey: 'key', isActive: true,
+          availableDate: '2026-01-01', expiresDate: daysFromNow(30), tier: 'Tier1',
+          gracePeriodDays: 7,
+        },
+      }));
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('[data-testid="grace-warning"]')).toBeNull();
+    });
+
+    it('grace warning absent when gracePeriodDays = 0 and license expired', async () => {
+      await setup({ isStoreManager: true, isAdmin: false });
+      mockApi.getStore.mockReturnValue(of({
+        ...storeStub,
+        license: {
+          id: 1, storeId: STORE_ID, appKey: 'key', isActive: true,
+          availableDate: '2026-01-01', expiresDate: daysFromNow(-3), tier: 'Tier1',
+          gracePeriodDays: 0,
+        },
+      }));
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('[data-testid="grace-warning"]')).toBeNull();
+    });
+
+    it('Admin form loads gracePeriodDays from license into editGracePeriodDays', async () => {
+      await setup({ isStoreManager: false, isAdmin: true });
+      mockApi.getStore.mockReturnValue(of({
+        ...storeStub,
+        license: {
+          id: 1, storeId: STORE_ID, appKey: 'key', isActive: true,
+          availableDate: '2026-01-01', expiresDate: daysFromNow(90), tier: 'Tier2',
+          gracePeriodDays: 7,
+        },
+      }));
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const comp = fixture.componentInstance;
+      expect(comp.editGracePeriodDays).toBe(7);
+    });
+  });
 });

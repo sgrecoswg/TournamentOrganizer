@@ -14,4 +14,9 @@ public interface ILicenseTierService
     /// Returns whether a store is currently in its trial period and when the trial ends.
     /// </summary>
     Task<(bool IsInTrial, DateTime? TrialExpiresDate)> GetTrialStatusAsync(int storeId);
+
+    /// <summary>
+    /// Returns whether a store is currently in its grace period and when the grace period ends.
+    /// </summary>
+    Task<(bool IsInGracePeriod, DateTime? GracePeriodEndsDate)> GetGracePeriodStatusAsync(int storeId);
 }

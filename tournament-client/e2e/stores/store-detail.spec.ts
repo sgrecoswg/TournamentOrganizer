@@ -196,7 +196,7 @@ test.describe('Store Detail — Employees tab', () => {
       }
     });
 
-    await page.getByLabel('Name').fill('Charlie New');
+    await page.getByLabel('Name', { exact: true }).fill('Charlie New');
     await page.getByLabel('Email').fill('charlie@shop.com');
     await page.getByRole('button', { name: /Add/ }).click();
 
@@ -765,6 +765,59 @@ test.describe('Store Detail — License tab: Admin trial controls', () => {
   test('trial expiry date picker is visible in License tab for Admin', async ({ page }) => {
     await page.getByRole('tab', { name: 'License' }).click();
     await expect(page.locator('[data-testid="trial-expiry-input"]')).toBeVisible();
+  });
+});
+
+// ── Grace period warning banner ────────────────────────────────────────────────
+
+function makeGracePeriodLicense(overrides: Partial<ReturnType<typeof makeTier1License>> & { gracePeriodDays?: number } = {}) {
+  const { gracePeriodDays, ...rest } = overrides;
+  return {
+    ...makeTier1License({ expiresDate: daysFromNow(-3) }),
+    gracePeriodDays: gracePeriodDays ?? 7,
+    ...rest,
+  };
+}
+
+test.describe('Store Detail — grace period warning', () => {
+  test('grace warning banner visible when expired but within grace period (StoreManager)', async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeGracePeriodLicense() }));
+    await mockGetEmployees(page, 1, []);
+    await page.goto('/stores/1');
+    await expect(page.locator('[data-testid="grace-warning"]')).toBeVisible();
+  });
+
+  test('grace warning banner absent when license is not yet expired', async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeTier1License({ expiresDate: daysFromNow(30) }) }));
+    await mockGetEmployees(page, 1, []);
+    await page.goto('/stores/1');
+    await expect(page.locator('[data-testid="grace-warning"]')).not.toBeVisible();
+  });
+
+  test('grace warning banner absent when gracePeriodDays = 0 and expired', async ({ page }) => {
+    await loginAs(page, 'StoreManager', { storeId: 1, licenseTier: 'Tier1' });
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeGracePeriodLicense({ gracePeriodDays: 0 }) }));
+    await mockGetEmployees(page, 1, []);
+    await page.goto('/stores/1');
+    await expect(page.locator('[data-testid="grace-warning"]')).not.toBeVisible();
+  });
+
+  test('grace warning banner NOT visible for Player role', async ({ page }) => {
+    await loginAs(page, 'Player');
+    await stubUnmatchedApi(page);
+    await mockGetThemes(page, []);
+    await mockGetStore(page, makeStoreDetailDto({ id: 1, license: makeGracePeriodLicense() }));
+    await mockGetEmployees(page, 1, []);
+    await page.goto('/stores/1');
+    await expect(page.locator('[data-testid="grace-warning"]')).not.toBeVisible();
   });
 });
 
