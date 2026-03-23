@@ -756,3 +756,52 @@ test.describe('Bulk Register: capacity guard — within capacity', () => {
     await expect(page.getByRole('button', { name: /Confirm Registration/i })).toBeEnabled();
   });
 });
+
+
+// ── Free Tier Cap Notice ──────────────────────────────────────────────────────
+
+test.describe('Event Detail — Free tier cap notice', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID, licenseTier: 'Free' });
+    await stubUnmatchedApi(page);
+    await mockGetEvent(page, REG_EVENT);
+    await mockGetEventPlayers(page, EVENT_ID, []);
+    await mockGetStores(page, []);
+    await page.goto(`/events/${EVENT_ID}`);
+  });
+
+  test('cap notice "Free tier: up to 16 players per event" is visible', async ({ page }) => {
+    await expect(page.locator('.free-cap-notice')).toBeVisible();
+    await expect(page.locator('.free-cap-notice')).toContainText('Free tier: up to 16 players per event');
+  });
+});
+
+test.describe('Event Detail — Tier1 no cap notice', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID, licenseTier: 'Tier1' });
+    await stubUnmatchedApi(page);
+    await mockGetEvent(page, REG_EVENT);
+    await mockGetEventPlayers(page, EVENT_ID, []);
+    await mockGetStores(page, []);
+    await page.goto(`/events/${EVENT_ID}`);
+  });
+
+  test('cap notice is NOT visible for Tier1 store', async ({ page }) => {
+    await expect(page.locator('.free-cap-notice')).not.toBeVisible();
+  });
+});
+
+test.describe('Event Detail — Player no cap notice', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player', { playerId: 99 });
+    await stubUnmatchedApi(page);
+    await mockGetEvent(page, REG_EVENT);
+    await mockGetEventPlayers(page, EVENT_ID, []);
+    await mockGetStores(page, []);
+    await page.goto(`/events/${EVENT_ID}`);
+  });
+
+  test('cap notice is NOT visible for Player role', async ({ page }) => {
+    await expect(page.locator('.free-cap-notice')).not.toBeVisible();
+  });
+});

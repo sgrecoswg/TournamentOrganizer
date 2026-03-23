@@ -127,6 +127,11 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
             <!-- Registration controls sit above the sub-tabs -->
             @if (event.status === 'Registration') {
               @if (authService.isStoreEmployee) {
+                @if (!authService.isTier1) {
+                  <p class="free-cap-notice">
+                    <mat-icon>info</mat-icon> Free tier: up to {{ FREE_CAP }} players per event.
+                  </p>
+                }
                 @if (isEventFull) {
                   <div class="event-full-notice">
                     <mat-chip color="warn" highlighted>Full</mat-chip>
@@ -515,6 +520,7 @@ export class EventDetailComponent implements OnInit {
   commandersInput2: string = '';
   readonly playerColumns = ['index', 'name', 'decklist', 'commander', 'status', 'actions'];
   private readonly PLAYERS_TAB = 0;
+  readonly FREE_CAP = 16;
 
   get pointSystemLabel(): string {
     return POINT_SYSTEM_LABELS[this.event!.pointSystem] ?? this.event!.pointSystem;

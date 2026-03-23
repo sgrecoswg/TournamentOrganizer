@@ -114,9 +114,19 @@ public class EventPairingsTests
     private static Player MakePlayer(int id, string name) => new()
         { Id = id, Name = name, Email = $"p{id}@test.com", Mu = 25, Sigma = 8.333 };
 
+    private sealed class StubLicenseTierService : ILicenseTierService
+    {
+        public Task<TournamentOrganizer.Api.Models.LicenseTier> GetEffectiveTierAsync(int storeId) =>
+            Task.FromResult(TournamentOrganizer.Api.Models.LicenseTier.Tier1);
+        public Task<(bool IsInTrial, DateTime? TrialExpiresDate)> GetTrialStatusAsync(int storeId) =>
+            Task.FromResult((false, (DateTime?)null));
+        public Task<(bool IsInGracePeriod, DateTime? GracePeriodEndsDate)> GetGracePeriodStatusAsync(int storeId) =>
+            Task.FromResult((false, (DateTime?)null));
+    }
+
     private static EventService BuildService(FakeEventRepository eventRepo) =>
         new(eventRepo, new StubPlayerRepository(), new StubGameRepository(),
-            new StubPodService(), new StubTrueSkillService(), new StubStoreEventRepository(), new StubDiscordWebhookService(), new StubBadgeService());
+            new StubPodService(), new StubTrueSkillService(), new StubStoreEventRepository(), new StubDiscordWebhookService(), new StubBadgeService(), new StubLicenseTierService());
 
     private static Round MakeRound(int eventId, int roundNumber, List<(Player Player, string? Commander)> players)
     {

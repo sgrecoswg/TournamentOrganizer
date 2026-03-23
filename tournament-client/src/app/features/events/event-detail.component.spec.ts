@@ -1199,4 +1199,28 @@ describe('EventDetailComponent', () => {
       jest.useRealTimers();
     });
   });
+
+  // ── Free tier cap notice ───────────────────────────────────────────────────
+
+  describe('Free tier cap notice', () => {
+    it('cap notice visible when isTier1 = false (Free tier store employee)', async () => {
+      await setup({ isStoreEmployee: true, isTier1: false });
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      currentEventSubject.next({ ...eventStub, status: 'Registration' });
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('.free-cap-notice')).not.toBeNull();
+    });
+
+    it('cap notice absent when isTier1 = true (Tier1+ store employee)', async () => {
+      await setup({ isStoreEmployee: true, isTier1: true });
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      currentEventSubject.next({ ...eventStub, status: 'Registration' });
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('.free-cap-notice')).toBeNull();
+    });
+  });
 });

@@ -162,6 +162,16 @@ public class EventCheckInTests
         public Task<List<StoreEvent>> GetByStoreIdAsync(int storeId) => Task.FromResult(new List<StoreEvent>());
     }
 
+    private sealed class StubLicenseTierService : ILicenseTierService
+    {
+        public Task<TournamentOrganizer.Api.Models.LicenseTier> GetEffectiveTierAsync(int storeId) =>
+            Task.FromResult(TournamentOrganizer.Api.Models.LicenseTier.Tier1);
+        public Task<(bool IsInTrial, DateTime? TrialExpiresDate)> GetTrialStatusAsync(int storeId) =>
+            Task.FromResult((false, (DateTime?)null));
+        public Task<(bool IsInGracePeriod, DateTime? GracePeriodEndsDate)> GetGracePeriodStatusAsync(int storeId) =>
+            Task.FromResult((false, (DateTime?)null));
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────
 
     private static Player MakePlayer(int id, string name = "Player") => new()
@@ -193,7 +203,8 @@ public class EventCheckInTests
             new StubTrueSkillService(),
             new StubStoreEventRepository(),
             new StubDiscordWebhookService(),
-            new StubBadgeService());
+            new StubBadgeService(),
+            new StubLicenseTierService());
     }
 
     // ── SetCheckInAsync tests ─────────────────────────────────────────────
