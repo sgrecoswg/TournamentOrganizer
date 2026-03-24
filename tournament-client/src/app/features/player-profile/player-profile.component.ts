@@ -101,9 +101,11 @@ function getUploadErrorMessage(err: HttpErrorResponse, fallback: string): string
         } @else {
           <div class="name-row">
             <h2>{{ profile.name }}</h2>
-            <button mat-icon-button (click)="startEdit()">
-              <mat-icon>edit</mat-icon>
-            </button>
+            @if (canEditProfile) {
+              <button mat-icon-button (click)="startEdit()">
+                <mat-icon>edit</mat-icon>
+              </button>
+            }
           </div>
         }
         <div class="header-details">
