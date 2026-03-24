@@ -1,5 +1,5 @@
 # Claude Code local project settings and memory
-.claude/
+.claude/*
 !.claude/commands/
 !.claude/commands/**
 
