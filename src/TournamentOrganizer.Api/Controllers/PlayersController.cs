@@ -43,8 +43,10 @@ public class PlayersController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize]
     public async Task<ActionResult<PlayerDto>> Update(int id, UpdatePlayerDto dto)
     {
+        if (!await UserCanManagePlayerAsync(id)) return Forbid();
         var player = await _playerService.UpdateAsync(id, dto);
         return player == null ? NotFound() : Ok(player);
     }
