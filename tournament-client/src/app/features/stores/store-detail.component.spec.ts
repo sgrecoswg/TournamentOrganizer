@@ -5,6 +5,7 @@ import { MatTabGroup } from '@angular/material/tabs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { StoreDetailComponent } from './store-detail.component';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -651,6 +652,45 @@ describe('StoreDetailComponent', () => {
     expect(snackBarSpy).toHaveBeenCalledWith('Logo upload failed', 'Close', expect.any(Object));
   });
 
+  it('onLogoSelected shows backend message when API returns 400 "Invalid file type. Allowed: .png, .jpg, .jpeg, .gif"', async () => {
+    mockApi.uploadStoreLogo.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 400, error: 'Invalid file type. Allowed: .png, .jpg, .jpeg, .gif' })));
+    await setup({ isStoreEmployee: true });
+    const fixture = TestBed.createComponent(StoreDetailComponent);
+    fixture.detectChanges();
+    const comp = fixture.componentInstance;
+    const snackBarSpy = jest.spyOn((comp as any).snackBar, 'open').mockReturnValue({} as any);
+    const file = new File(['x'], 'logo.bmp', { type: 'image/bmp' });
+    const event = { target: { files: [file] } } as unknown as Event;
+    comp.onLogoSelected(event);
+    expect(snackBarSpy).toHaveBeenCalledWith('Invalid file type. Allowed: .png, .jpg, .jpeg, .gif', 'Close', expect.any(Object));
+  });
+
+  it('onLogoSelected shows backend message when API returns 400 "File exceeds 2 MB limit."', async () => {
+    mockApi.uploadStoreLogo.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 400, error: 'File exceeds 2 MB limit.' })));
+    await setup({ isStoreEmployee: true });
+    const fixture = TestBed.createComponent(StoreDetailComponent);
+    fixture.detectChanges();
+    const comp = fixture.componentInstance;
+    const snackBarSpy = jest.spyOn((comp as any).snackBar, 'open').mockReturnValue({} as any);
+    const file = new File(['x'], 'logo.png', { type: 'image/png' });
+    const event = { target: { files: [file] } } as unknown as Event;
+    comp.onLogoSelected(event);
+    expect(snackBarSpy).toHaveBeenCalledWith('File exceeds 2 MB limit.', 'Close', expect.any(Object));
+  });
+
+  it('onLogoSelected shows "Logo upload failed" when API returns 500', async () => {
+    mockApi.uploadStoreLogo.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500, error: 'Internal Server Error' })));
+    await setup({ isStoreEmployee: true });
+    const fixture = TestBed.createComponent(StoreDetailComponent);
+    fixture.detectChanges();
+    const comp = fixture.componentInstance;
+    const snackBarSpy = jest.spyOn((comp as any).snackBar, 'open').mockReturnValue({} as any);
+    const file = new File(['x'], 'logo.png', { type: 'image/png' });
+    const event = { target: { files: [file] } } as unknown as Event;
+    comp.onLogoSelected(event);
+    expect(snackBarSpy).toHaveBeenCalledWith('Logo upload failed', 'Close', expect.any(Object));
+  });
+
   it('onLogoSelected updates ctx.stores cache with new logoUrl on success', async () => {
     const cachedStore = { id: STORE_ID, storeName: 'Test Store', isActive: true, logoUrl: null };
     mockCtx.stores.getById.mockReturnValue(cachedStore);
@@ -925,6 +965,51 @@ describe('StoreDetailComponent', () => {
     it('on error, snackbar shows "Background upload failed"', async () => {
       mockApi.uploadStoreBackground = jest.fn().mockReturnValue(
         throwError(() => new Error('upload failed'))
+      );
+      await setup({ isStoreManager: true });
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      const snackBarSpy = jest.spyOn((comp as any).snackBar, 'open').mockReturnValue({} as any);
+      const file = new File(['data'], 'bg.png', { type: 'image/png' });
+      const event = { target: { files: [file] } } as unknown as Event;
+      comp.onBackgroundSelected(event);
+      expect(snackBarSpy).toHaveBeenCalledWith('Background upload failed', 'Close', expect.any(Object));
+    });
+
+    it('onBackgroundSelected shows backend message when API returns 400 "Invalid file type. Allowed: .png, .jpg, .jpeg"', async () => {
+      mockApi.uploadStoreBackground = jest.fn().mockReturnValue(
+        throwError(() => new HttpErrorResponse({ status: 400, error: 'Invalid file type. Allowed: .png, .jpg, .jpeg' }))
+      );
+      await setup({ isStoreManager: true });
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      const snackBarSpy = jest.spyOn((comp as any).snackBar, 'open').mockReturnValue({} as any);
+      const file = new File(['data'], 'bg.bmp', { type: 'image/bmp' });
+      const event = { target: { files: [file] } } as unknown as Event;
+      comp.onBackgroundSelected(event);
+      expect(snackBarSpy).toHaveBeenCalledWith('Invalid file type. Allowed: .png, .jpg, .jpeg', 'Close', expect.any(Object));
+    });
+
+    it('onBackgroundSelected shows backend message when API returns 400 "File exceeds 5 MB limit."', async () => {
+      mockApi.uploadStoreBackground = jest.fn().mockReturnValue(
+        throwError(() => new HttpErrorResponse({ status: 400, error: 'File exceeds 5 MB limit.' }))
+      );
+      await setup({ isStoreManager: true });
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      const snackBarSpy = jest.spyOn((comp as any).snackBar, 'open').mockReturnValue({} as any);
+      const file = new File(['data'], 'bg.png', { type: 'image/png' });
+      const event = { target: { files: [file] } } as unknown as Event;
+      comp.onBackgroundSelected(event);
+      expect(snackBarSpy).toHaveBeenCalledWith('File exceeds 5 MB limit.', 'Close', expect.any(Object));
+    });
+
+    it('onBackgroundSelected shows "Background upload failed" when API returns 500', async () => {
+      mockApi.uploadStoreBackground = jest.fn().mockReturnValue(
+        throwError(() => new HttpErrorResponse({ status: 500, error: 'Internal Server Error' }))
       );
       await setup({ isStoreManager: true });
       const fixture = TestBed.createComponent(StoreDetailComponent);

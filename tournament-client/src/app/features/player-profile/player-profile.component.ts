@@ -28,6 +28,14 @@ import { LocalStorageContext } from '../../core/services/local-storage-context.s
 import { PlayerProfile, PlayerBadgeDto, WishlistEntryDto, TradeEntryDto, BulkUploadResultDto, SuggestedTradeDto, TradeCardDemandDto, CommanderStatDto, ScryfallCard, RatingSnapshotDto } from '../../core/models/api.models';
 import { RatingBadgeComponent } from '../../shared/components/rating-badge.component';
 import { PlacementBadgeComponent } from '../../shared/components/placement-badge.component';
+import { HttpErrorResponse } from '@angular/common/http';
+
+function getUploadErrorMessage(err: HttpErrorResponse, fallback: string): string {
+  if (err.status === 400 && typeof err.error === 'string' && err.error.trim()) {
+    return err.error.trim();
+  }
+  return fallback;
+}
 
 @Component({
   selector: 'app-player-profile',
@@ -698,9 +706,10 @@ export class PlayerProfileComponent implements OnInit {
         this.playerService.refreshPlayersFromApi().subscribe();
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.uploadingAvatar = false;
-        this.snackBar.open('Upload failed. Check file type and size.', 'Close', { duration: 4000 });
+        const msg = getUploadErrorMessage(err, 'Avatar upload failed');
+        this.snackBar.open(msg, 'Close', { duration: 4000 });
         this.cdr.detectChanges();
       }
     });

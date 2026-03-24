@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ScryfallService } from '../../core/services/scryfall.service';
 import { PlayerProfileComponent } from './player-profile.component';
 import { PlayerService } from '../../core/services/player.service';
@@ -437,6 +438,39 @@ describe('PlayerProfileComponent — Avatar', () => {
     const file = new File(['data'], 'avatar.png', { type: 'image/png' });
     fixture.componentInstance.onAvatarFileSelected({ target: { files: [file] } } as unknown as Event);
     expect(snackBarSpy).toHaveBeenCalledWith(expect.stringContaining('failed'), 'Close', expect.anything());
+  });
+
+  it('onAvatarFileSelected shows backend message when API returns 400 "Invalid file type."', async () => {
+    const mockApi = makeMockApi(throwError(() => new HttpErrorResponse({ status: 400, error: 'Invalid file type.' })));
+    await setup(makeProfile(), makeAuthService({ isAdmin: true }), mockApi);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const snackBarSpy = jest.spyOn((fixture.componentInstance as any).snackBar, 'open').mockReturnValue({} as any);
+    const file = new File(['data'], 'avatar.bmp', { type: 'image/bmp' });
+    fixture.componentInstance.onAvatarFileSelected({ target: { files: [file] } } as unknown as Event);
+    expect(snackBarSpy).toHaveBeenCalledWith('Invalid file type.', 'Close', expect.anything());
+  });
+
+  it('onAvatarFileSelected shows backend message when API returns 400 "File exceeds 2 MB limit."', async () => {
+    const mockApi = makeMockApi(throwError(() => new HttpErrorResponse({ status: 400, error: 'File exceeds 2 MB limit.' })));
+    await setup(makeProfile(), makeAuthService({ isAdmin: true }), mockApi);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const snackBarSpy = jest.spyOn((fixture.componentInstance as any).snackBar, 'open').mockReturnValue({} as any);
+    const file = new File(['data'], 'avatar.png', { type: 'image/png' });
+    fixture.componentInstance.onAvatarFileSelected({ target: { files: [file] } } as unknown as Event);
+    expect(snackBarSpy).toHaveBeenCalledWith('File exceeds 2 MB limit.', 'Close', expect.anything());
+  });
+
+  it('onAvatarFileSelected shows "Avatar upload failed" when API returns 500', async () => {
+    const mockApi = makeMockApi(throwError(() => new HttpErrorResponse({ status: 500, error: 'Internal Server Error' })));
+    await setup(makeProfile(), makeAuthService({ isAdmin: true }), mockApi);
+    const fixture = TestBed.createComponent(PlayerProfileComponent);
+    fixture.detectChanges();
+    const snackBarSpy = jest.spyOn((fixture.componentInstance as any).snackBar, 'open').mockReturnValue({} as any);
+    const file = new File(['data'], 'avatar.png', { type: 'image/png' });
+    fixture.componentInstance.onAvatarFileSelected({ target: { files: [file] } } as unknown as Event);
+    expect(snackBarSpy).toHaveBeenCalledWith('Avatar upload failed', 'Close', expect.anything());
   });
 
   it('removeAvatar calls removePlayerAvatar and clears avatarUrl on success', async () => {

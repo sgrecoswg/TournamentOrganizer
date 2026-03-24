@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -28,6 +29,13 @@ import { StoreContextService } from '../../core/services/store-context.service';
 import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
 import { TierUpgradePromptComponent } from '../../shared/components/tier-upgrade-prompt.component';
 import { MatChipsModule } from '@angular/material/chips';
+
+function getUploadErrorMessage(err: HttpErrorResponse, fallback: string): string {
+  if (err.status === 400 && typeof err.error === 'string' && err.error.trim()) {
+    return err.error.trim();
+  }
+  return fallback;
+}
 
 @Component({
   selector: 'app-store-detail',
@@ -1072,8 +1080,9 @@ export class StoreDetailComponent implements OnInit {
         this.storeContext.storesChanged$.next();
         this.cdr.detectChanges();
       },
-      error: () => {
-        this.snackBar.open('Logo upload failed', 'Close', { duration: 3000 });
+      error: (err: HttpErrorResponse) => {
+        const msg = getUploadErrorMessage(err, 'Logo upload failed');
+        this.snackBar.open(msg, 'Close', { duration: 4000 });
         this.cdr.detectChanges();
       }
     });
@@ -1096,8 +1105,9 @@ export class StoreDetailComponent implements OnInit {
         if (this.store) this.store = { ...this.store, backgroundImageUrl: bgUrl };
         this.cdr.detectChanges();
       },
-      error: () => {
-        this.snackBar.open('Background upload failed', 'Close', { duration: 3000 });
+      error: (err: HttpErrorResponse) => {
+        const msg = getUploadErrorMessage(err, 'Background upload failed');
+        this.snackBar.open(msg, 'Close', { duration: 4000 });
         this.cdr.detectChanges();
       }
     });
