@@ -72,7 +72,7 @@ If the prompt file for the current task contains a `> **GitHub Issue:** [#N ...]
 ```bash
 # 1. Find the project item ID for issue #N (replace 99 with the actual issue number)
 # NOTE: jq and python3 are NOT available in this shell. Use gh's built-in --jq flag.
-ITEM_ID=$(gh project item-list 2 --owner sgrecoswg --format json \
+ITEM_ID=$(gh project item-list 2 --owner SensibleProgramming --format json \
   --jq '.items[] | select(.content.number == 99) | .id')
 
 # 2. Set Status — use the appropriate option ID:
@@ -81,24 +81,24 @@ ITEM_ID=$(gh project item-list 2 --owner sgrecoswg --format json \
 #   In Progress → 47fc9ee4
 #   In Review   → 2d25f841
 #   Done        → 98236657
-gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \
+gh project item-edit --project-id PVT_kwDOECHdcM4BSqCs \
   --id "$ITEM_ID" \
-  --field-id PVTSSF_lAHOBDyNN84BSBgjzg_rb-U \
+  --field-id PVTSSF_lADOECHdcM4BSqCszhAIG6Q \
   --single-select-option-id 47fc9ee4   # ← swap option ID as needed
 
 # 3. Assign to the current iteration (determine by today's date vs startDate+duration):
 #   Iteration 1 → 449f6210  (2026-03-17, 14 days)
 #   Iteration 2 → 4ce1e9d2  (2026-03-31, 14 days)
 #   Iteration 3 → 17db6b27  (2026-04-14, 14 days)
-gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \
+gh project item-edit --project-id PVT_kwDOECHdcM4BSqCs \
   --id "$ITEM_ID" \
-  --field-id PVTIF_lAHOBDyNN84BSBgjzg_rc44 \
+  --field-id PVTIF_lADOECHdcM4BSqCszhAIG7A \
   --iteration-id 449f6210   # ← use whichever iteration contains today's date
 
 # 4. Set story points (number field — estimate from table below):
-gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \
+gh project item-edit --project-id PVT_kwDOECHdcM4BSqCs \
   --id "$ITEM_ID" \
-  --field-id PVTF_lAHOBDyNN84BSBgjzg_rcXo \
+  --field-id PVTF_lADOECHdcM4BSqCszhAIG60 \
   --number 5   # ← replace with estimate
 
 # Story point guide:

@@ -3,7 +3,7 @@ Implement all unblocked Ready items in parallel, each in its own git worktree.
 ## Step 1 — Fetch all Ready items
 
 ```bash
-gh project item-list 2 --owner sgrecoswg --format json \
+gh project item-list 2 --owner SensibleProgramming --format json \
   | jq '[.items[] | select(.status == "Ready") | {number: .content.number, title: .content.title, body: .content.body, itemId: .id}]'
 ```
 

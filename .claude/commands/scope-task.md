@@ -6,7 +6,7 @@ If `$ARGUMENTS` contains an issue number (e.g. `30`), use it.
 
 Otherwise fetch Ready items from the project board:
 ```bash
-gh project item-list 2 --owner sgrecoswg --format json \
+gh project item-list 2 --owner SensibleProgramming --format json \
   --jq '.items[] | select(.status == "Ready") | "#" + (.content.number | tostring) + " | " + .content.title'
 ```
 
@@ -17,7 +17,7 @@ gh project item-list 2 --owner sgrecoswg --format json \
 
 Fetch full project data:
 ```bash
-gh project item-list 2 --owner sgrecoswg --format json
+gh project item-list 2 --owner SensibleProgramming --format json
 ```
 
 Find the item whose `content.number` matches. Extract:
@@ -60,9 +60,9 @@ Map to model:
 ## Step 4 — Update story points on the project board
 
 ```bash
-gh project item-edit --project-id PVT_kwHOBDyNN84BSBgj \
+gh project item-edit --project-id PVT_kwDOECHdcM4BSqCs \
   --id "$ITEM_ID" \
-  --field-id PVTF_lAHOBDyNN84BSBgjzg_rcXo \
+  --field-id PVTF_lADOECHdcM4BSqCszhAIG60 \
   --number <estimated-points>
 ```
 
