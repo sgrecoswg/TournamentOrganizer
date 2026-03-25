@@ -1,6 +1,18 @@
 import { test, expect } from '@playwright/test';
 import { stubUnmatchedApi, mockGetEventPairings, makePairingsDto } from '../helpers/api-mock';
 
+// ── Background display ────────────────────────────────────────────────────────
+
+test.describe('Pairings Display — background display', () => {
+  test('header has background when backgroundImageUrl is set', async ({ page }) => {
+    await stubUnmatchedApi(page);
+    await mockGetEventPairings(page, 1, makePairingsDto({ backgroundImageUrl: '/backgrounds/event_1.png' }));
+    await page.goto('/events/1/pairings');
+    const header = page.locator('.pairings-header');
+    await expect(header).toHaveCSS('background-image', /url\(.*backgrounds\/event_1\.png/);
+  });
+});
+
 test.describe('Pairings Display — active round', () => {
   test.beforeEach(async ({ page }) => {
     await stubUnmatchedApi(page);

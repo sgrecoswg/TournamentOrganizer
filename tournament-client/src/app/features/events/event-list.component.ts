@@ -30,6 +30,9 @@ import { EventDto, EventTemplateDto, PointSystem, POINT_SYSTEM_LABELS } from '..
     MatDatepickerModule, MatNativeDateModule, MatTabsModule, MatSelectModule
   ],
   template: `
+    @if (storeBackgroundUrl) {
+      <div class="event-list-header" [style.backgroundImage]="'url(' + storeBackgroundUrl + ')'"></div>
+    }
     <h2>Events</h2>
 
     @if (canCreateEvent) {
@@ -146,6 +149,14 @@ import { EventDto, EventTemplateDto, PointSystem, POINT_SYSTEM_LABELS } from '..
 })
 export class EventListComponent implements OnInit, OnDestroy {
   events: EventDto[] = [];
+
+  private readonly sessionTs = Date.now();
+
+  get storeBackgroundUrl(): string | null {
+    const url = this.events[0]?.storeBackgroundImageUrl;
+    if (!url) return null;
+    return `${url}?t=${this.sessionTs}`;
+  }
   templates: EventTemplateDto[] = [];
   selectedTemplateId: number | null = null;
   private storeChangeSub!: Subscription;

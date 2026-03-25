@@ -153,6 +153,8 @@ export interface EventDto {
   storeName?: string;
   plannedRounds?: number | null;
   checkInToken?: string | null;
+  backgroundImageUrl?: string | null;
+  storeBackgroundImageUrl?: string | null;
 }
 
 export interface CheckInResponseDto {
@@ -506,6 +508,7 @@ export interface PairingsDto {
   eventName: string;
   currentRound: number | null;
   pods: PodPairingsDto[];
+  backgroundImageUrl?: string | null;
 }
 
 // Standings

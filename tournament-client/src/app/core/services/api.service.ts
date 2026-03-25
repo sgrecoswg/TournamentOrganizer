@@ -246,6 +246,12 @@ export class ApiService {
     return this.http.post<StoreDto>(`${this.base}/stores/${storeId}/background`, fd);
   }
 
+  uploadEventBackground(eventId: number, file: File): Observable<EventDto> {
+    const fd = new FormData();
+    fd.append('background', file);
+    return this.http.post<EventDto>(`${this.base}/events/${eventId}/background`, fd);
+  }
+
   getSuggestedTrades(playerId: number): Observable<SuggestedTradeDto[]> {
     return this.http.get<SuggestedTradeDto[]>(`${this.base}/players/${playerId}/trades/suggestions`);
   }

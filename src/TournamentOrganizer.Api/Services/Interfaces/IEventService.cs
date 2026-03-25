@@ -26,4 +26,5 @@ public interface IEventService
     Task<CheckInResponseDto> CheckInByTokenAsync(string token, string playerEmail);
     Task<EventPlayerDto> DeclareCommanderAsync(int eventId, int playerId, DeclareCommanderDto dto);
     Task<BulkRegisterResultDto> BulkRegisterConfirmAsync(int eventId, BulkRegisterConfirmDto dto);
+    Task<EventDto?> UpdateBackgroundImageUrlAsync(int eventId, string url);
 }

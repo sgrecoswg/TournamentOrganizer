@@ -66,8 +66,8 @@ public class EventServiceTests
         public FakeStoreEventRepo(int storeId) => _storeId = storeId;
         public Task AddAsync(StoreEvent se) => Task.CompletedTask;
         public Task<int?> GetStoreIdForEventAsync(int eventId) => Task.FromResult(_storeId);
-        public Task<(int? StoreId, string? StoreName)> GetStoreInfoForEventAsync(int eventId) =>
-            Task.FromResult<(int?, string?)>((_storeId, null));
+        public Task<(int? StoreId, string? StoreName, string? StoreBackgroundImageUrl)> GetStoreInfoForEventAsync(int eventId) =>
+            Task.FromResult<(int?, string?, string?)>((_storeId, null, null));
         public Task<List<StoreEvent>> GetByStoreIdAsync(int storeId) => Task.FromResult(new List<StoreEvent>());
     }
 

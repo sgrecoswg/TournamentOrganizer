@@ -32,6 +32,7 @@ public class Event
     public int? PlannedRounds { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string CheckInToken { get; set; } = Guid.NewGuid().ToString("N");
+    public string? BackgroundImageUrl { get; set; }
 
     public ICollection<EventRegistration> Registrations { get; set; } = new List<EventRegistration>();
     public ICollection<Round> Rounds { get; set; } = new List<Round>();

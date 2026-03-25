@@ -120,6 +120,17 @@ export function makeStoreDetailDto(overrides: Partial<StoreDetailDto> = {}): Sto
   };
 }
 
+/** Intercept POST /api/events/:id/background and return the given event dto. */
+export async function mockUploadEventBackground(page: Page, eventId: number, response: EventDto): Promise<void> {
+  await page.route(`**/api/events/${eventId}/background`, route => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
 /** Intercept POST /api/stores/:id/logo and return the given store dto. */
 export async function mockUploadStoreLogo(page: Page, storeId: number, response: StoreDto): Promise<void> {
   await page.route(`**/api/stores/${storeId}/logo`, route => {

@@ -10,7 +10,10 @@ import { PairingsDto } from '../../core/models/api.models';
   imports: [MatCardModule],
   template: `
     <div class="pairings-page">
-      <h1>{{ pairings?.eventName }} — Round {{ pairings?.currentRound }}</h1>
+      <div class="pairings-header"
+           [style.backgroundImage]="backgroundUrl ? 'url(' + backgroundUrl + ')' : null">
+        <h1>{{ pairings?.eventName }} — Round {{ pairings?.currentRound }}</h1>
+      </div>
 
       @if (!pairings?.currentRound) {
         <p class="waiting-message">Waiting for pairings...</p>
@@ -119,6 +122,14 @@ export class PairingsDisplayComponent implements OnInit, OnDestroy {
 
   pairings: PairingsDto | null = null;
   loading = true;
+
+  private readonly sessionTs = Date.now();
+
+  get backgroundUrl(): string | null {
+    const url = this.pairings?.backgroundImageUrl;
+    if (!url) return null;
+    return url.includes('?t=') ? url : `${url}?t=${this.sessionTs}`;
+  }
 
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
   private route = inject(ActivatedRoute);
