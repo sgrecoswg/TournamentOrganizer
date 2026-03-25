@@ -12,6 +12,7 @@ public class SuggestedTradeService : ISuggestedTradeService
     private readonly IStoreSettingsRepository _storeSettingsRepo;
     private readonly ICardPriceService _cardPriceService;
     private readonly IPlayerRepository _playerRepo;
+    private readonly INotificationService _notificationService;
 
     public SuggestedTradeService(
         IWishlistRepository wishlistRepo,
@@ -19,7 +20,8 @@ public class SuggestedTradeService : ISuggestedTradeService
         IStoreRepository storeRepo,
         IStoreSettingsRepository storeSettingsRepo,
         ICardPriceService cardPriceService,
-        IPlayerRepository playerRepo)
+        IPlayerRepository playerRepo,
+        INotificationService notificationService)
     {
         _wishlistRepo = wishlistRepo;
         _tradeRepo = tradeRepo;
@@ -27,6 +29,7 @@ public class SuggestedTradeService : ISuggestedTradeService
         _storeSettingsRepo = storeSettingsRepo;
         _cardPriceService = cardPriceService;
         _playerRepo = playerRepo;
+        _notificationService = notificationService;
     }
 
     public async Task<List<SuggestedTradeDto>> GetSuggestionsAsync(int playerId)
@@ -246,7 +249,22 @@ public class SuggestedTradeService : ISuggestedTradeService
             }
         }
 
-        return results.Where(s => s.ParticipantIds.Contains(playerId)).ToList();
+        var filtered = results.Where(s => s.ParticipantIds.Contains(playerId)).ToList();
+
+        // Notify all participants in new matches
+        foreach (var match in results)
+        {
+            for (var i = 0; i < match.ParticipantIds.Count; i++)
+            {
+                var recipient = match.ParticipantIds[i];
+                foreach (var other in match.ParticipantIds.Where(id => id != recipient))
+                {
+                    await _notificationService.CreateTradeMatchNotificationAsync(recipient, other);
+                }
+            }
+        }
+
+        return filtered;
     }
 
     public async Task<List<TradeCardDemandDto>> GetDemandAsync(int playerId)
