@@ -2,10 +2,14 @@ using TournamentOrganizer.Api.Models;
 
 namespace TournamentOrganizer.Api.DTOs;
 
-public record StoreDto(int Id, string StoreName, bool IsActive, string? LogoUrl = null, string? Slug = null, string? Location = null, string? BackgroundImageUrl = null, LicenseTier? Tier = null);
+public record StoreDto(int Id, string StoreName, bool IsActive, string? LogoUrl = null, string? Slug = null, string? Location = null, string? BackgroundImageUrl = null, LicenseTier? Tier = null, int? StoreGroupId = null, string? StoreGroupName = null);
+
+public record StoreGroupDto(int Id, string Name, string? LogoUrl, int StoreCount);
+public record CreateStoreGroupDto(string Name);
+public record UpdateStoreGroupDto(string Name, string? LogoUrl);
 public record StoreEventSummaryDto(int EventId, string EventName, DateTime Date, string Status);
 public record StoreDetailDto(int Id, string StoreName, bool IsActive, decimal AllowableTradeDifferential, List<StoreEventSummaryDto> Events, LicenseDto? License = null, int? ThemeId = null, string? ThemeCssClass = null, string? LogoUrl = null, bool HasDiscordWebhook = false, string? SellerPortalUrl = null, string? Slug = null, string? BackgroundImageUrl = null);
-public record CreateStoreDto(string StoreName);
+public record CreateStoreDto(string StoreName, int? StoreGroupId = null);
 public record UpdateStoreDto(string StoreName, decimal AllowableTradeDifferential, int? ThemeId = null, string? DiscordWebhookUrl = null, string? SellerPortalUrl = null);
 public record ThemeDto(int Id, string Name, string CssClass, bool IsActive);
 
