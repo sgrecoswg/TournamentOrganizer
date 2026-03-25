@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, LicenseDto, PairingsDto, PlayerBadgeDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, StoreDto, StoreDetailDto, StoreEventSummaryDto, StorePublicDto, StorePublicTopPlayerDto, ThemeDto } from '../../src/app/core/models/api.models';
+import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, LicenseDto, PairingsDto, PlayerBadgeDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, StoreDto, StoreDetailDto, StoreEventSummaryDto, StoreGroupDto, StorePublicDto, StorePublicTopPlayerDto, ThemeDto } from '../../src/app/core/models/api.models';
 
 /** Intercept GET /api/events and return the given list. */
 export async function mockGetEvents(page: Page, events: EventDto[]): Promise<void> {
@@ -118,6 +118,17 @@ export function makeStoreDetailDto(overrides: Partial<StoreDetailDto> = {}): Sto
     themeCssClass:            null,
     ...overrides,
   };
+}
+
+/** Intercept POST /api/events/:id/background and return the given event dto. */
+export async function mockUploadEventBackground(page: Page, eventId: number, response: EventDto): Promise<void> {
+  await page.route(`**/api/events/${eventId}/background`, route => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
 }
 
 /** Intercept POST /api/stores/:id/logo and return the given store dto. */
@@ -594,6 +605,51 @@ export function makeStorePublicTopPlayerDto(overrides: Partial<StorePublicTopPla
     name:              'Alice',
     conservativeScore: 18.5,
     avatarUrl:         null,
+    ...overrides,
+  };
+}
+
+// ── Store Groups ───────────────────────────────────────────────────────────────
+
+/** Intercept GET /api/storegroups and return the given list. */
+export async function mockGetStoreGroups(page: Page, groups: StoreGroupDto[]): Promise<void> {
+  await page.route('**/api/storegroups', route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ json: groups });
+    } else {
+      route.fallback();
+    }
+  });
+}
+
+/** Intercept POST /api/storegroups and return the given group. */
+export async function mockCreateStoreGroup(page: Page, response: StoreGroupDto): Promise<void> {
+  await page.route('**/api/storegroups', route => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({ status: 201, json: response });
+    } else {
+      route.fallback();
+    }
+  });
+}
+
+/** Intercept POST /api/storegroups/:groupId/stores/:storeId → 204 */
+export async function mockAssignStore(page: Page, groupId: number, storeId: number): Promise<void> {
+  await page.route(`**/api/storegroups/${groupId}/stores/${storeId}`, route => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({ status: 204 });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export function makeStoreGroupDto(overrides: Partial<StoreGroupDto> = {}): StoreGroupDto {
+  return {
+    id:         1,
+    name:       'Top Deck Chain',
+    logoUrl:    null,
+    storeCount: 0,
     ...overrides,
   };
 }

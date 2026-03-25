@@ -157,8 +157,8 @@ public class EventCheckInTests
     {
         public Task AddAsync(StoreEvent se) => Task.CompletedTask;
         public Task<int?> GetStoreIdForEventAsync(int eventId) => Task.FromResult<int?>(1);
-        public Task<(int? StoreId, string? StoreName)> GetStoreInfoForEventAsync(int eventId) =>
-            Task.FromResult<(int?, string?)>((1, "Test Store"));
+        public Task<(int? StoreId, string? StoreName, string? StoreBackgroundImageUrl)> GetStoreInfoForEventAsync(int eventId) =>
+            Task.FromResult<(int?, string?, string?)>((1, "Test Store", null));
         public Task<List<StoreEvent>> GetByStoreIdAsync(int storeId) => Task.FromResult(new List<StoreEvent>());
     }
 

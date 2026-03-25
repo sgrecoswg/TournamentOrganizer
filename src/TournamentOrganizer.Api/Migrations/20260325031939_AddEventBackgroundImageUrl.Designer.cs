@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TournamentOrganizer.Api.Data;
 
@@ -11,9 +12,11 @@ using TournamentOrganizer.Api.Data;
 namespace TournamentOrganizer.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260325031939_AddEventBackgroundImageUrl")]
+    partial class AddEventBackgroundImageUrl
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -540,9 +543,6 @@ namespace TournamentOrganizer.Api.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
 
-                    b.Property<int?>("StoreGroupId")
-                        .HasColumnType("int");
-
                     b.Property<string>("StoreName")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -562,8 +562,6 @@ namespace TournamentOrganizer.Api.Migrations
                     b.HasIndex("Slug")
                         .IsUnique()
                         .HasFilter("[Slug] IS NOT NULL");
-
-                    b.HasIndex("StoreGroupId");
 
                     b.ToTable("Stores");
                 });
@@ -594,30 +592,6 @@ namespace TournamentOrganizer.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("StoreEvents");
-                });
-
-            modelBuilder.Entity("TournamentOrganizer.Api.Models.StoreGroup", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("LogoUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("StoreGroups");
                 });
 
             modelBuilder.Entity("TournamentOrganizer.Api.Models.StoreSettings", b =>
@@ -954,14 +928,7 @@ namespace TournamentOrganizer.Api.Migrations
                         .HasForeignKey("LicenseId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("TournamentOrganizer.Api.Models.StoreGroup", "StoreGroup")
-                        .WithMany("Stores")
-                        .HasForeignKey("StoreGroupId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("License");
-
-                    b.Navigation("StoreGroup");
                 });
 
             modelBuilder.Entity("TournamentOrganizer.Api.Models.StoreEvent", b =>
@@ -1065,11 +1032,6 @@ namespace TournamentOrganizer.Api.Migrations
                     b.Navigation("Settings");
 
                     b.Navigation("StoreEvents");
-                });
-
-            modelBuilder.Entity("TournamentOrganizer.Api.Models.StoreGroup", b =>
-                {
-                    b.Navigation("Stores");
                 });
 #pragma warning restore 612, 618
         }

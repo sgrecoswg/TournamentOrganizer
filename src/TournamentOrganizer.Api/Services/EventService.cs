@@ -65,7 +65,7 @@ public class EventService : IEventService
         };
         await _eventRepo.CreateAsync(evt);
         await _storeEventRepo.AddAsync(new StoreEvent { StoreId = dto.StoreId!.Value, EventId = evt.Id });
-        var (_, createdStoreName) = await _storeEventRepo.GetStoreInfoForEventAsync(evt.Id);
+        var (_, createdStoreName, _) = await _storeEventRepo.GetStoreInfoForEventAsync(evt.Id);
         return ToEventDto(evt, 0, dto.StoreId, createdStoreName);
     }
 
@@ -75,8 +75,8 @@ public class EventService : IEventService
         if (evt == null) return null;
 
         var players = await _eventRepo.GetRegisteredPlayersAsync(id);
-        var (storeId, storeName) = await _storeEventRepo.GetStoreInfoForEventAsync(id);
-        return ToEventDto(evt, players.Count, storeId, storeName);
+        var (storeId, storeName, storeBg) = await _storeEventRepo.GetStoreInfoForEventAsync(id);
+        return ToEventDto(evt, players.Count, storeId, storeName, storeBg);
     }
 
     public async Task<List<EventDto>> GetAllAsync(int? storeId = null)
@@ -86,7 +86,7 @@ public class EventService : IEventService
         foreach (var evt in events.Where(e => e.Status != EventStatus.Removed))
         {
             var players = await _eventRepo.GetRegisteredPlayersAsync(evt.Id);
-            result.Add(ToEventDto(evt, players.Count, evt.StoreEvent?.StoreId, evt.StoreEvent?.Store?.StoreName));
+            result.Add(ToEventDto(evt, players.Count, evt.StoreEvent?.StoreId, evt.StoreEvent?.Store?.StoreName, evt.StoreEvent?.Store?.BackgroundImageUrl));
         }
         return result;
     }
@@ -656,8 +656,8 @@ public class EventService : IEventService
         }
 
         var players = await _eventRepo.GetRegisteredPlayersAsync(eventId);
-        var (storeId, storeName) = await _storeEventRepo.GetStoreInfoForEventAsync(eventId);
-        return ToEventDto(evt, players.Count, storeId, storeName);
+        var (storeId, storeName, storeBgStatus) = await _storeEventRepo.GetStoreInfoForEventAsync(eventId);
+        return ToEventDto(evt, players.Count, storeId, storeName, storeBgStatus);
     }
 
     public async Task<List<EventPlayerDto>> GetEventPlayersAsync(int eventId)
@@ -778,12 +778,15 @@ public class EventService : IEventService
         var evt = await _eventRepo.GetByIdAsync(eventId);
         if (evt == null) return null;
 
+        var (_, _, pairingStoreBgEarly) = await _storeEventRepo.GetStoreInfoForEventAsync(eventId);
+        var earlyEffectiveBg = evt.BackgroundImageUrl ?? pairingStoreBgEarly;
+
         if (evt.Status != EventStatus.InProgress)
-            return new PairingsDto(evt.Id, evt.Name, null, []);
+            return new PairingsDto(evt.Id, evt.Name, null, [], earlyEffectiveBg);
 
         var round = await _eventRepo.GetLatestRoundWithPairingsAsync(eventId);
         if (round == null)
-            return new PairingsDto(evt.Id, evt.Name, null, []);
+            return new PairingsDto(evt.Id, evt.Name, null, [], earlyEffectiveBg);
 
         var registrations = await _eventRepo.GetRegistrationsWithPlayersAsync(eventId);
         var commanderMap  = registrations.ToDictionary(r => r.PlayerId, r => r.Commanders);
@@ -818,11 +821,23 @@ public class EventService : IEventService
             })
             .ToList();
 
-        return new PairingsDto(evt.Id, evt.Name, round.RoundNumber, pods);
+        var (_, _, pairingStoreBg) = await _storeEventRepo.GetStoreInfoForEventAsync(eventId);
+        var effectiveBg = evt.BackgroundImageUrl ?? pairingStoreBg;
+        return new PairingsDto(evt.Id, evt.Name, round.RoundNumber, pods, effectiveBg);
     }
 
-    private static EventDto ToEventDto(Event evt, int playerCount, int? storeId = null, string? storeName = null) =>
-        new(evt.Id, evt.Name, evt.Date, evt.Status.ToString(), playerCount, evt.DefaultRoundTimeMinutes, evt.MaxPlayers, evt.PointSystem.ToString(), storeId, storeName, evt.PlannedRounds, evt.CheckInToken);
+    private static EventDto ToEventDto(Event evt, int playerCount, int? storeId = null, string? storeName = null, string? storeBackgroundImageUrl = null) =>
+        new(evt.Id, evt.Name, evt.Date, evt.Status.ToString(), playerCount, evt.DefaultRoundTimeMinutes, evt.MaxPlayers, evt.PointSystem.ToString(), storeId, storeName, evt.PlannedRounds, evt.CheckInToken, evt.BackgroundImageUrl, storeBackgroundImageUrl);
+
+    public async Task<EventDto?> UpdateBackgroundImageUrlAsync(int eventId, string url)
+    {
+        var evt = await _eventRepo.GetByIdAsync(eventId);
+        if (evt == null) return null;
+        evt.BackgroundImageUrl = url;
+        await _eventRepo.UpdateAsync(evt);
+        var (storeId, storeName, storeBg) = await _storeEventRepo.GetStoreInfoForEventAsync(eventId);
+        return ToEventDto(evt, (await _eventRepo.GetRegisteredPlayersAsync(eventId)).Count, storeId, storeName, storeBg);
+    }
 
     public static int GetRecommendedRounds(int playerCount) => playerCount switch
     {

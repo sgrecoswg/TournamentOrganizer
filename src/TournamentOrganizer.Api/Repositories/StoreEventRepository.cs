@@ -23,12 +23,12 @@ public class StoreEventRepository : IStoreEventRepository
         return se?.StoreId;
     }
 
-    public async Task<(int? StoreId, string? StoreName)> GetStoreInfoForEventAsync(int eventId)
+    public async Task<(int? StoreId, string? StoreName, string? StoreBackgroundImageUrl)> GetStoreInfoForEventAsync(int eventId)
     {
         var se = await _db.StoreEvents
             .Include(se => se.Store)
             .FirstOrDefaultAsync(se => se.EventId == eventId);
-        return (se?.StoreId, se?.Store?.StoreName);
+        return (se?.StoreId, se?.Store?.StoreName, se?.Store?.BackgroundImageUrl);
     }
 
     public async Task<List<StoreEvent>> GetByStoreIdAsync(int storeId)

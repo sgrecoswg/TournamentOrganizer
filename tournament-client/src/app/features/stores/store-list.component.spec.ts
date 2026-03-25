@@ -7,14 +7,15 @@ import { StoreListComponent } from './store-list.component';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LocalStorageContext } from '../../core/services/local-storage-context.service';
-import { StoreDto } from '../../core/models/api.models';
+import { StoreDto, StoreGroupDto } from '../../core/models/api.models';
 
 describe('StoreListComponent', () => {
   const storeStub: StoreDto = { id: 1, storeName: 'Downtown Shop', isActive: true };
 
   const mockApi = {
-    getStores:   jest.fn().mockReturnValue(of([])),
-    createStore: jest.fn().mockReturnValue(of(storeStub)),
+    getStores:      jest.fn().mockReturnValue(of([])),
+    createStore:    jest.fn().mockReturnValue(of(storeStub)),
+    getStoreGroups: jest.fn().mockReturnValue(of([])),
   };
 
   const mockAuth = {
@@ -100,14 +101,14 @@ describe('StoreListComponent', () => {
     expect(fixture.componentInstance.stores).toEqual([]);
   });
 
-  it('createStore() calls api.createStore with trimmed name', () => {
+  it('createStore() calls api.createStore with trimmed name and null groupId', () => {
     const fixture = TestBed.createComponent(StoreListComponent);
     const comp = fixture.componentInstance;
     comp.newStoreName = '  New Shop  ';
 
     comp.createStore();
 
-    expect(mockApi.createStore).toHaveBeenCalledWith({ storeName: 'New Shop' });
+    expect(mockApi.createStore).toHaveBeenCalledWith({ storeName: 'New Shop', storeGroupId: null });
   });
 
   it('createStore() clears newStoreName on success', () => {
@@ -142,7 +143,7 @@ describe('StoreListComponent — Create button disabled when API offline', () =>
       providers: [
         provideRouter([]),
         provideAnimationsAsync(),
-        { provide: ApiService,          useValue: { getStores: jest.fn().mockReturnValue(throwError(() => new Error('offline'))), createStore: jest.fn() } },
+        { provide: ApiService,          useValue: { getStores: jest.fn().mockReturnValue(throwError(() => new Error('offline'))), createStore: jest.fn(), getStoreGroups: jest.fn().mockReturnValue(of([])) } },
         { provide: AuthService,         useValue: { isAdmin: true, currentUser: null } },
         { provide: LocalStorageContext,  useValue: { stores: { getAll: jest.fn().mockReturnValue([]), seed: jest.fn() } } },
         { provide: MatSnackBar,          useValue: mockSnackBar },
@@ -178,7 +179,7 @@ describe('StoreListComponent — tier badges', () => {
       providers: [
         provideRouter([]),
         provideAnimationsAsync(),
-        { provide: ApiService,         useValue: { getStores: jest.fn().mockReturnValue(of(stores)) } },
+        { provide: ApiService,         useValue: { getStores: jest.fn().mockReturnValue(of(stores)), getStoreGroups: jest.fn().mockReturnValue(of([])) } },
         { provide: AuthService,        useValue: { isAdmin, currentUser: null } },
         { provide: LocalStorageContext, useValue: { stores: { getAll: jest.fn().mockReturnValue(stores), seed: jest.fn() } } },
         { provide: MatSnackBar,         useValue: { open: jest.fn() } },
@@ -219,5 +220,115 @@ describe('StoreListComponent — tier badges', () => {
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.tier-badge')).toBeNull();
+  });
+});
+
+// ── Store Groups ───────────────────────────────────────────────────────────────
+
+describe('StoreListComponent — Store Groups', () => {
+  const groupedStore1: StoreDto = { id: 1, storeName: 'Loc 1', isActive: true, storeGroupId: 1, storeGroupName: 'Top Deck Chain' };
+  const groupedStore2: StoreDto = { id: 2, storeName: 'Loc 2', isActive: true, storeGroupId: 1, storeGroupName: 'Top Deck Chain' };
+  const ungroupedStore: StoreDto = { id: 3, storeName: 'Solo Shop', isActive: true };
+
+  function buildModule(isAdmin: boolean, stores: StoreDto[]) {
+    return TestBed.configureTestingModule({
+      imports: [StoreListComponent],
+      providers: [
+        provideRouter([]),
+        provideAnimationsAsync(),
+        { provide: ApiService,         useValue: { getStores: jest.fn().mockReturnValue(of(stores)), getStoreGroups: jest.fn().mockReturnValue(of([])) } },
+        { provide: AuthService,        useValue: { isAdmin, currentUser: null } },
+        { provide: LocalStorageContext, useValue: { stores: { getAll: jest.fn().mockReturnValue(stores), seed: jest.fn() } } },
+        { provide: MatSnackBar,         useValue: { open: jest.fn() } },
+      ],
+    }).compileComponents();
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('Admin: stores with same storeGroupId rendered under a group header', async () => {
+    await buildModule(true, [groupedStore1, groupedStore2]);
+    const fixture = TestBed.createComponent(StoreListComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('Top Deck Chain');
+  });
+
+  it('Admin: group name shown in .group-header element', async () => {
+    await buildModule(true, [groupedStore1]);
+    const fixture = TestBed.createComponent(StoreListComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const headers = el.querySelectorAll('.group-header');
+    expect(headers.length).toBeGreaterThan(0);
+    expect(headers[0].textContent).toContain('Top Deck Chain');
+  });
+
+  it('Admin: ungrouped stores listed separately in .ungrouped-section', async () => {
+    await buildModule(true, [groupedStore1, ungroupedStore]);
+    const fixture = TestBed.createComponent(StoreListComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const ungroupedSection = el.querySelector('.ungrouped-section');
+    expect(ungroupedSection).not.toBeNull();
+    expect(ungroupedSection?.textContent).toContain('Solo Shop');
+  });
+
+  it('Player: no group headers rendered', async () => {
+    await buildModule(false, [groupedStore1, groupedStore2]);
+    const fixture = TestBed.createComponent(StoreListComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelectorAll('.group-header').length).toBe(0);
+  });
+});
+
+// ── Store Group dropdown in create form ────────────────────────────────────────
+
+describe('StoreListComponent — create with group', () => {
+  const group1: StoreGroupDto = { id: 1, name: 'Top Deck Chain', storeCount: 2 };
+
+  function buildModule() {
+    return TestBed.configureTestingModule({
+      imports: [StoreListComponent],
+      providers: [
+        provideRouter([]),
+        provideAnimationsAsync(),
+        {
+          provide: ApiService, useValue: {
+            getStores:      jest.fn().mockReturnValue(of([])),
+            createStore:    jest.fn().mockReturnValue(of({ id: 99, storeName: 'X', isActive: true })),
+            getStoreGroups: jest.fn().mockReturnValue(of([group1])),
+          }
+        },
+        { provide: AuthService,        useValue: { isAdmin: true, currentUser: null } },
+        { provide: LocalStorageContext, useValue: { stores: { getAll: jest.fn().mockReturnValue([]), seed: jest.fn() } } },
+        { provide: MatSnackBar,         useValue: { open: jest.fn() } },
+      ],
+    }).compileComponents();
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('admin create form shows a store group select', async () => {
+    await buildModule();
+    const fixture = TestBed.createComponent(StoreListComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('mat-select[data-create-group-select]')).not.toBeNull();
+  });
+
+  it('createStore() passes storeGroupId when a group is selected', async () => {
+    await buildModule();
+    const fixture = TestBed.createComponent(StoreListComponent);
+    const comp = fixture.componentInstance;
+    fixture.detectChanges();
+
+    const api = TestBed.inject(ApiService) as any;
+    comp.newStoreName = 'New Shop';
+    comp.newStoreGroupId = 1;
+    comp.createStore();
+
+    expect(api.createStore).toHaveBeenCalledWith({ storeName: 'New Shop', storeGroupId: 1 });
   });
 });

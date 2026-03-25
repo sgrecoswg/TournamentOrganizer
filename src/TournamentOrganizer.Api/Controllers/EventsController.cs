@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using TournamentOrganizer.Api.DTOs;
 using TournamentOrganizer.Api.Repositories.Interfaces;
@@ -11,13 +12,18 @@ namespace TournamentOrganizer.Api.Controllers;
 [Route("api/[controller]")]
 public class EventsController : ControllerBase
 {
+    private static readonly HashSet<string> _allowedBgExtensions = [".png", ".jpg", ".jpeg"];
+    private const long MaxBgFileSizeBytes = 5 * 1024 * 1024; // 5 MB
+
     private readonly IEventService _eventService;
     private readonly IStoreEventRepository _storeEventRepo;
+    private readonly IWebHostEnvironment _env;
 
-    public EventsController(IEventService eventService, IStoreEventRepository storeEventRepo)
+    public EventsController(IEventService eventService, IStoreEventRepository storeEventRepo, IWebHostEnvironment env)
     {
         _eventService = eventService;
         _storeEventRepo = storeEventRepo;
+        _env = env;
     }
 
     [HttpGet]
@@ -324,5 +330,32 @@ public class EventsController : ControllerBase
         // Players can only declare for their own registration
         var jwtPlayerId = int.TryParse(User.FindFirstValue("playerId"), out var pid) ? pid : 0;
         return jwtPlayerId != 0 && jwtPlayerId == targetPlayerId;
+    }
+
+    [HttpPost("{id}/background")]
+    [Authorize(Policy = "StoreEmployee")]
+    public async Task<ActionResult<EventDto>> UploadBackground(int id, IFormFile background)
+    {
+        if (!await UserCanManageEvent(id))
+            return Forbid();
+
+        var ext = Path.GetExtension(background.FileName).ToLowerInvariant();
+        if (!_allowedBgExtensions.Contains(ext))
+            return BadRequest("Invalid file type. Allowed: .png, .jpg, .jpeg");
+
+        if (background.Length > MaxBgFileSizeBytes)
+            return BadRequest("File exceeds 5 MB limit.");
+
+        var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
+        var bgDir = Path.Combine(webRoot, "backgrounds");
+        Directory.CreateDirectory(bgDir);
+
+        var filePath = Path.Combine(bgDir, $"event_{id}{ext}");
+        await using var stream = new FileStream(filePath, FileMode.Create);
+        await background.CopyToAsync(stream);
+
+        var bgUrl = $"/backgrounds/event_{id}{ext}";
+        var updated = await _eventService.UpdateBackgroundImageUrlAsync(id, bgUrl);
+        return updated == null ? NotFound() : Ok(updated);
     }
 }

@@ -153,6 +153,8 @@ export interface EventDto {
   storeName?: string;
   plannedRounds?: number | null;
   checkInToken?: string | null;
+  backgroundImageUrl?: string | null;
+  storeBackgroundImageUrl?: string | null;
 }
 
 export interface CheckInResponseDto {
@@ -272,6 +274,24 @@ export interface StoreDto {
   location?: string | null;
   backgroundImageUrl?: string | null;
   tier?: LicenseTier | null;
+  storeGroupId?: number | null;
+  storeGroupName?: string | null;
+}
+
+export interface StoreGroupDto {
+  id: number;
+  name: string;
+  logoUrl?: string | null;
+  storeCount: number;
+}
+
+export interface CreateStoreGroupDto {
+  name: string;
+}
+
+export interface UpdateStoreGroupDto {
+  name: string;
+  logoUrl?: string | null;
 }
 
 export interface StoreDetailDto {
@@ -310,6 +330,7 @@ export interface StorePublicDto {
 
 export interface CreateStoreDto {
   storeName: string;
+  storeGroupId?: number | null;
 }
 
 export interface UpdateStoreDto {
@@ -506,6 +527,7 @@ export interface PairingsDto {
   eventName: string;
   currentRound: number | null;
   pods: PodPairingsDto[];
+  backgroundImageUrl?: string | null;
 }
 
 // Standings

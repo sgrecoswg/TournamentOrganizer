@@ -214,3 +214,54 @@ test.describe('Store List — tier badges: StoreEmployee hidden', () => {
     await expect(page.locator('.tier-badge')).not.toBeVisible();
   });
 });
+
+// ── Store Groups ───────────────────────────────────────────────────────────────
+
+const groupedStore1 = makeStoreDto({ id: 10, storeName: 'Location A', storeGroupId: 1, storeGroupName: 'Top Deck Chain' } as any);
+const groupedStore2 = makeStoreDto({ id: 11, storeName: 'Location B', storeGroupId: 1, storeGroupName: 'Top Deck Chain' } as any);
+const ungroupedStore = makeStoreDto({ id: 12, storeName: 'Solo Shop', storeGroupId: null } as any);
+
+test.describe('Store List — Groups: Admin grouped view', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Administrator');
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, [groupedStore1, groupedStore2]);
+    await page.goto('/stores');
+  });
+
+  test('"Top Deck Chain" group header visible', async ({ page }) => {
+    await expect(page.locator('.group-header').filter({ hasText: 'Top Deck Chain' })).toBeVisible();
+  });
+
+  test('both stores listed under the group', async ({ page }) => {
+    await expect(page.getByRole('cell', { name: 'Location A' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'Location B' })).toBeVisible();
+  });
+});
+
+test.describe('Store List — Groups: ungrouped', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Administrator');
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, [ungroupedStore]);
+    await page.goto('/stores');
+  });
+
+  test('ungrouped store shown in ungrouped section', async ({ page }) => {
+    await expect(page.locator('.ungrouped-section')).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'Solo Shop' })).toBeVisible();
+  });
+});
+
+test.describe('Store List — Groups: Player no grouping', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'Player');
+    await stubUnmatchedApi(page);
+    await mockGetStores(page, [groupedStore1, groupedStore2]);
+    await page.goto('/stores');
+  });
+
+  test('no group headers rendered for Player', async ({ page }) => {
+    await expect(page.locator('.group-header')).not.toBeVisible();
+  });
+});

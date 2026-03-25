@@ -37,8 +37,15 @@ public class StoresController : ControllerBase
         => Ok(await _service.GetAllAsync());
 
     [HttpGet("{id}")]
+    [Authorize(Policy = "StoreEmployee")]
     public async Task<ActionResult<StoreDetailDto>> GetById(int id)
     {
+        // Admin can read any store; StoreEmployee/Manager can only read their own.
+        if (!User.HasClaim("role", "Administrator"))
+        {
+            var jwtStoreId = int.TryParse(User.FindFirstValue("storeId"), out var s) ? s : 0;
+            if (jwtStoreId != id) return Forbid();
+        }
         var store = await _service.GetByIdAsync(id);
         return store == null ? NotFound() : Ok(store);
     }

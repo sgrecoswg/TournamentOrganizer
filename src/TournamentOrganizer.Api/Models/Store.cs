@@ -16,6 +16,9 @@ public class Store
     public string? Slug { get; set; }
     public string? Location { get; set; }
 
+    public int? StoreGroupId { get; set; }
+    public StoreGroup? StoreGroup { get; set; }
+
     public License? License { get; set; }
     public StoreSettings? Settings { get; set; }
     public ICollection<StoreEvent> StoreEvents { get; set; } = new List<StoreEvent>();

@@ -109,7 +109,7 @@ public class QrCheckInTests
     {
         public Task AddAsync(StoreEvent se) => Task.CompletedTask;
         public Task<int?> GetStoreIdForEventAsync(int eventId) => Task.FromResult<int?>(null);
-        public Task<(int? StoreId, string? StoreName)> GetStoreInfoForEventAsync(int eventId) => Task.FromResult<(int?, string?)>((null, null));
+        public Task<(int? StoreId, string? StoreName, string? StoreBackgroundImageUrl)> GetStoreInfoForEventAsync(int eventId) => Task.FromResult<(int?, string?, string?)>((null, null, null));
         public Task<List<StoreEvent>> GetByStoreIdAsync(int storeId) => Task.FromResult(new List<StoreEvent>());
     }
 

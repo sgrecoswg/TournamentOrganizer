@@ -2,7 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -689,6 +689,7 @@ export class StoreDetailComponent implements OnInit {
 
   constructor(
     private route:        ActivatedRoute,
+    private router:       Router,
     private apiService:   ApiService,
     private snackBar:     MatSnackBar,
     private cdr:          ChangeDetectorRef,
@@ -742,7 +743,12 @@ export class StoreDetailComponent implements OnInit {
           this.loadTemplates();
         }
       },
-      error: () => {
+      error: (err) => {
+        if (err?.status === 403) {
+          this.snackBar.open('Access denied', 'OK', { duration: 4000 });
+          this.router.navigate(['/stores']);
+          return;
+        }
         this.apiOnline = false;
         // Fall back to the locally-cached store so the page renders offline
         const cached = this.ctx.stores.getById(this.storeId);

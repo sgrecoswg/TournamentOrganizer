@@ -87,10 +87,10 @@ public class StoreEventTests
         public Task<int?> GetStoreIdForEventAsync(int eventId) =>
             Task.FromResult(Created.FirstOrDefault(se => se.EventId == eventId)?.StoreId);
 
-        public Task<(int? StoreId, string? StoreName)> GetStoreInfoForEventAsync(int eventId)
+        public Task<(int? StoreId, string? StoreName, string? StoreBackgroundImageUrl)> GetStoreInfoForEventAsync(int eventId)
         {
             var se = Created.FirstOrDefault(s => s.EventId == eventId);
-            return Task.FromResult<(int?, string?)>((se?.StoreId, null));
+            return Task.FromResult<(int?, string?, string?)>((se?.StoreId, null, null));
         }
 
         public Task<List<StoreEvent>> GetByStoreIdAsync(int storeId) =>

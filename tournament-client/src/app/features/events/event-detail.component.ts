@@ -22,6 +22,7 @@ import { EventService } from '../../core/services/event.service';
 import { PlayerService } from '../../core/services/player.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ScryfallService } from '../../core/services/scryfall.service';
+import { ApiService } from '../../core/services/api.service';
 import {
   EventDto, RoundDto, StandingsEntry, EventPlayerDto, PlayerDto, POINT_SYSTEM_LABELS,
 } from '../../core/models/api.models';
@@ -41,7 +42,10 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
   ],
   template: `
     @if (event) {
-      <div class="event-header">
+      <div class="event-header" [style.backgroundImage]="effectiveBackgroundUrl ? 'url(' + effectiveBackgroundUrl + ')' : null">
+        @if (effectiveBackgroundUrl) {
+          <img class="event-background" [src]="effectiveBackgroundUrl" alt="Event background" style="display:none">
+        }
         <div class="event-info">
           <h2>{{ event.name }}</h2>
           @if (event.storeName) {
@@ -104,6 +108,12 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
               <a mat-stroked-button [routerLink]="['/events', event.id, 'pairings']" target="_blank">
                 <mat-icon>table_chart</mat-icon> Pairings
               </a>
+              <button mat-stroked-button class="upload-background-btn" (click)="bgInput.click()">
+                <mat-icon>wallpaper</mat-icon>
+                {{ event.backgroundImageUrl ? 'Change Background' : 'Upload Background' }}
+              </button>
+              <input #bgInput type="file" accept=".png,.jpg,.jpeg" style="display:none"
+                     (change)="onBackgroundSelected($event)">
             </div>
           }
         </div>
@@ -545,6 +555,14 @@ export class EventDetailComponent implements OnInit {
 
   private registeredPlayerIds = new Set<number>();
 
+  private readonly sessionTs = Date.now();
+
+  get effectiveBackgroundUrl(): string | null {
+    const url = this.event?.backgroundImageUrl ?? this.event?.storeBackgroundImageUrl;
+    if (!url) return null;
+    return url.includes('?t=') ? url : `${url}?t=${this.sessionTs}`;
+  }
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -555,7 +573,25 @@ export class EventDetailComponent implements OnInit {
     public authService: AuthService,
     private dialog: MatDialog,
     private scryfallService: ScryfallService,
+    private apiService: ApiService,
   ) {}
+
+  onBackgroundSelected(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    this.apiService.uploadEventBackground(this.eventId, file).subscribe({
+      next: dto => {
+        if (this.event && dto.backgroundImageUrl) {
+          this.event = { ...this.event, backgroundImageUrl: `${dto.backgroundImageUrl}?t=${Date.now()}` };
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.snackBar.open('Failed to upload background image.', 'Dismiss', { duration: 5000 });
+        this.cdr.detectChanges();
+      },
+    });
+  }
 
   ngOnInit() {
     this.eventId = Number(this.route.snapshot.paramMap.get('id'));

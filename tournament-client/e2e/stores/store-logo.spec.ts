@@ -72,7 +72,7 @@ test.describe('Store logo — toolbar display', () => {
 
 test.describe('Store logo — upload refreshes store-detail image', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreEmployee');
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
     await mockGetStores(page, [makeStoreDto({ id: STORE_ID, storeName: 'Logo Test Shop' })]);
     await mockGetStore(page, STORE_WITH_LOGO);
@@ -139,7 +139,7 @@ test.describe('Store logo — upload refreshes toolbar thumbnail', () => {
 
 test.describe('Store logo — persists after Save Settings', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'StoreManager');
+    await loginAs(page, 'StoreManager', { storeId: STORE_ID, licenseTier: 'Tier1' });
     await stubUnmatchedApi(page);
     await mockGetStores(page, [makeStoreDto({ id: STORE_ID, storeName: 'Logo Test Shop', logoUrl: OLD_LOGO })]);
     await mockGetStore(page, STORE_WITH_LOGO);

@@ -12,6 +12,7 @@ import {
   mockPromoteFromWaitlist,
   mockDeclareCommander,
   mockBulkRegisterConfirm,
+  mockUploadEventBackground,
   makeEventDto,
   makeEventPlayerDto,
   makeBulkRegisterResultDto,
@@ -612,7 +613,7 @@ test.describe('Bulk Register: cancel', () => {
 
   test('clicking Back hides the preview panel', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Preview Registration', level: 3 })).toBeVisible();
-    await page.getByRole('button', { name: 'Back' }).click();
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Preview Registration', level: 3 })).not.toBeVisible();
   });
 });
@@ -810,5 +811,72 @@ test.describe('Event Detail — Player no cap notice', () => {
 
   test('cap notice is NOT visible for Player role', async ({ page }) => {
     await expect(page.locator('.free-cap-notice')).not.toBeVisible();
+  });
+});
+
+// ── Background upload ─────────────────────────────────────────────────────────
+
+const BG_EVENT = makeEventDto({
+  id: EVENT_ID, status: 'Registration', playerCount: 0, storeId: STORE_ID,
+  backgroundImageUrl: undefined,
+});
+const BG_EVENT_WITH_BG = makeEventDto({
+  id: EVENT_ID, status: 'Registration', playerCount: 0, storeId: STORE_ID,
+  backgroundImageUrl: '/backgrounds/event_1.png',
+});
+
+test.describe('Event Detail — background upload', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
+    await stubUnmatchedApi(page);
+    await mockGetEvent(page, BG_EVENT);
+    await mockGetEventPlayers(page, EVENT_ID, []);
+    await mockGetStores(page, []);
+    await mockUploadEventBackground(page, EVENT_ID,
+      makeEventDto({ id: EVENT_ID, backgroundImageUrl: '/backgrounds/event_1.png' }),
+    );
+    await page.goto(`/events/${EVENT_ID}`);
+  });
+
+  test('Upload Background button is visible for StoreEmployee', async ({ page }) => {
+    await expect(page.locator('.upload-background-btn')).toBeVisible();
+  });
+
+  test('after upload the event background src contains a cache-busting timestamp', async ({ page }) => {
+    const [fileChooser] = await Promise.all([
+      page.waitForEvent('filechooser'),
+      page.locator('.upload-background-btn').click(),
+    ]);
+    await fileChooser.setFiles({
+      name: 'bg.png', mimeType: 'image/png', buffer: Buffer.from('PNG'),
+    });
+    const bg = page.locator('.event-background');
+    await expect(bg).toHaveAttribute('src', /\/backgrounds\/event_1\.png\?t=\d+/);
+  });
+});
+
+test.describe('Event Detail — background display', () => {
+  test('header has background style when backgroundImageUrl is set', async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
+    await stubUnmatchedApi(page);
+    await mockGetEvent(page, BG_EVENT_WITH_BG);
+    await mockGetEventPlayers(page, EVENT_ID, []);
+    await mockGetStores(page, []);
+    await page.goto(`/events/${EVENT_ID}`);
+    const header = page.locator('.event-header');
+    await expect(header).toHaveCSS('background-image', /url\(.*backgrounds\/event_1\.png/);
+  });
+
+  test('header falls back to store background when event has none', async ({ page }) => {
+    await loginAs(page, 'StoreEmployee', { storeId: STORE_ID });
+    await stubUnmatchedApi(page);
+    await mockGetEvent(page, makeEventDto({
+      id: EVENT_ID, storeBackgroundImageUrl: '/backgrounds/1.png',
+    }));
+    await mockGetEventPlayers(page, EVENT_ID, []);
+    await mockGetStores(page, []);
+    await page.goto(`/events/${EVENT_ID}`);
+    const header = page.locator('.event-header');
+    await expect(header).toHaveCSS('background-image', /url\(.*backgrounds\/1\.png/);
   });
 });

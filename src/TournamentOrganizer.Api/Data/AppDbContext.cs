@@ -25,6 +25,7 @@ public class AppDbContext : DbContext
     public DbSet<Theme> Themes => Set<Theme>();
     public DbSet<EventTemplate> EventTemplates => Set<EventTemplate>();
     public DbSet<PlayerBadge> PlayerBadges => Set<PlayerBadge>();
+    public DbSet<StoreGroup> StoreGroups => Set<StoreGroup>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -131,6 +132,16 @@ public class AppDbContext : DbContext
                 .HasForeignKey(t => t.PlayerId);
             entity.Property(t => t.CardName).HasMaxLength(200).IsRequired();
             entity.Property(t => t.Quantity).HasDefaultValue(1);
+        });
+
+        modelBuilder.Entity<StoreGroup>(entity =>
+        {
+            entity.Property(g => g.Name).HasMaxLength(200).IsRequired();
+            entity.HasMany(g => g.Stores)
+                .WithOne(s => s.StoreGroup)
+                .HasForeignKey(s => s.StoreGroupId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Store>(entity =>

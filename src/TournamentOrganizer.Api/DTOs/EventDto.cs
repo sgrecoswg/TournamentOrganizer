@@ -20,7 +20,9 @@ public record EventDto(
     int? StoreId,
     string? StoreName,
     int? PlannedRounds,
-    string? CheckInToken = null);
+    string? CheckInToken = null,
+    string? BackgroundImageUrl = null,
+    string? StoreBackgroundImageUrl = null);
 
 public record CheckInResponseDto(int EventId, string EventName);
 
@@ -51,7 +53,7 @@ public record DeclareCommanderDto(string? Commanders, string? DecklistUrl);
 
 public record PodPlayerPairingsDto(int PlayerId, string Name, string? CommanderName, int SeatOrder = 0);
 public record PodPairingsDto(int PodId, int PodNumber, List<PodPlayerPairingsDto> Players, string GameStatus = "Pending", int? WinnerPlayerId = null);
-public record PairingsDto(int EventId, string EventName, int? CurrentRound, List<PodPairingsDto> Pods);
+public record PairingsDto(int EventId, string EventName, int? CurrentRound, List<PodPairingsDto> Pods, string? BackgroundImageUrl = null);
 
 // ── Bulk register ────────────────────────────────────────────────────────────
 

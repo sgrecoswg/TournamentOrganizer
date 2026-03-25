@@ -60,6 +60,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/stores/commander-meta.component').then(m => m.CommanderMetaComponent)
   },
   {
+    path: 'store-groups',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/stores/store-groups.component').then(m => m.StoreGroupsComponent)
+  },
+  {
     path: 'auth/callback',
     loadComponent: () => import('./features/auth/oauth-callback.component').then(m => m.OAuthCallbackComponent)
   }

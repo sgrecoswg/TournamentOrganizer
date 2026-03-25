@@ -9,6 +9,7 @@ import {
   WishlistEntryDto, TradeEntryDto, CreateCardEntryDto, BulkUploadResultDto,
   ThemeDto,
   StoreDto, StoreDetailDto, CreateStoreDto, UpdateStoreDto,
+  StoreGroupDto, CreateStoreGroupDto, UpdateStoreGroupDto,
   SuggestedTradeDto, TradeCardDemandDto, WishlistCardSupplyDto,
   AppUserDto, AssignEmployeeDto,
   LicenseDto, CreateLicenseDto, UpdateLicenseDto,
@@ -244,6 +245,37 @@ export class ApiService {
     const fd = new FormData();
     fd.append('background', file);
     return this.http.post<StoreDto>(`${this.base}/stores/${storeId}/background`, fd);
+  }
+
+  // Store Groups
+  getStoreGroups(): Observable<StoreGroupDto[]> {
+    return this.http.get<StoreGroupDto[]>(`${this.base}/storegroups`);
+  }
+
+  createStoreGroup(dto: CreateStoreGroupDto): Observable<StoreGroupDto> {
+    return this.http.post<StoreGroupDto>(`${this.base}/storegroups`, dto);
+  }
+
+  updateStoreGroup(id: number, dto: UpdateStoreGroupDto): Observable<StoreGroupDto> {
+    return this.http.put<StoreGroupDto>(`${this.base}/storegroups/${id}`, dto);
+  }
+
+  deleteStoreGroup(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/storegroups/${id}`);
+  }
+
+  assignStoreToGroup(groupId: number, storeId: number): Observable<void> {
+    return this.http.post<void>(`${this.base}/storegroups/${groupId}/stores/${storeId}`, {});
+  }
+
+  unassignStoreFromGroup(groupId: number, storeId: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/storegroups/${groupId}/stores/${storeId}`);
+  }
+
+  uploadEventBackground(eventId: number, file: File): Observable<EventDto> {
+    const fd = new FormData();
+    fd.append('background', file);
+    return this.http.post<EventDto>(`${this.base}/events/${eventId}/background`, fd);
   }
 
   getSuggestedTrades(playerId: number): Observable<SuggestedTradeDto[]> {

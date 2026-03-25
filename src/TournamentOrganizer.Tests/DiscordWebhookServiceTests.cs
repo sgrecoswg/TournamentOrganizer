@@ -27,8 +27,8 @@ public class DiscordWebhookServiceTests
     {
         public int StoreId { get; set; } = 1;
         public string StoreName { get; set; } = "Test Shop";
-        public Task<(int? StoreId, string? StoreName)> GetStoreInfoForEventAsync(int eventId)
-            => Task.FromResult<(int?, string?)>((StoreId, StoreName));
+        public Task<(int? StoreId, string? StoreName, string? StoreBackgroundImageUrl)> GetStoreInfoForEventAsync(int eventId)
+            => Task.FromResult<(int?, string?, string?)>((StoreId, StoreName, null));
         public Task AddAsync(StoreEvent se) => Task.CompletedTask;
         public Task<int?> GetStoreIdForEventAsync(int eventId) => Task.FromResult<int?>(StoreId);
         public Task<List<StoreEvent>> GetByStoreIdAsync(int storeId) => Task.FromResult(new List<StoreEvent>());

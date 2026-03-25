@@ -14,6 +14,7 @@ import { ScryfallService } from '../../core/services/scryfall.service';
 import {
   EventDto, EventPlayerDto, PlayerDto, RoundDto, StandingsEntry,
 } from '../../core/models/api.models';
+import { ApiService } from '../../core/services/api.service';
 
 describe('EventDetailComponent', () => {
   const EVENT_ID = 7;
@@ -74,8 +75,9 @@ describe('EventDetailComponent', () => {
     loadAllPlayers: jest.Mock;
   };
 
-  let mockSnackBar: { open: jest.Mock };
-  let mockRouter:   { navigate: jest.Mock };
+  let mockSnackBar:    { open: jest.Mock };
+  let mockRouter:      { navigate: jest.Mock };
+  let mockApiService:  { uploadEventBackground: jest.Mock };
 
   async function setup(authOverrides: object = {}) {
     const mockAuth = {
@@ -99,6 +101,7 @@ describe('EventDetailComponent', () => {
         { provide: PlayerService,        useValue: mockPlayerService },
         { provide: AuthService,          useValue: mockAuth },
         { provide: MatSnackBar,          useValue: mockSnackBar },
+        { provide: ApiService,           useValue: mockApiService },
       ],
     }).compileComponents();
   }
@@ -138,7 +141,8 @@ describe('EventDetailComponent', () => {
       loadAllPlayers: jest.fn(),
     };
 
-    mockSnackBar = { open: jest.fn() };
+    mockSnackBar   = { open: jest.fn() };
+    mockApiService = { uploadEventBackground: jest.fn() };
     mockRouter   = {
       navigate: jest.fn(),
       events: EMPTY,
@@ -1221,6 +1225,62 @@ describe('EventDetailComponent', () => {
       fixture.detectChanges();
       const el: HTMLElement = fixture.nativeElement;
       expect(el.querySelector('.free-cap-notice')).toBeNull();
+    });
+  });
+
+  // ── Background upload ───────────────────────────────────────────────────────
+
+  describe('Background upload', () => {
+    it('upload button is visible for a StoreEmployee', async () => {
+      await setup({ isStoreEmployee: true });
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      currentEventSubject.next(eventStub);
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('.upload-background-btn')).not.toBeNull();
+    });
+
+    it('onBackgroundSelected calls apiService.uploadEventBackground with the file', async () => {
+      await setup({ isStoreEmployee: true });
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      comp.eventId = EVENT_ID;
+      const file = new File(['data'], 'bg.png', { type: 'image/png' });
+      mockApiService.uploadEventBackground.mockReturnValue(of({ ...eventStub, backgroundImageUrl: '/backgrounds/event_7.png' }));
+      comp.onBackgroundSelected({ target: { files: [file] } } as any);
+      expect(mockApiService.uploadEventBackground).toHaveBeenCalledWith(EVENT_ID, file);
+    });
+
+    it('upload success applies a cache-busted backgroundImageUrl to event', async () => {
+      await setup({ isStoreEmployee: true });
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      comp.event = { ...eventStub };
+      comp.eventId = EVENT_ID;
+      const file = new File(['data'], 'bg.png', { type: 'image/png' });
+      const returnedUrl = '/backgrounds/event_7.png';
+      mockApiService.uploadEventBackground.mockReturnValue(
+        of({ ...eventStub, backgroundImageUrl: returnedUrl }),
+      );
+      comp.onBackgroundSelected({ target: { files: [file] } } as any);
+      expect(comp.event!.backgroundImageUrl).toMatch(/\/backgrounds\/event_7\.png\?t=\d+/);
+    });
+
+    it('upload error opens snackBar', async () => {
+      await setup({ isStoreEmployee: true });
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      comp.event = { ...eventStub };
+      comp.eventId = EVENT_ID;
+      const snackBarOpenSpy = jest.spyOn((comp as any).snackBar, 'open').mockReturnValue({} as any);
+      const file = new File(['data'], 'bg.png', { type: 'image/png' });
+      mockApiService.uploadEventBackground.mockReturnValue(throwError(() => new Error('upload failed')));
+      comp.onBackgroundSelected({ target: { files: [file] } } as any);
+      expect(snackBarOpenSpy).toHaveBeenCalled();
     });
   });
 });

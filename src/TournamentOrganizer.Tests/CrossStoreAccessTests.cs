@@ -36,6 +36,52 @@ public class CrossStoreAccessTests(TournamentOrganizerFactory factory)
             $"Expected 403 Forbidden but got {(int)response.StatusCode}");
 
     // ══════════════════════════════════════════════════════════════════════════
+    // StoresController — GET /api/stores/{id}
+    // StoreEmployee policy + explicit storeId ownership check
+    // ══════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task Player_GetStore_Returns403()
+    {
+        // Player role does not satisfy StoreEmployee policy.
+        var client = factory.ClientAs("Player", playerId: 1);
+        var response = await client.GetAsync("/api/stores/1");
+        AssertForbidden(response);
+    }
+
+    [Fact]
+    public async Task Unauthenticated_GetStore_Returns401()
+    {
+        var client = factory.CreateClient(); // no JWT
+        var response = await client.GetAsync("/api/stores/1");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task StoreEmployee_Store1_GetStore2_Returns403()
+    {
+        var client = factory.ClientAs("StoreEmployee", storeId: 1);
+        var response = await client.GetAsync("/api/stores/2");
+        AssertForbidden(response);
+    }
+
+    [Fact]
+    public async Task StoreEmployee_GetOwnStore_IsAllowed()
+    {
+        var client = factory.ClientAs("StoreEmployee", storeId: 1);
+        var response = await client.GetAsync("/api/stores/1");
+        AssertAllowed(response);
+    }
+
+    [Fact]
+    public async Task Administrator_GetAnyStore_IsAllowed()
+    {
+        var client = factory.ClientAs("Administrator");
+        var response = await client.GetAsync("/api/stores/2");
+        AssertAllowed(response);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // StoresController — PUT /api/stores/{id}
     // StoreManager policy + explicit storeId ownership check
     // ══════════════════════════════════════════════════════════════════════════

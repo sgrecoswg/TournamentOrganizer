@@ -93,4 +93,28 @@ public class StoresServiceTests
         Assert.Single(result);
         Assert.Equal(LicenseTier.Free, result[0].Tier);
     }
+
+    [Fact]
+    public async Task CreateAsync_WithStoreGroupId_SetsGroupOnStore()
+    {
+        var stores = new List<Store>();
+        var svc = Build(stores);
+
+        var result = await svc.CreateAsync(new CreateStoreDto("New Store", StoreGroupId: 7));
+
+        Assert.Equal(7, stores[0].StoreGroupId);
+        Assert.Equal(7, result.StoreGroupId);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithoutStoreGroupId_GroupIdIsNull()
+    {
+        var stores = new List<Store>();
+        var svc = Build(stores);
+
+        var result = await svc.CreateAsync(new CreateStoreDto("New Store"));
+
+        Assert.Null(stores[0].StoreGroupId);
+        Assert.Null(result.StoreGroupId);
+    }
 }
