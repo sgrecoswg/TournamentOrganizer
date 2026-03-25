@@ -603,4 +603,17 @@ export interface CreateEventTemplateDto {
   numberOfRounds: number;
 }
 
+export interface NotificationDto {
+  id: number;
+  type: string;
+  message: string;
+  linkPath?: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface NotificationCountDto {
+  unread: number;
+}
+
 

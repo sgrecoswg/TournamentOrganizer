@@ -26,6 +26,7 @@ public class AppDbContext : DbContext
     public DbSet<EventTemplate> EventTemplates => Set<EventTemplate>();
     public DbSet<PlayerBadge> PlayerBadges => Set<PlayerBadge>();
     public DbSet<StoreGroup> StoreGroups => Set<StoreGroup>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -233,6 +234,19 @@ public class AppDbContext : DbContext
                 .WithOne(e => e.StoreEvent)
                 .HasForeignKey<StoreEvent>(se => se.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.HasOne(n => n.Player)
+                .WithMany()
+                .HasForeignKey(n => n.PlayerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(n => n.Type).HasMaxLength(50).IsRequired();
+            entity.Property(n => n.Message).HasMaxLength(500).IsRequired();
+            entity.Property(n => n.LinkPath).HasMaxLength(300);
+            entity.Property(n => n.IsRead).HasDefaultValue(false);
+            entity.HasIndex(n => new { n.PlayerId, n.CreatedAt });
         });
 
         modelBuilder.Entity<AppUser>(entity =>

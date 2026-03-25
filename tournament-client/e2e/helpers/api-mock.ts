@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, LicenseDto, PairingsDto, PlayerBadgeDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, StoreDto, StoreDetailDto, StoreEventSummaryDto, StoreGroupDto, StorePublicDto, StorePublicTopPlayerDto, ThemeDto } from '../../src/app/core/models/api.models';
+import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, LicenseDto, NotificationCountDto, NotificationDto, PairingsDto, PlayerBadgeDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, StoreDto, StoreDetailDto, StoreEventSummaryDto, StoreGroupDto, StorePublicDto, StorePublicTopPlayerDto, ThemeDto } from '../../src/app/core/models/api.models';
 
 /** Intercept GET /api/events and return the given list. */
 export async function mockGetEvents(page: Page, events: EventDto[]): Promise<void> {
@@ -706,4 +706,58 @@ export async function mockPlayerProfileSubApis(page: Page, playerId: number): Pr
   });
   await page.route(`**/api/players/${playerId}/ratinghistory`, route =>
     route.fulfill({ json: { playerId, history: [] } }));
+}
+
+// ── Notification helpers ───────────────────────────────────────────────────────
+
+export function makeNotificationDto(overrides: Partial<NotificationDto> = {}): NotificationDto {
+  return {
+    id: 1,
+    type: 'TradeMatch',
+    message: 'New trade match found with player #2!',
+    linkPath: '/players/2/profile#trades',
+    isRead: false,
+    createdAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+export async function mockGetNotificationCount(page: Page, response: NotificationCountDto): Promise<void> {
+  await page.route('**/api/notifications/count', route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export async function mockGetNotifications(page: Page, response: NotificationDto[]): Promise<void> {
+  await page.route('**/api/notifications', route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ json: response });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export async function mockMarkNotificationRead(page: Page, id: number): Promise<void> {
+  await page.route(`**/api/notifications/${id}/read`, route => {
+    if (route.request().method() === 'PUT') {
+      route.fulfill({ status: 204, body: '' });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+export async function mockMarkAllNotificationsRead(page: Page): Promise<void> {
+  await page.route('**/api/notifications/readall', route => {
+    if (route.request().method() === 'PUT') {
+      route.fulfill({ status: 204, body: '' });
+    } else {
+      route.continue();
+    }
+  });
 }
