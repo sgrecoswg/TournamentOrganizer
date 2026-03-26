@@ -48,6 +48,7 @@ describe('StoreDetailComponent', () => {
     uploadStoreLogo:        jest.Mock;
     uploadStoreBackground:  jest.Mock;
     testDiscordWebhook:     jest.Mock;
+    getStoreAnalytics:      jest.Mock;
   };
 
   let mockCtx: {
@@ -77,6 +78,7 @@ describe('StoreDetailComponent', () => {
       isStoreManager:  true,
       isStoreEmployee: true,
       isAdmin:         false,
+      isTier3:         false,
       currentUser:     null,
       ...authOverrides,
     };
@@ -124,6 +126,7 @@ describe('StoreDetailComponent', () => {
       uploadStoreLogo:        jest.fn().mockReturnValue(of({ id: STORE_ID, storeName: 'Test Store', isActive: true, logoUrl: '/logos/5.png' })),
       uploadStoreBackground:  jest.fn().mockReturnValue(of({ id: STORE_ID, storeName: 'Test Store', isActive: true, backgroundImageUrl: '/backgrounds/5.png' })),
       testDiscordWebhook:     jest.fn().mockReturnValue(of(undefined)),
+      getStoreAnalytics:      jest.fn().mockReturnValue(of({ eventTrends: [], topCommanders: [], topPlayers: [], finishDistribution: { first: 0, second: 0, third: 0, fourth: 0 }, colorFrequency: [] })),
     };
 
     mockCtx = {
@@ -1204,6 +1207,55 @@ describe('StoreDetailComponent', () => {
       await fixture.whenStable();
       const comp = fixture.componentInstance;
       expect(comp.editGracePeriodDays).toBe(7);
+    });
+  });
+
+  // ── Analytics Tab ────────────────────────────────────────────────────────
+
+  describe('Analytics tab', () => {
+    it('Analytics tab visible for Tier3 StoreManager', async () => {
+      await setup({ isStoreManager: true, isStoreEmployee: true, isTier3: true, isAdmin: false });
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const tabs = fixture.nativeElement.querySelectorAll('.mat-mdc-tab');
+      const labels = Array.from(tabs).map((t: any) => t.textContent?.trim());
+      expect(labels).toContain('Analytics');
+    });
+
+    it('Upgrade prompt shown for Tier1/Tier2 StoreManager (not Tier3)', async () => {
+      await setup({ isStoreManager: true, isStoreEmployee: true, isTier3: false, isAdmin: false });
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const tabs = fixture.nativeElement.querySelectorAll('.mat-mdc-tab');
+      const labels = Array.from(tabs).map((t: any) => t.textContent?.trim());
+      expect(labels).toContain('Analytics');
+
+      // Activate the Analytics tab and check for upgrade prompt
+      const tabGroup = fixture.debugElement.query(
+        (el) => el.nativeElement.tagName === 'MAT-TAB-GROUP'
+      );
+      const analyticsTabIdx = labels.findIndex(l => l === 'Analytics');
+      if (tabGroup && analyticsTabIdx >= 0) {
+        tabGroup.componentInstance.selectedIndex = analyticsTabIdx;
+        fixture.detectChanges();
+        await fixture.whenStable();
+      }
+      expect(fixture.nativeElement.querySelector('app-tier-upgrade-prompt')).toBeTruthy();
+    });
+
+    it('Analytics tab absent for Player role', async () => {
+      await setup({ isStoreManager: false, isStoreEmployee: false, isTier3: false, isAdmin: false });
+      const fixture = TestBed.createComponent(StoreDetailComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const tabs = fixture.nativeElement.querySelectorAll('.mat-mdc-tab');
+      const labels = Array.from(tabs).map((t: any) => t.textContent?.trim());
+      expect(labels).not.toContain('Analytics');
     });
   });
 });

@@ -68,6 +68,9 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("Tier2Required", p => p.RequireAssertion(ctx =>
         ctx.User.HasClaim("role", "Administrator") ||
         TierAtLeast(ctx.User, LicenseTier.Tier2)));
+    options.AddPolicy("Tier3Required", p => p.RequireAssertion(ctx =>
+        ctx.User.HasClaim("role", "Administrator") ||
+        TierAtLeast(ctx.User, LicenseTier.Tier3)));
 });
 
 static bool TierAtLeast(ClaimsPrincipal user, LicenseTier required)
@@ -90,6 +93,7 @@ builder.Services.AddScoped<ILicenseRepository, LicenseRepository>();
 builder.Services.AddScoped<IThemeRepository, ThemeRepository>();
 builder.Services.AddScoped<IEventTemplateRepository, EventTemplateRepository>();
 builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 
 // Services
 builder.Services.AddScoped<ITrueSkillService, TrueSkillService>();
@@ -109,6 +113,8 @@ builder.Services.AddScoped<IAppUserRepository, AppUserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILicenseTierService, LicenseTierService>();
 builder.Services.AddScoped<IBadgeService, BadgeService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IStoreAnalyticsService, StoreAnalyticsService>();
 
 // Card price (Scryfall) — typed HttpClient with 1h in-memory cache
 builder.Services.AddMemoryCache();

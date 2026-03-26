@@ -16,6 +16,8 @@ import {
   BulkRegisterConfirmDto, BulkRegisterResultDto,
   EventTemplateDto, CreateEventTemplateDto,
   StorePublicDto,
+  NotificationDto, NotificationCountDto,
+  StoreAnalyticsDto,
 } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -349,5 +351,29 @@ export class ApiService {
 
   deleteEventTemplate(storeId: number, id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/stores/${storeId}/eventtemplates/${id}`);
+  }
+
+  // ── Notifications ──────────────────────────────────────────────────────────
+
+  getNotifications(): Observable<NotificationDto[]> {
+    return this.http.get<NotificationDto[]>(`${this.base}/notifications`);
+  }
+
+  getNotificationCount(): Observable<NotificationCountDto> {
+    return this.http.get<NotificationCountDto>(`${this.base}/notifications/count`);
+  }
+
+  markNotificationRead(id: number): Observable<void> {
+    return this.http.put<void>(`${this.base}/notifications/${id}/read`, {});
+  }
+
+  markAllNotificationsRead(): Observable<void> {
+    return this.http.put<void>(`${this.base}/notifications/readall`, {});
+  }
+
+  // ── Store Analytics ────────────────────────────────────────────────────────
+
+  getStoreAnalytics(storeId: number): Observable<StoreAnalyticsDto> {
+    return this.http.get<StoreAnalyticsDto>(`${this.base}/stores/${storeId}/analytics`);
   }
 }

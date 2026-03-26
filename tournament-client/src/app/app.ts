@@ -20,6 +20,7 @@ import { LocalStorageContext } from './core/services/local-storage-context.servi
 import { ThemeService } from './core/services/theme.service';
 import { CurrentUser, StoreDto } from './core/models/api.models';
 import { PwaInstallPromptComponent } from './shared/components/pwa-install-prompt.component';
+import { NotificationBellComponent } from './shared/components/notification-bell.component';
 
 @Component({
   selector: 'app-root',
@@ -28,7 +29,8 @@ import { PwaInstallPromptComponent } from './shared/components/pwa-install-promp
     RouterOutlet, RouterLink, RouterLinkActive,
     MatToolbarModule, MatSidenavModule, MatListModule, MatIconModule, MatButtonModule, MatMenuModule,
     MatSelectModule, MatFormFieldModule, MatSnackBarModule,
-    PwaInstallPromptComponent
+    PwaInstallPromptComponent,
+    NotificationBellComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
