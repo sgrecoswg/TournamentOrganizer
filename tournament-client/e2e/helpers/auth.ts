@@ -17,7 +17,7 @@ export type Role = 'Administrator' | 'StoreManager' | 'StoreEmployee' | 'Player'
 export async function loginAs(
   page: Page,
   role: Role,
-  opts: { id?: number; storeId?: number; playerId?: number; licenseTier?: 'Free' | 'Tier1' | 'Tier2' } = {}
+  opts: { id?: number; storeId?: number; playerId?: number; licenseTier?: 'Free' | 'Tier1' | 'Tier2' | 'Tier3' } = {}
 ): Promise<void> {
   const exp   = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
   const token = makeJwt({

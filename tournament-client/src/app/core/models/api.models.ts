@@ -1,5 +1,5 @@
 // License Tier
-export type LicenseTier = 'Free' | 'Tier1' | 'Tier2';
+export type LicenseTier = 'Free' | 'Tier1' | 'Tier2' | 'Tier3';
 
 // Auth DTOs
 export interface CurrentUser {
@@ -614,6 +614,21 @@ export interface NotificationDto {
 
 export interface NotificationCountDto {
   unread: number;
+}
+
+// ── Store Analytics DTOs ───────────────────────────────────────────────────
+
+export interface EventTrendDto { year: number; month: number; eventCount: number; avgPlayerCount: number; }
+export interface CommanderWinRateDto { commanderName: string; wins: number; gamesPlayed: number; winPercent: number; }
+export interface StorePlayerStatsDto { playerId: number; playerName: string; totalPoints: number; eventsPlayed: number; }
+export interface FinishDistributionDto { first: number; second: number; third: number; fourth: number; }
+export interface ColorFrequencyDto { colorCode: string; count: number; }
+export interface StoreAnalyticsDto {
+  eventTrends: EventTrendDto[];
+  topCommanders: CommanderWinRateDto[];
+  topPlayers: StorePlayerStatsDto[];
+  finishDistribution: FinishDistributionDto;
+  colorFrequency: ColorFrequencyDto[];
 }
 
 

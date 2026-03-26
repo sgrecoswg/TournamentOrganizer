@@ -17,6 +17,7 @@ import {
   EventTemplateDto, CreateEventTemplateDto,
   StorePublicDto,
   NotificationDto, NotificationCountDto,
+  StoreAnalyticsDto,
 } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -368,5 +369,11 @@ export class ApiService {
 
   markAllNotificationsRead(): Observable<void> {
     return this.http.put<void>(`${this.base}/notifications/readall`, {});
+  }
+
+  // ── Store Analytics ────────────────────────────────────────────────────────
+
+  getStoreAnalytics(storeId: number): Observable<StoreAnalyticsDto> {
+    return this.http.get<StoreAnalyticsDto>(`${this.base}/stores/${storeId}/analytics`);
   }
 }

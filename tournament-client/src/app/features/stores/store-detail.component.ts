@@ -28,6 +28,7 @@ import { StoreDetailDto, AppUserDto, LicenseDto, ThemeDto, EventTemplateDto, Cre
 import { StoreContextService } from '../../core/services/store-context.service';
 import { ConfirmDialogComponent } from './dialogs/confirm-dialog.component';
 import { TierUpgradePromptComponent } from '../../shared/components/tier-upgrade-prompt.component';
+import { StoreAnalyticsComponent } from './store-analytics.component';
 import { MatChipsModule } from '@angular/material/chips';
 
 function getUploadErrorMessage(err: HttpErrorResponse, fallback: string): string {
@@ -46,7 +47,8 @@ function getUploadErrorMessage(err: HttpErrorResponse, fallback: string): string
     MatTabsModule, MatTableModule, MatSelectModule,
     MatDatepickerModule, MatNativeDateModule, MatSlideToggleModule,
     MatDialogModule, MatDividerModule, MatChipsModule,
-    TierUpgradePromptComponent
+    TierUpgradePromptComponent,
+    StoreAnalyticsComponent,
   ],
   template: `
     <div class="page-header">
@@ -556,6 +558,21 @@ function getUploadErrorMessage(err: HttpErrorResponse, fallback: string): string
                 <p class="empty-state">No templates yet. Click "New Template" to create one.</p>
               }
 
+            </div>
+          </mat-tab>
+        }
+
+        <!-- ── Tab 6: Analytics (StoreManager + Tier3 or Admin) ────── -->
+        @if ((authService.isStoreManager && authService.isTier3) || authService.isAdmin) {
+          <mat-tab label="Analytics">
+            <div class="tab-content">
+              <app-store-analytics [storeId]="storeId" />
+            </div>
+          </mat-tab>
+        } @else if (authService.isStoreManager) {
+          <mat-tab label="Analytics">
+            <div class="tab-content">
+              <app-tier-upgrade-prompt feature="Analytics" requiredTier="Tier 3" />
             </div>
           </mat-tab>
         }

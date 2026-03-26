@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, LicenseDto, NotificationCountDto, NotificationDto, PairingsDto, PlayerBadgeDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, StoreDto, StoreDetailDto, StoreEventSummaryDto, StoreGroupDto, StorePublicDto, StorePublicTopPlayerDto, ThemeDto } from '../../src/app/core/models/api.models';
+import { BulkRegisterResultDto, CheckInResponseDto, CommanderMetaEntryDto, CommanderMetaReportDto, CommanderStatDto, EventDto, EventPlayerDto, EventTemplateDto, LeaderboardEntry, LicenseDto, NotificationCountDto, NotificationDto, PairingsDto, PlayerBadgeDto, PlayerCommanderStatsDto, PlayerDto, PlayerProfile, RatingHistoryDto, RatingSnapshotDto, StoreDto, StoreDetailDto, StoreEventSummaryDto, StoreGroupDto, StorePublicDto, StorePublicTopPlayerDto, ThemeDto, StoreAnalyticsDto } from '../../src/app/core/models/api.models';
 
 /** Intercept GET /api/events and return the given list. */
 export async function mockGetEvents(page: Page, events: EventDto[]): Promise<void> {
@@ -756,6 +756,29 @@ export async function mockMarkAllNotificationsRead(page: Page): Promise<void> {
   await page.route('**/api/notifications/readall', route => {
     if (route.request().method() === 'PUT') {
       route.fulfill({ status: 204, body: '' });
+    } else {
+      route.continue();
+    }
+  });
+}
+
+// ── Store Analytics ──────────────────────────────────────────────────────────
+
+export function makeStoreAnalyticsDto(overrides: Partial<StoreAnalyticsDto> = {}): StoreAnalyticsDto {
+  return {
+    eventTrends: [],
+    topCommanders: [],
+    topPlayers: [],
+    finishDistribution: { first: 0, second: 0, third: 0, fourth: 0 },
+    colorFrequency: [],
+    ...overrides,
+  };
+}
+
+export async function mockGetStoreAnalytics(page: Page, storeId: number, response: StoreAnalyticsDto): Promise<void> {
+  await page.route(`**/api/stores/${storeId}/analytics`, route => {
+    if (route.request().method() === 'GET') {
+      route.fulfill({ json: response });
     } else {
       route.continue();
     }

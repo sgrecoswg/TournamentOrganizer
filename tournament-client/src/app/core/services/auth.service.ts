@@ -86,6 +86,10 @@ export class AuthService {
     return this.licenseTier === 'Tier2';
   }
 
+  get isTier3(): boolean {
+    return this.licenseTier === 'Tier3';
+  }
+
   login(): void {
     // Navigate directly to the backend — bypassing the Angular dev proxy.
     // The OAuth CSRF state cookie is set by the backend and must remain on the
