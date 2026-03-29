@@ -51,7 +51,9 @@ Determine the next available prompt file number by listing `prompts/ignore/` and
 `max(existing NN prefixes) + 1`. Name the file `prompts/ignore/NN_<slug>.md` where `<slug>` is
 kebab-case derived from the issue title (strip "feat:", "fix:", etc.).
 
-Write the file, then **show the full contents to the user and ask for approval before continuing**.
+Write the file, then run `/refine-prompt PROMPT_PATH` and apply any clear improvements before showing it to the user.
+
+**Show the full contents to the user and ask for approval before continuing.**
 Wait for explicit confirmation ("looks good", "approved", "go ahead", etc.) or requested edits
 before proceeding. If edits are requested, apply them and show again.
 
@@ -80,7 +82,7 @@ Read the `## Dependencies` section of the prompt file.
 - For each listed issue number `#N`, check whether a PR referencing it has been merged to `dev`:
   ```bash
   gh pr list --base dev --state merged --json number,title,body \
-    | jq -r '.[] | select(.body | test("#N")) | "#\(.number) \(.title)"'
+    --jq '.[] | select(.body | test("#N")) | "#\(.number) \(.title)"'
   ```
   - All dependencies merged → proceed to Step 3.
   - Any dependency NOT yet merged → **stop**. Do not create a branch or mark In Progress.

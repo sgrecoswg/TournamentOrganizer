@@ -23,7 +23,7 @@ For each item with a prompt file, read its `## Dependencies` section.
 For each listed issue number `#N`, check if a merged PR referencing it exists on `dev`:
 ```bash
 gh pr list --base dev --state merged --json number,title,body \
-  | jq -r '.[] | select(.body | test("#N")) | "#\(.number) \(.title)"'
+  --jq '.[] | select(.body | test("#N")) | "#\(.number) \(.title)"'
 ```
 
 Classify each item:
@@ -38,7 +38,7 @@ file path → [list of issue numbers that touch it]
 ```
 
 Flag any file touched by 2+ items as a **conflict**. Categorise conflicts by risk:
-- **Low risk** (additive-only files): `AppDbContext.cs`, `Program.cs`, `api.service.ts`, `api.models.ts`, `app.routes.ts`, `app.html` — these are typically append-only; conflicts are easy to resolve at merge time.
+- **Low risk** (additive-only files): `AppDbContext.cs`, `Program.cs`, `api.service.ts`, `api.models.ts`, `api-mock.ts`, `app.routes.ts`, `app.html` — these are typically append-only; conflicts are easy to resolve at merge time.
 - **High risk** (structural changes): any existing service, controller, or component being *modified* (not created).
 
 ## Step 5 — Report and confirm

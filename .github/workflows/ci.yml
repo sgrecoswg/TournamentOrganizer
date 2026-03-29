@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev]
+
+jobs:
+  backend:
+    name: Backend — build, test, fuzz
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test (unit + FsCheck properties)
+        run: dotnet test --no-build --configuration Release --logger "github;verbosity=detailed" --verbosity normal
+
+  frontend:
+    name: Frontend — Jest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tournament-client
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: tournament-client/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Test
+        run: npx jest --config jest.config.js --ci --passWithNoTests
