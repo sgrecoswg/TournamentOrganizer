@@ -290,16 +290,15 @@ describe('AuthService', () => {
   // ─── login ──────────────────────────────────────────────────────────────
 
   describe('login()', () => {
-    it('navigates to the Google OAuth login endpoint', () => {
+    it('navigates to the Google OAuth login endpoint via relative URL (proxied in dev)', () => {
       createService().login();
       expect(navigateSpy).toHaveBeenCalledTimes(1);
-      // Verify the target URL contains the expected path
+      // With apiBase = '' the URL is relative: /api/auth/google-login
+      // JSDOM parses a relative path keeping the existing host (localhost from jsdom),
+      // NOT overriding to port 5021. Confirm no hardcoded port is present.
       const [parsedUrl] = navigateSpy.mock.calls[0];
-      expect(parsedUrl).toMatchObject({
-        host: 'localhost',
-        port: 5021,
-        path: ['api', 'auth', 'google-login'],
-      });
+      expect(parsedUrl?.path).toEqual(['api', 'auth', 'google-login']);
+      expect(parsedUrl?.port).not.toBe(5021);
     });
   });
 

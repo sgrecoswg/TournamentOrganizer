@@ -1058,7 +1058,7 @@ export class EventDetailComponent implements OnInit {
     div.appendChild(h2);
 
     const img = document.createElement('img');
-    img.src = this.qrCodeDataUrl;
+    img.src = this.qrCodeDataUrl ?? '';
     div.appendChild(img);
 
     document.body.appendChild(div);
