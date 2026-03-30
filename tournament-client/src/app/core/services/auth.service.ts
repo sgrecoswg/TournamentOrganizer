@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { CurrentUser, LicenseTier } from '../models/api.models';
+import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -91,10 +92,10 @@ export class AuthService {
   }
 
   login(): void {
-    // Navigate directly to the backend — bypassing the Angular dev proxy.
-    // The OAuth CSRF state cookie is set by the backend and must remain on the
-    // same origin (localhost:5021) for the Google callback to validate correctly.
-    window.location.href = 'http://localhost:5021/api/auth/google-login';
+    // Uses environment.apiBase so the URL is never hardcoded.
+    // Dev: apiBase='' → relative /api/auth/google-login forwarded by the proxy.
+    // Prod: apiBase='https://api.yourdomain.com' → absolute HTTPS URL.
+    window.location.href = `${environment.apiBase}/api/auth/google-login`;
   }
 
   private decodeJwt(token: string): CurrentUser {

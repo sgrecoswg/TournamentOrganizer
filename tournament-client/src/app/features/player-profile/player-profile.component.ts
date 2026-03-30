@@ -159,7 +159,7 @@ function getUploadErrorMessage(err: HttpErrorResponse, fallback: string): string
         </div>
       }
 
-      @if (profile?.badges?.length) {
+      @if (profile.badges?.length) {
         <div class="badges-section">
           <h3>Achievements</h3>
           <div class="badge-list">
