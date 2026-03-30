@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using TournamentOrganizer.Api.Models;
@@ -12,17 +13,20 @@ public class AuthService : IAuthService
 {
     private readonly IAppUserRepository _userRepo;
     private readonly IPlayerRepository _playerRepo;
+    private readonly IRefreshTokenRepository _refreshTokenRepo;
     private readonly IConfiguration _config;
     private readonly ILicenseTierService _licenseTierService;
 
     public AuthService(
         IAppUserRepository userRepo,
         IPlayerRepository playerRepo,
+        IRefreshTokenRepository refreshTokenRepo,
         IConfiguration config,
         ILicenseTierService licenseTierService)
     {
         _userRepo = userRepo;
         _playerRepo = playerRepo;
+        _refreshTokenRepo = refreshTokenRepo;
         _config = config;
         _licenseTierService = licenseTierService;
     }
@@ -86,7 +90,7 @@ public class AuthService : IAuthService
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var expiry = DateTime.UtcNow.AddMinutes(double.Parse(_config["Jwt:ExpiryMinutes"] ?? "480"));
+        var expiry = DateTime.UtcNow.AddMinutes(double.Parse(_config["Jwt:ExpiryMinutes"] ?? "60"));
 
         var claims = new List<Claim>
         {
@@ -119,5 +123,31 @@ public class AuthService : IAuthService
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public async Task<RefreshToken> GenerateRefreshTokenAsync(int appUserId)
+    {
+        var expiryDays = int.Parse(_config["Jwt:RefreshTokenExpiryDays"] ?? "30");
+        var token = new RefreshToken
+        {
+            Token     = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLower(),
+            AppUserId = appUserId,
+            ExpiresAt = DateTime.UtcNow.AddDays(expiryDays),
+        };
+        return await _refreshTokenRepo.CreateAsync(token);
+    }
+
+    public async Task<(string jwt, RefreshToken refreshToken)?> RefreshAsync(string rawToken)
+    {
+        var stored = await _refreshTokenRepo.GetByTokenAsync(rawToken);
+        if (stored == null || !stored.IsActive)
+            return null;
+
+        await _refreshTokenRepo.RevokeAsync(stored);
+
+        var newRefreshToken = await GenerateRefreshTokenAsync(stored.AppUserId);
+        var jwt = await GenerateJwtAsync(stored.AppUser);
+
+        return (jwt, newRefreshToken);
     }
 }

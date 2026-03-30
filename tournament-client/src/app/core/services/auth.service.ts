@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
 import { CurrentUser, LicenseTier } from '../models/api.models';
 import { environment } from '../../../environments/environment';
 
@@ -8,7 +10,7 @@ export class AuthService {
   private userSubject = new BehaviorSubject<CurrentUser | null>(null);
   currentUser$ = this.userSubject.asObservable();
 
-  constructor() {
+  constructor(private http: HttpClient) {
     this.loadFromStorage();
   }
 
@@ -38,6 +40,13 @@ export class AuthService {
     this.userSubject.next(null);
   }
 
+  /** Calls POST /api/auth/logout (revokes cookie server-side) then clears local state. */
+  logoutFull(): void {
+    this.http.post(`${environment.apiBase}/api/auth/logout`, {}, { withCredentials: true })
+      .subscribe({ error: () => {} });
+    this.logout();
+  }
+
   getToken(): string | null {
     const token = localStorage.getItem('auth_token');
     if (!token) return null;
@@ -54,6 +63,18 @@ export class AuthService {
       return null;
     }
     return token;
+  }
+
+  /** Calls POST /api/auth/refresh (sends HttpOnly cookie), stores the returned JWT, returns it. */
+  refresh(): Observable<string> {
+    return this.http.post<{ token: string }>(
+      `${environment.apiBase}/api/auth/refresh`,
+      {},
+      { withCredentials: true }
+    ).pipe(
+      tap(res => this.storeToken(res.token)),
+      map(res => res.token)
+    );
   }
 
   get currentUser(): CurrentUser | null {

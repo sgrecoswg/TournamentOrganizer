@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TournamentOrganizer.Api.DTOs;
+using TournamentOrganizer.Api.Repositories.Interfaces;
 using TournamentOrganizer.Api.Services.Interfaces;
 
 namespace TournamentOrganizer.Api.Controllers;
@@ -13,12 +14,19 @@ namespace TournamentOrganizer.Api.Controllers;
 [Route("api/auth")]
 public class AuthController : ControllerBase
 {
+    private const string RefreshCookieName = "refresh_token";
+
     private readonly IAuthService _authService;
+    private readonly IRefreshTokenRepository _refreshTokenRepo;
     private readonly IConfiguration _configuration;
 
-    public AuthController(IAuthService authService, IConfiguration configuration)
+    public AuthController(
+        IAuthService authService,
+        IRefreshTokenRepository refreshTokenRepo,
+        IConfiguration configuration)
     {
         _authService = authService;
+        _refreshTokenRepo = refreshTokenRepo;
         _configuration = configuration;
     }
 
@@ -36,8 +44,8 @@ public class AuthController : ControllerBase
         if (!result.Succeeded)
             return Redirect("http://localhost:4200/auth/callback?error=auth_failed");
 
-        var email = result.Principal!.FindFirstValue(ClaimTypes.Email);
-        var name = result.Principal.FindFirstValue(ClaimTypes.Name);
+        var email    = result.Principal!.FindFirstValue(ClaimTypes.Email);
+        var name     = result.Principal.FindFirstValue(ClaimTypes.Name);
         var googleId = result.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (email == null || googleId == null)
@@ -46,8 +54,54 @@ public class AuthController : ControllerBase
         var user = await _authService.FindOrCreateUserAsync(email, name ?? email, googleId);
         var token = await _authService.GenerateJwtAsync(user);
 
+        var refreshToken = await _authService.GenerateRefreshTokenAsync(user.Id);
+        Response.Cookies.Append(RefreshCookieName, refreshToken.Token, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure   = true,
+            SameSite = SameSiteMode.Strict,
+            Expires  = refreshToken.ExpiresAt,
+        });
+
         var frontendBase = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
         return Redirect($"{frontendBase}/auth/callback#token={Uri.EscapeDataString(token)}");
+    }
+
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Refresh()
+    {
+        if (!Request.Cookies.TryGetValue(RefreshCookieName, out var rawToken) || rawToken == null)
+            return Unauthorized();
+
+        var result = await _authService.RefreshAsync(rawToken);
+        if (result == null)
+            return Unauthorized();
+
+        var (jwt, newRefreshToken) = result.Value;
+        Response.Cookies.Append(RefreshCookieName, newRefreshToken.Token, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure   = true,
+            SameSite = SameSiteMode.Strict,
+            Expires  = newRefreshToken.ExpiresAt,
+        });
+
+        return Ok(new { token = jwt });
+    }
+
+    [HttpPost("logout")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Logout()
+    {
+        if (Request.Cookies.TryGetValue(RefreshCookieName, out var rawToken) && rawToken != null)
+        {
+            var token = await _refreshTokenRepo.GetByTokenAsync(rawToken);
+            if (token != null)
+                await _refreshTokenRepo.RevokeAsync(token);
+        }
+        Response.Cookies.Delete(RefreshCookieName);
+        return NoContent();
     }
 
     [HttpGet("me")]

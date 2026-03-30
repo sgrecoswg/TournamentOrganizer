@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
     public DbSet<PlayerBadge> PlayerBadges => Set<PlayerBadge>();
     public DbSet<StoreGroup> StoreGroups => Set<StoreGroup>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
