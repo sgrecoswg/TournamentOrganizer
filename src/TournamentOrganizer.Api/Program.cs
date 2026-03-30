@@ -167,6 +167,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+if (!app.Environment.IsDevelopment())
+    app.UseHsts();
+
+app.UseHttpsRedirection();
+
 app.UseCors();
 
 // Serve wwwroot regardless of whether the directory existed at startup.
