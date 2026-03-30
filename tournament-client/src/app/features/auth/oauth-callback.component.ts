@@ -33,9 +33,12 @@ export class OAuthCallbackComponent implements OnInit {
       this.authService.storeToken(token);
       // Full page reload so AuthService.loadFromStorage() runs fresh
       // and the toolbar renders with the correct user state from the start.
-      const returnUrl = sessionStorage.getItem('auth_return_url') || '/';
+      const returnUrl = sessionStorage.getItem('auth_return_url') ?? '/';
       sessionStorage.removeItem('auth_return_url');
-      window.location.href = returnUrl;
+      const safeUrl = returnUrl.startsWith('/') && !returnUrl.startsWith('//')
+        ? returnUrl
+        : '/';
+      window.location.href = safeUrl;
     } else {
       console.error('OAuth callback error:', error);
       window.location.href = '/';

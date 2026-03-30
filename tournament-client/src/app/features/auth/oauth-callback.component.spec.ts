@@ -170,4 +170,39 @@ describe('OAuthCallbackComponent', () => {
     setup({});
     expect(consoleSpy).toHaveBeenCalledWith('OAuth callback error:', null);
   });
+
+  // ─── Open redirect prevention (returnUrl validation) ──────────────────
+
+  afterEach(() => sessionStorage.clear());
+
+  it('redirects to a valid relative returnUrl from sessionStorage', () => {
+    sessionStorage.setItem('auth_return_url', '/events/42');
+    setup({}, '#token=my-jwt');
+    expect(navigateSpy).toHaveBeenCalledTimes(1);
+    const [parsedUrl] = navigateSpy.mock.calls[0];
+    // /events/42 should parse to a path with segments ['events', '42']
+    expect(parsedUrl?.path).toEqual(['events', '42']);
+  });
+
+  it('falls back to "/" when returnUrl is an absolute external URL', () => {
+    sessionStorage.setItem('auth_return_url', 'https://evil.com/steal');
+    setup({}, '#token=my-jwt');
+    expect(navigateSpy).toHaveBeenCalledTimes(1);
+    const [parsedUrl] = navigateSpy.mock.calls[0];
+    expect(isRootPath(parsedUrl)).toBe(true);
+  });
+
+  it('falls back to "/" when returnUrl starts with //', () => {
+    sessionStorage.setItem('auth_return_url', '//evil.com/steal');
+    setup({}, '#token=my-jwt');
+    expect(navigateSpy).toHaveBeenCalledTimes(1);
+    const [parsedUrl] = navigateSpy.mock.calls[0];
+    expect(isRootPath(parsedUrl)).toBe(true);
+  });
+
+  it('removes returnUrl from sessionStorage after redirect', () => {
+    sessionStorage.setItem('auth_return_url', '/events');
+    setup({}, '#token=my-jwt');
+    expect(sessionStorage.getItem('auth_return_url')).toBeNull();
+  });
 });
