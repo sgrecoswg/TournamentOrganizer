@@ -91,7 +91,7 @@ public class HeadToHeadTests
 
         var result = await svc.GetHeadToHeadAsync(1);
 
-        var bob = result.First(e => e.OpponentId == 2);
+        var bob = result!.First(e => e.OpponentId == 2);
         Assert.Equal(1, bob.Wins);
         Assert.Equal(0, bob.Losses);
         Assert.Equal(1, bob.Games);
@@ -112,7 +112,7 @@ public class HeadToHeadTests
 
         var result = await svc.GetHeadToHeadAsync(1);
 
-        var bob = result.First(e => e.OpponentId == 2);
+        var bob = result!.First(e => e.OpponentId == 2);
         Assert.Equal(1, bob.Wins);
         Assert.Equal(1, bob.Losses);
         Assert.Equal(2, bob.Games);
@@ -128,7 +128,7 @@ public class HeadToHeadTests
 
         var result = await svc.GetHeadToHeadAsync(1);
 
-        Assert.Empty(result);
+        Assert.Empty(result!);
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public class HeadToHeadTests
 
         var result = await svc.GetHeadToHeadAsync(1);
 
-        Assert.Equal(2, result.Count);
+        Assert.Equal(2, result!.Count);
         Assert.Contains(result, e => e.OpponentId == 2);
         Assert.Contains(result, e => e.OpponentId == 3);
     }
@@ -171,7 +171,7 @@ public class HeadToHeadTests
 
         var result = await svc.GetHeadToHeadAsync(1);
 
-        Assert.Equal(3, result[0].OpponentId); // Charlie first (2 games)
-        Assert.Equal(2, result[1].OpponentId); // Bob second (1 game)
+        Assert.Equal(3, result![0].OpponentId); // Charlie first (2 games)
+        Assert.Equal(2, result![1].OpponentId); // Bob second (1 game)
     }
 }
