@@ -31,7 +31,6 @@ public class PlayersController : ControllerBase
     }
 
     [HttpPost]
-    [AllowAnonymous]
     public async Task<ActionResult<PlayerDto>> Register(CreatePlayerDto dto)
     {
         try

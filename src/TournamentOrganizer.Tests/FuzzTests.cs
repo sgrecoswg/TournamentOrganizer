@@ -220,10 +220,14 @@ public class FuzzTests
 
         Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
 
-        // Response body must be valid JSON
-        var responseBody = await response.Content.ReadAsStringAsync();
-        var exception = Record.Exception(() => JsonDocument.Parse(responseBody));
-        Assert.Null(exception);
+        // 401/403 responses have empty bodies by default — only validate JSON for business responses.
+        if (response.StatusCode != HttpStatusCode.Unauthorized &&
+            response.StatusCode != HttpStatusCode.Forbidden)
+        {
+            var responseBody = await response.Content.ReadAsStringAsync();
+            var exception = Record.Exception(() => JsonDocument.Parse(responseBody));
+            Assert.Null(exception);
+        }
     }
 
     // -----------------------------------------------------------------------
