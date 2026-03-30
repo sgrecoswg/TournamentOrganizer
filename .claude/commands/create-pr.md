@@ -38,8 +38,10 @@ Create a pull request from the current feature branch targeting `dev`.
 - [ ] <test step 1>
 - [ ] <test step 2>
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
+🤖 Generated with [Claude Code](https://claude.com/claude-code) · Model: `<model>`
 ```
+
+For the `Model:` field: read the `> **Story Points:** … · Model: \`…\`` line from the relevant prompt file in `prompts/ignore/` or `prompts/done/` (match by issue number or slug). If `$ARGUMENTS` contains a model hint, use that. If neither is available, use the current session model (`claude-sonnet-4-6`).
 
 ## Rules
 - Always target `--base dev` — never `main`

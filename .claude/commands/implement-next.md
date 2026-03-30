@@ -170,7 +170,9 @@ mv prompts/ignore/<filename>.md prompts/done/<filename>.md
 
 Commit all changes on the feature branch, then run `/create-pr`.
 
-The PR body must include `References #ISSUE_NUMBER` so the branch appears in the issue's Development section.
+The PR body must include:
+- `References #ISSUE_NUMBER` so the branch appears in the issue's Development section.
+- `🤖 Generated with [Claude Code](https://claude.com/claude-code) · Model: \`<model>\`` where `<model>` is read from the `> **Story Points:** … · Model: \`…\`` line in the prompt file (set in Step 3).
 
 After the PR is created, update the project board status to "In Review":
 ```bash
