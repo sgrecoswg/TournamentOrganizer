@@ -1283,4 +1283,66 @@ describe('EventDetailComponent', () => {
       expect(snackBarOpenSpy).toHaveBeenCalled();
     });
   });
+
+  // ── printQrCode — XSS safety ──────────────────────────────────────────────
+  describe('printQrCode', () => {
+    function setupPrintSpies(): { appendedDivs: HTMLDivElement[] } {
+      const appendedDivs: HTMLDivElement[] = [];
+      // Capture the div but don't actually mutate the DOM (avoids JSDOM recursion).
+      jest.spyOn(document.body, 'appendChild').mockImplementation((node: Node) => {
+        if (node instanceof HTMLDivElement) appendedDivs.push(node);
+        return node as any;
+      });
+      jest.spyOn(document.body, 'removeChild').mockImplementation((node: Node) => node as any);
+      jest.spyOn(window, 'print').mockImplementation(() => {});
+      return { appendedDivs };
+    }
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('does not use innerHTML with event name (XSS prevention)', async () => {
+      await setup({ isStoreEmployee: true });
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      const xssName = '<img src=x onerror="alert(1)">';
+      comp.event = { ...eventStub, name: xssName };
+      (comp as any).qrCodeDataUrl = 'data:image/png;base64,abc';
+      const { appendedDivs } = setupPrintSpies();
+
+      comp.printQrCode();
+
+      expect(appendedDivs.length).toBe(1);
+      // The raw XSS string must NOT appear verbatim as executable markup
+      expect(appendedDivs[0].innerHTML).not.toContain('<img src=x onerror=');
+    });
+
+    it('renders event name as safe text content', async () => {
+      await setup({ isStoreEmployee: true });
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      comp.event = { ...eventStub, name: 'My Event' };
+      (comp as any).qrCodeDataUrl = 'data:image/png;base64,abc';
+      const { appendedDivs } = setupPrintSpies();
+
+      comp.printQrCode();
+
+      expect(appendedDivs[0].textContent).toContain('My Event');
+    });
+
+    it('falls back to Check-In when event name is absent', async () => {
+      await setup({ isStoreEmployee: true });
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      comp.event = null as any;
+      (comp as any).qrCodeDataUrl = 'data:image/png;base64,abc';
+      const { appendedDivs } = setupPrintSpies();
+
+      comp.printQrCode();
+
+      expect(appendedDivs[0].textContent).toContain('Check-In');
+    });
+  });
 });

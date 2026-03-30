@@ -1052,7 +1052,15 @@ export class EventDetailComponent implements OnInit {
   printQrCode(): void {
     const div = document.createElement('div');
     div.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:#fff;z-index:99999;text-align:center;padding:32px';
-    div.innerHTML = `<h2>${this.event?.name ?? 'Check-In'}</h2><img src="${this.qrCodeDataUrl}" />`;
+
+    const h2 = document.createElement('h2');
+    h2.textContent = this.event?.name ?? 'Check-In';
+    div.appendChild(h2);
+
+    const img = document.createElement('img');
+    img.src = this.qrCodeDataUrl;
+    div.appendChild(img);
+
     document.body.appendChild(div);
     window.print();
     document.body.removeChild(div);
