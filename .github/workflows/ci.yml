@@ -8,6 +8,8 @@ jobs:
   backend:
     name: Backend — build, test, fuzz
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
 
@@ -28,6 +30,8 @@ jobs:
   frontend:
     name: Frontend — Jest
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     defaults:
       run:
         working-directory: tournament-client

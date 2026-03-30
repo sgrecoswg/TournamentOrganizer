@@ -13,7 +13,7 @@ public class LicenseTierServiceTests
         public Task<License?> GetByStoreAsync(int storeId) => Task.FromResult(license);
         public Task<List<License>> GetAllAsync() => Task.FromResult(new List<License>());
         public Task<License> CreateAsync(License l) => Task.FromResult(l);
-        public Task<License?> UpdateAsync(License l) => Task.FromResult(l);
+        public Task<License?> UpdateAsync(License l) => Task.FromResult<License?>(l);
     }
 
     private static LicenseTierService CreateService(License? license)

@@ -82,7 +82,7 @@ public class GameRepository : IGameRepository
     public async Task<List<GameResult>> GetStoreGameResultsAsync(int storeId, DateTime? since)
         => await _db.GameResults
             .Where(gr => gr.Game.Pod.Round.Event.StoreEvent != null
-                      && gr.Game.Pod.Round.Event.StoreEvent.StoreId == storeId)
+                      && gr.Game.Pod.Round.Event.StoreEvent!.StoreId == storeId)
             .Where(gr => since == null || gr.Game.Pod.Round.Event.Date >= since)
             .ToListAsync();
 
