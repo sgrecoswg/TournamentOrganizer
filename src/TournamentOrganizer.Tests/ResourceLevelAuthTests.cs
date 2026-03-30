@@ -119,4 +119,36 @@ public class ResourceLevelAuthTests(TournamentOrganizerFactory factory)
             new { role = "Administrator" });
         AssertForbidden(response);
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // StoreAnalyticsController — GET /api/stores/{storeId}/analytics
+    // [Tier3Required] + ownership guard (Issue #86)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task Tier3StoreEmployee_GetOwnAnalytics_IsAllowed()
+    {
+        // StoreEmployee with storeId=1 and Tier3 license reads their own analytics
+        var client = factory.ClientAs("StoreEmployee", storeId: 1, licenseTier: "Tier3");
+        var response = await client.GetAsync("/api/stores/1/analytics");
+        AssertAllowed(response);
+    }
+
+    [Fact]
+    public async Task Tier3StoreEmployee_GetOtherStoreAnalytics_Returns403()
+    {
+        // IDOR: StoreEmployee with storeId=1 attempts to read store 2's analytics
+        var client = factory.ClientAs("StoreEmployee", storeId: 1, licenseTier: "Tier3");
+        var response = await client.GetAsync("/api/stores/2/analytics");
+        AssertForbidden(response);
+    }
+
+    [Fact]
+    public async Task Administrator_GetAnyStoreAnalytics_IsAllowed()
+    {
+        // Administrators bypass the ownership check
+        var client = factory.ClientAs("Administrator");
+        var response = await client.GetAsync("/api/stores/2/analytics");
+        AssertAllowed(response);
+    }
 }
