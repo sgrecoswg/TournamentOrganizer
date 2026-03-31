@@ -115,7 +115,13 @@ public class PlayersController : ControllerBase
         if (player.AvatarUrl != null)
         {
             var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
-            var filePath = Path.Combine(webRoot, player.AvatarUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+            var avatarsDir = Path.GetFullPath(Path.Combine(webRoot, "avatars"));
+            var filePath = Path.GetFullPath(Path.Combine(webRoot,
+                player.AvatarUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)));
+
+            if (!filePath.StartsWith(avatarsDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                return BadRequest("Invalid avatar path.");
+
             if (System.IO.File.Exists(filePath)) System.IO.File.Delete(filePath);
         }
 
