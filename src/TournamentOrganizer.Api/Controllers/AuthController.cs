@@ -40,16 +40,18 @@ public class AuthController : ControllerBase
     [HttpGet("google-callback")]
     public async Task<IActionResult> GoogleCallback()
     {
+        var frontendBase = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
+
         var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         if (!result.Succeeded)
-            return Redirect("http://localhost:4200/auth/callback?error=auth_failed");
+            return Redirect($"{frontendBase}/auth/callback?error=auth_failed");
 
         var email    = result.Principal!.FindFirstValue(ClaimTypes.Email);
         var name     = result.Principal.FindFirstValue(ClaimTypes.Name);
         var googleId = result.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (email == null || googleId == null)
-            return Redirect("http://localhost:4200/auth/callback?error=missing_claims");
+            return Redirect($"{frontendBase}/auth/callback?error=missing_claims");
 
         var user = await _authService.FindOrCreateUserAsync(email, name ?? email, googleId);
         var token = await _authService.GenerateJwtAsync(user);
@@ -63,7 +65,6 @@ public class AuthController : ControllerBase
             Expires  = refreshToken.ExpiresAt,
         });
 
-        var frontendBase = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
         return Redirect($"{frontendBase}/auth/callback#token={Uri.EscapeDataString(token)}");
     }
 
