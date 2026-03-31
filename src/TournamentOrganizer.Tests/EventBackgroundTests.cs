@@ -230,7 +230,7 @@ public class EventBackgroundTests
         bool isAdmin = false,
         int jwtStoreId = 1)
     {
-        var controller = new EventsController(service, new FakeStoreEventRepo(jwtStoreId), env);
+        var controller = new EventsController(service, new FakeStoreEventRepo(jwtStoreId), env, Microsoft.Extensions.Logging.Abstractions.NullLogger<EventsController>.Instance);
         var claims = new List<Claim>
         {
             new("sub", "user-1"),

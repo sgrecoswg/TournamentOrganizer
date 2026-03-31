@@ -965,9 +965,9 @@ public class EventService : IEventService
                 await RegisterPlayerAsync(eventId, playerId);
                 registered++;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                errors.Add(new BulkRegisterErrorDto(item.Email, ex.Message));
+                errors.Add(new BulkRegisterErrorDto(item.Email, "Registration failed."));
             }
         }
 

@@ -19,12 +19,14 @@ public class EventsController : ControllerBase
     private readonly IEventService _eventService;
     private readonly IStoreEventRepository _storeEventRepo;
     private readonly IWebHostEnvironment _env;
+    private readonly ILogger<EventsController> _logger;
 
-    public EventsController(IEventService eventService, IStoreEventRepository storeEventRepo, IWebHostEnvironment env)
+    public EventsController(IEventService eventService, IStoreEventRepository storeEventRepo, IWebHostEnvironment env, ILogger<EventsController> logger)
     {
         _eventService = eventService;
         _storeEventRepo = storeEventRepo;
         _env = env;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -85,7 +87,8 @@ public class EventsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { error = ex.Message });
+            _logger.LogWarning(ex, "Domain rule violation.");
+            return BadRequest(new { error = "Operation not permitted." });
         }
     }
 
@@ -101,7 +104,8 @@ public class EventsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { error = ex.Message });
+            _logger.LogWarning(ex, "Domain rule violation.");
+            return BadRequest(new { error = "Operation not permitted." });
         }
     }
 
@@ -130,7 +134,8 @@ public class EventsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { error = ex.Message });
+            _logger.LogWarning(ex, "Domain rule violation.");
+            return BadRequest(new { error = "Operation not permitted." });
         }
     }
 
@@ -146,7 +151,8 @@ public class EventsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { error = ex.Message });
+            _logger.LogWarning(ex, "Domain rule violation.");
+            return BadRequest(new { error = "Operation not permitted." });
         }
     }
 
@@ -169,7 +175,8 @@ public class EventsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { error = ex.Message });
+            _logger.LogWarning(ex, "Domain rule violation.");
+            return BadRequest(new { error = "Operation not permitted." });
         }
     }
 
@@ -185,7 +192,8 @@ public class EventsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { error = ex.Message });
+            _logger.LogWarning(ex, "Domain rule violation.");
+            return BadRequest(new { error = "Operation not permitted." });
         }
     }
 
@@ -199,7 +207,8 @@ public class EventsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return NotFound(new { error = ex.Message });
+            _logger.LogWarning(ex, "Domain rule violation.");
+            return NotFound(new { error = "Resource not found." });
         }
     }
 
@@ -214,7 +223,7 @@ public class EventsController : ControllerBase
             return Ok(result);
         }
         catch (KeyNotFoundException) { return NotFound(); }
-        catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (InvalidOperationException ex) { _logger.LogWarning(ex, "Domain rule violation."); return BadRequest(new { error = "Operation not permitted." }); }
     }
 
     [HttpPost("{id}/players/{playerId}/promote")]
@@ -228,7 +237,7 @@ public class EventsController : ControllerBase
             return Ok(result);
         }
         catch (KeyNotFoundException) { return NotFound(); }
-        catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (InvalidOperationException ex) { _logger.LogWarning(ex, "Domain rule violation."); return BadRequest(new { error = "Operation not permitted." }); }
     }
 
     [HttpPut("{id}/players/{playerId}/checkin")]
@@ -242,7 +251,7 @@ public class EventsController : ControllerBase
             return Ok(result);
         }
         catch (KeyNotFoundException) { return NotFound(); }
-        catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (InvalidOperationException ex) { _logger.LogWarning(ex, "Domain rule violation."); return BadRequest(new { error = "Operation not permitted." }); }
     }
 
     [HttpGet("{id}/pairings")]
@@ -264,7 +273,7 @@ public class EventsController : ControllerBase
             return Ok(result);
         }
         catch (KeyNotFoundException) { return NotFound(); }
-        catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (InvalidOperationException ex) { _logger.LogWarning(ex, "Domain rule violation."); return BadRequest(new { error = "Operation not permitted." }); }
     }
 
     [HttpPost("{id}/bulkregister/confirm")]
@@ -287,8 +296,8 @@ public class EventsController : ControllerBase
             var result = await _eventService.CheckInByTokenAsync(token, email);
             return Ok(result);
         }
-        catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
-        catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (KeyNotFoundException ex) { _logger.LogWarning(ex, "Resource not found."); return NotFound(new { error = "Resource not found." }); }
+        catch (InvalidOperationException ex) { _logger.LogWarning(ex, "Domain rule violation."); return BadRequest(new { error = "Operation not permitted." }); }
     }
 
     private async Task<bool> UserCanManageEvent(int eventId)

@@ -72,7 +72,7 @@ public class PlayerAvatarPathTraversalTests
         IPlayerService service,
         IWebHostEnvironment env)
     {
-        var controller = new PlayersController(service, env, new StubBadgeService());
+        var controller = new PlayersController(service, env, new StubBadgeService(), Microsoft.Extensions.Logging.Abstractions.NullLogger<PlayersController>.Instance);
         var claims = new List<Claim>
         {
             new(ClaimTypes.Email, "alice@test.com"),

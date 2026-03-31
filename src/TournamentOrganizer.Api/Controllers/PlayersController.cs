@@ -15,12 +15,14 @@ public class PlayersController : ControllerBase
     private readonly IPlayerService _playerService;
     private readonly IWebHostEnvironment _env;
     private readonly IBadgeService _badgeService;
+    private readonly ILogger<PlayersController> _logger;
 
-    public PlayersController(IPlayerService playerService, IWebHostEnvironment env, IBadgeService badgeService)
+    public PlayersController(IPlayerService playerService, IWebHostEnvironment env, IBadgeService badgeService, ILogger<PlayersController> logger)
     {
         _playerService = playerService;
         _env = env;
         _badgeService = badgeService;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -40,7 +42,8 @@ public class PlayersController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new { error = ex.Message });
+            _logger.LogWarning(ex, "Domain rule violation.");
+            return Conflict(new { error = "Operation not permitted." });
         }
     }
 

@@ -10,8 +10,13 @@ namespace TournamentOrganizer.Api.Controllers;
 public class GamesController : ControllerBase
 {
     private readonly IEventService _eventService;
+    private readonly ILogger<GamesController> _logger;
 
-    public GamesController(IEventService eventService) => _eventService = eventService;
+    public GamesController(IEventService eventService, ILogger<GamesController> logger)
+    {
+        _eventService = eventService;
+        _logger = logger;
+    }
 
     [HttpPost("{id}/result")]
     [Authorize(Policy = "StoreEmployee")]
@@ -24,7 +29,8 @@ public class GamesController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { error = ex.Message });
+            _logger.LogWarning(ex, "Domain rule violation.");
+            return BadRequest(new { error = "Operation not permitted." });
         }
     }
 
@@ -39,7 +45,8 @@ public class GamesController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { error = ex.Message });
+            _logger.LogWarning(ex, "Domain rule violation.");
+            return BadRequest(new { error = "Operation not permitted." });
         }
     }
 }
