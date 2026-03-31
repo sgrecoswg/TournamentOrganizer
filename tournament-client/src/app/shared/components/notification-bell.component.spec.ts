@@ -143,4 +143,51 @@ describe('NotificationBellComponent', () => {
 
     expect(mockApiService.markAllNotificationsRead).toHaveBeenCalled();
   });
+
+  describe('onNotifClick — open redirect protection', () => {
+    async function setupAndGetRouter() {
+      await setup(MOCK_USER, true);
+      const fixture = TestBed.createComponent(NotificationBellComponent);
+      fixture.detectChanges();
+      const { Router } = await import('@angular/router');
+      const router = TestBed.inject(Router);
+      const navSpy = jest.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+      return { fixture, navSpy };
+    }
+
+    it('navigates for a valid relative path starting with /', async () => {
+      const { fixture, navSpy } = await setupAndGetRouter();
+      const notif = makeNotification({ linkPath: '/events/42', isRead: true });
+      fixture.componentInstance.onNotifClick(notif);
+      expect(navSpy).toHaveBeenCalledWith('/events/42');
+    });
+
+    it('does not navigate for a protocol-relative URL (//evil.com)', async () => {
+      const { fixture, navSpy } = await setupAndGetRouter();
+      const notif = makeNotification({ linkPath: '//evil.com', isRead: true });
+      fixture.componentInstance.onNotifClick(notif);
+      expect(navSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not navigate for an absolute https URL', async () => {
+      const { fixture, navSpy } = await setupAndGetRouter();
+      const notif = makeNotification({ linkPath: 'https://phishing.com', isRead: true });
+      fixture.componentInstance.onNotifClick(notif);
+      expect(navSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not navigate for an absolute http URL', async () => {
+      const { fixture, navSpy } = await setupAndGetRouter();
+      const notif = makeNotification({ linkPath: 'http://evil.com', isRead: true });
+      fixture.componentInstance.onNotifClick(notif);
+      expect(navSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not navigate when linkPath is null', async () => {
+      const { fixture, navSpy } = await setupAndGetRouter();
+      const notif = makeNotification({ linkPath: null as any, isRead: true });
+      fixture.componentInstance.onNotifClick(notif);
+      expect(navSpy).not.toHaveBeenCalled();
+    });
+  });
 });

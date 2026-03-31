@@ -131,7 +131,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
         },
       });
     }
-    if (n.linkPath) {
+    if (n.linkPath && n.linkPath.startsWith('/') && !n.linkPath.startsWith('//')) {
       this.router.navigateByUrl(n.linkPath);
     }
     this.cdr.detectChanges();
