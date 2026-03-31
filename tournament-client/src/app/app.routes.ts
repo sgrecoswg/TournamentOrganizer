@@ -25,10 +25,12 @@ export const routes: Routes = [
   },
   {
     path: 'events/:id',
+    canActivate: [authGuard],
     loadComponent: () => import('./features/events/event-detail.component').then(m => m.EventDetailComponent)
   },
   {
     path: 'events/:id/pairings',
+    canActivate: [authGuard],
     loadComponent: () => import('./features/events/pairings-display.component').then(m => m.PairingsDisplayComponent)
   },
   {
