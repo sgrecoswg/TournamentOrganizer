@@ -154,11 +154,11 @@ Follow the requirements in the prompt file exactly. Mandatory order:
 2. Confirm tests are red
 3. Write minimum implementation to make them pass
 4. Confirm tests are green
-5. Run `/build` — fix any errors before continuing
+5. Run `/build` — fix any errors before continuing. **After build passes, immediately continue to Step 6 — do not stop.**
 
 After any frontend component changes:
 - Run `/check-zone` on every modified component
-- Run `/e2e <spec-file>` — all tests must pass before moving on
+- Run `/e2e <spec-file>` — all tests must pass before moving on. **After E2E passes, immediately continue to the next step — do not stop.**
 
 ## Step 6 — Move prompt file to done
 
@@ -190,3 +190,4 @@ Report the PR URL to the user.
 - Do not skip any step in the TDD workflow
 - Do not consider the task done until `/build`, all tests, `/check-zone`, and `/e2e` all pass
 - Never start implementation before the prompt file is approved (Step 2a) or read (Step 2b)
+- **Do not stop after any verification step** (`/build`, `/e2e`, `/check-zone`). These are checkpoints, not endpoints — continue to the next numbered step immediately after each passes. Do not return until the PR URL has been reported to the user and the project board has been marked In Review.
