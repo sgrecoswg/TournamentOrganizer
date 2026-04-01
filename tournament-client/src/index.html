@@ -2,6 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self';
+             script-src 'self';
+             style-src 'self' https://fonts.googleapis.com 'unsafe-inline';
+             font-src https://fonts.gstatic.com;
+             img-src 'self' data: https://cards.scryfall.io https://api.scryfall.com;
+             connect-src 'self' https://api.scryfall.com;">
   <title>Commander Tournament Organizer</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">

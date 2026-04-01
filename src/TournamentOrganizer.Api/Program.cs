@@ -211,6 +211,20 @@ app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
     RequestPath  = "/backgrounds"
 });
 
+// Content-Security-Policy header — defence-in-depth against XSS (OWASP A05:2021)
+app.Use(async (ctx, next) =>
+{
+    ctx.Response.Headers.Append(
+        "Content-Security-Policy",
+        "default-src 'self'; " +
+        "script-src 'self'; " +
+        "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; " +
+        "font-src https://fonts.gstatic.com; " +
+        "img-src 'self' data: https://cards.scryfall.io https://api.scryfall.com; " +
+        "connect-src 'self' https://api.scryfall.com;");
+    await next();
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 

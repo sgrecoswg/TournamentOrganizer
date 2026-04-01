@@ -154,25 +154,46 @@ Follow the requirements in the prompt file exactly. Mandatory order:
 2. Confirm tests are red
 3. Write minimum implementation to make them pass
 4. Confirm tests are green
-5. Run `/build` — fix any errors before continuing. **After build passes, immediately continue to Step 6 — do not stop.**
+5. Build — run these commands directly (do NOT use `/build`):
+   ```bash
+   dotnet build src/TournamentOrganizer.Api/
+   cd tournament-client && npx ng build && cd ..
+   ```
+   Fix any errors before continuing. Then immediately proceed to Step 6.
 
-After any frontend component changes:
-- Run `/check-zone` on every modified component
-- Run `/e2e <spec-file>` — all tests must pass before moving on. **After E2E passes, immediately continue to the next step — do not stop.**
+After any frontend component changes, perform zone and E2E checks inline (do NOT use `/check-zone` or `/e2e`):
+- **Zone check**: Read each modified `*.component.ts` file and verify every method that assigns to `this.*` calls `this.cdr.detectChanges()` after the mutation. Fix any missing calls.
+- **E2E**: Run from `tournament-client/`:
+  ```bash
+  cd tournament-client && npx playwright test <spec-file> --reporter=list && cd ..
+  ```
+  All tests must pass before continuing.
 
 ## Step 6 — Move prompt file to done
 
+Only run this if a prompt file was used (skip if prompt file was not generated in Step 2a):
 ```bash
 mv prompts/ignore/<filename>.md prompts/done/<filename>.md
 ```
 
 ## Step 7 — Commit and create PR
 
-Commit all changes on the feature branch, then run `/create-pr`.
+Commit all changes on the feature branch, then create the PR with inline commands (do NOT use `/create-pr`):
 
-The PR body must include:
-- `References #ISSUE_NUMBER` so the branch appears in the issue's Development section.
-- `🤖 Generated with [Claude Code](https://claude.com/claude-code) · Model: \`<model>\`` where `<model>` is read from the `> **Story Points:** … · Model: \`…\`` line in the prompt file (set in Step 3).
+```bash
+# Push branch
+git push -u TournamentOrganizer <branch-name>
+
+# Check for existing PR
+gh pr list --head <branch-name> --base dev --json number,url
+
+# If no existing PR, create one:
+gh pr create --base dev --title "<title>" --body "<body>"
+```
+
+PR body must include:
+- `References #ISSUE_NUMBER`
+- `🤖 Generated with [Claude Code](https://claude.com/claude-code) · Model: \`<model>\`` where `<model>` is from the `> **Story Points:** … · Model: \`…\`` line in the prompt file (or `claude-sonnet-4-6` if no prompt file).
 
 After the PR is created, update the project board status to "In Review":
 ```bash
@@ -188,6 +209,7 @@ Report the PR URL to the user.
 - Never commit directly to `dev` or `main`
 - The remote is named `TournamentOrganizer` (not `origin`)
 - Do not skip any step in the TDD workflow
-- Do not consider the task done until `/build`, all tests, `/check-zone`, and `/e2e` all pass
+- Do not consider the task done until build, all tests, zone check, and E2E all pass
 - Never start implementation before the prompt file is approved (Step 2a) or read (Step 2b)
-- **Do not stop after any verification step** (`/build`, `/e2e`, `/check-zone`). These are checkpoints, not endpoints — continue to the next numbered step immediately after each passes. Do not return until the PR URL has been reported to the user and the project board has been marked In Review.
+- **Never use sub-skills (`/build`, `/check-zone`, `/e2e`, `/create-pr`) inside this command** — always run their bash commands directly so this command never pauses waiting for a sub-skill to return
+- Do not stop until the PR URL has been reported to the user and the project board has been marked In Review
