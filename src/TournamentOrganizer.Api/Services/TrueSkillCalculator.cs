@@ -89,8 +89,8 @@ public static class TrueSkillCalculator
             double newSigmaSq = sigmas[i] * sigmas[i] * Math.Max(sigmaFactors[i], 0.0001);
             newSigmas[i] = Math.Sqrt(newSigmaSq);
 
-            // Ensure sigma doesn't grow unboundedly or go below a minimum
-            newSigmas[i] = Math.Max(newSigmas[i], 0.01);
+            // Ensure sigma doesn't go below a minimum (prevents non-positive ConservativeScore)
+            newSigmas[i] = Math.Max(newSigmas[i], 0.1);
         }
 
         return Enumerable.Range(0, n)

@@ -201,4 +201,31 @@ public class TrueSkillCalculatorTests
 
         Assert.Empty(result);
     }
+
+    // ------------------------------------------------------------------
+    // High-disparity Sigma (issue #113)
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public void HighSigmaDisparity_SigmaRemainsPositive()
+    {
+        // Regression test for issue #113: high disparity in sigma values
+        // should not produce non-positive NewSigma
+        var ratings = new List<(double Mu, double Sigma)>
+        {
+            (2.0, 2.0),  // low sigma (high confidence)
+            (2.0, 5.0)   // high sigma (low confidence)
+        };
+        var positions = new[] { 1, 2 };
+
+        var result = TrueSkillCalculator.CalculateNewRatings(ratings, positions);
+
+        Assert.Equal(2, result.Count);
+        Assert.True(result[0].NewSigma > 0, "First player sigma must be positive");
+        Assert.True(result[1].NewSigma > 0, "Second player sigma must be positive");
+
+        // Verify the values are reasonable (greater than minimum clamp)
+        Assert.True(result[0].NewSigma >= 0.1, "First player sigma should respect minimum clamp");
+        Assert.True(result[1].NewSigma >= 0.1, "Second player sigma should respect minimum clamp");
+    }
 }
