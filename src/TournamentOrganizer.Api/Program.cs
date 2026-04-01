@@ -149,12 +149,16 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// CORS for future Angular frontend
+// CORS — localhost:4200 is only permitted in Development.
+// In Production the origin is read from Cors:AllowedOrigin (appsettings.Production.json).
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:4200")
+        var origins = builder.Environment.IsDevelopment()
+            ? new[] { "http://localhost:4200" }
+            : new[] { builder.Configuration["Cors:AllowedOrigin"]! };
+        policy.WithOrigins(origins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
