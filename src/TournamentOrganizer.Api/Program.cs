@@ -211,6 +211,15 @@ app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
     RequestPath  = "/backgrounds"
 });
 
+// Security response headers — OWASP A05:2021
+app.Use(async (ctx, next) =>
+{
+    ctx.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    ctx.Response.Headers.Append("X-Frame-Options", "DENY");
+    ctx.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    await next();
+});
+
 // Content-Security-Policy header — defence-in-depth against XSS (OWASP A05:2021)
 app.Use(async (ctx, next) =>
 {
