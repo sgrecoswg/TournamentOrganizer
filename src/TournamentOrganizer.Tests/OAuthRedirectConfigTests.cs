@@ -6,13 +6,13 @@ namespace TournamentOrganizer.Tests;
 
 /// <summary>
 /// Verifies that the OAuth callback does NOT hardcode http://localhost:4200.
-/// The Frontend:BaseUrl config key must be respected for all redirect paths
+/// The Frontend:Origin config key must be respected for all redirect paths
 /// (success and error). OWASP A02:2021 — Cryptographic Failures.
 /// </summary>
 public class OAuthRedirectConfigTests
 {
     /// <summary>
-    /// Factory that overrides Frontend:BaseUrl to a custom sentinel value so we
+    /// Factory that overrides Frontend:Origin to a custom sentinel value so we
     /// can detect whether the controller uses config or the hardcoded string.
     /// </summary>
     private class CustomFrontendFactory : TournamentOrganizerFactory
@@ -26,7 +26,7 @@ public class OAuthRedirectConfigTests
             {
                 cfg.AddInMemoryCollection(new Dictionary<string, string?>
                 {
-                    ["Frontend:BaseUrl"] = CustomOrigin,
+                    ["Frontend:Origin"] = CustomOrigin,
                 });
             });
         }
@@ -36,7 +36,7 @@ public class OAuthRedirectConfigTests
     public async Task GoogleCallback_ErrorRedirect_UsesConfiguredBaseUrl_NotHardcodedLocalhost()
     {
         // Arrange — call the callback without a valid Google auth cookie so it
-        // hits the error path: Redirect("http://localhost:4200/auth/callback?error=auth_failed")
+        // hits the error path: Redirect("{Frontend:Origin}/auth/callback?error=1")
         using var factory = new CustomFrontendFactory();
         var client = factory.CreateClient(
             new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
@@ -57,5 +57,10 @@ public class OAuthRedirectConfigTests
         var location = response.Headers.Location?.ToString() ?? "";
         Assert.Contains(CustomFrontendFactory.CustomOrigin, location);
         Assert.DoesNotContain("http://localhost:4200", location);
+
+        // Also verify opaque numeric error code is used
+        Assert.Contains("error=", location);
+        Assert.DoesNotContain("auth_failed", location);
+        Assert.DoesNotContain("missing_claims", location);
     }
 }

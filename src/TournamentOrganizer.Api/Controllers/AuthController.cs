@@ -40,18 +40,22 @@ public class AuthController : ControllerBase
     [HttpGet("google-callback")]
     public async Task<IActionResult> GoogleCallback()
     {
-        var frontendBase = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
+        var frontendOrigin = _configuration["Frontend:Origin"] ?? "http://localhost:4200";
 
         var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         if (!result.Succeeded)
-            return Redirect($"{frontendBase}/auth/callback?error=auth_failed");
+            // SECURITY: Use opaque numeric error code (1 = auth_failed) to prevent information leakage
+            // in URLs. Never expose exception messages, claim validation details, or user data in
+            // redirect parameters — attackers may observe/log URLs via browser history, proxies, etc.
+            return Redirect($"{frontendOrigin}/auth/callback?error=1");
 
         var email    = result.Principal!.FindFirstValue(ClaimTypes.Email);
         var name     = result.Principal.FindFirstValue(ClaimTypes.Name);
         var googleId = result.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (email == null || googleId == null)
-            return Redirect($"{frontendBase}/auth/callback?error=missing_claims");
+            // SECURITY: Use opaque numeric error code (2 = missing_claims) instead of leaking details
+            return Redirect($"{frontendOrigin}/auth/callback?error=2");
 
         var user = await _authService.FindOrCreateUserAsync(email, name ?? email, googleId);
         var token = await _authService.GenerateJwtAsync(user);
@@ -65,7 +69,7 @@ public class AuthController : ControllerBase
             Expires  = refreshToken.ExpiresAt,
         });
 
-        return Redirect($"{frontendBase}/auth/callback#token={Uri.EscapeDataString(token)}");
+        return Redirect($"{frontendOrigin}/auth/callback#token={Uri.EscapeDataString(token)}");
     }
 
     [HttpPost("refresh")]
