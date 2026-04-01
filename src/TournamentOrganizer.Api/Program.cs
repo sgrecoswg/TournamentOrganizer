@@ -167,12 +167,14 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-app.UseExceptionHandler(errorApp => errorApp.Run(async ctx =>
+if (app.Environment.IsDevelopment())
 {
-    ctx.Response.StatusCode = 500;
-    ctx.Response.ContentType = "application/json";
-    await ctx.Response.WriteAsJsonAsync(new { error = "An unexpected error occurred." });
-}));
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/error");
+}
 
 if (app.Environment.IsDevelopment())
 {
