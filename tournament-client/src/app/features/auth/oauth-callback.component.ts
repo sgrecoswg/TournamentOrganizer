@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
@@ -12,6 +12,7 @@ import { AuthService } from '../../core/services/auth.service';
 export class OAuthCallbackComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private authService: AuthService
   ) {}
 
@@ -31,22 +32,21 @@ export class OAuthCallbackComponent implements OnInit {
 
     if (token) {
       this.authService.storeToken(token);
-      // Full page reload so AuthService.loadFromStorage() runs fresh
-      // and the toolbar renders with the correct user state from the start.
+      // Token is now in-memory — no page reload needed.
+      // Navigate to the return URL (or root) using the Angular Router.
       const returnUrl = sessionStorage.getItem('auth_return_url') ?? '/';
       sessionStorage.removeItem('auth_return_url');
       const safeUrl = returnUrl.startsWith('/') && !returnUrl.startsWith('//')
         ? returnUrl
         : '/';
-      window.location.href = safeUrl;
+      this.router.navigate([safeUrl]);
     } else {
       console.error('OAuth callback error:', error);
-      window.location.href = '/';
+      this.router.navigate(['/']);
     }
   }
 
-  // Extracted for testability: JSDOM's location setter spy intercepts hash
-  // assignments before they take effect, so tests spy on this method instead.
+  // Extracted for testability: allows tests to supply a mock hash value.
   protected readLocationHash(): string {
     return window.location.hash;
   }

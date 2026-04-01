@@ -1,55 +1,21 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { OAuthCallbackComponent } from './oauth-callback.component';
 import { AuthService } from '../../core/services/auth.service';
 
-// ─── window.location.href mock ───────────────────────────────────────────────
-// JSDOM's window.location.href is a configurable:false own accessor — it cannot
-// be redefined or spied on via jest.spyOn or Object.defineProperty.
-//
-// The generated Location wrapper delegates to an internal LocationImpl instance
-// stored at Symbol('impl') on the location object. We access that instance and
-// spy on its _locationObjectSetterNavigate method, which is called (with the
-// parsed URL object) every time location.href is set. Spying on the *instance*
-// (not a prototype) is immune to Jest's per-file module isolation.
-//
-// Note: we do NOT set window.location.hash in tests because JSDOM's hash setter
-// also routes through _locationObjectSetterNavigate, which our spy intercepts
-// before the actual URL update is applied. Instead, we spy on the component's
-// protected readLocationHash() method.
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getLocationImpl(): any {
-  const implSym = Object.getOwnPropertySymbols(window.location)
-    .find(s => s.toString() === 'Symbol(impl)');
-  return implSym ? (window.location as any)[implSym] : null;
-}
-
-/** Returns true when the parsed JSDOM URL object represents the path '/'. */
-function isRootPath(parsedUrl: { path?: string[] }): boolean {
-  // '/' parses to { path: [''] } (single empty-string segment)
-  return Array.isArray(parsedUrl?.path) &&
-    parsedUrl.path.length === 1 &&
-    parsedUrl.path[0] === '';
-}
-
-let navigateSpy: jest.SpyInstance;
 let replaceStateSpy: jest.SpyInstance;
+let routerNavigateSpy: jest.SpyInstance;
 
 beforeEach(() => {
-  const impl = getLocationImpl();
-  navigateSpy = jest
-    .spyOn(impl, '_locationObjectSetterNavigate')
-    .mockImplementation(() => {}); // suppress JSDOM "not implemented: navigation" noise
-
   replaceStateSpy = jest.spyOn(history, 'replaceState').mockImplementation(() => {});
 });
 
 afterEach(() => {
-  navigateSpy.mockRestore();
   replaceStateSpy.mockRestore();
+  routerNavigateSpy?.mockRestore();
 });
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function makeRoute(params: Record<string, string>) {
   return {
@@ -74,11 +40,14 @@ describe('OAuthCallbackComponent', () => {
     TestBed.configureTestingModule({
       imports: [OAuthCallbackComponent],
       providers: [
+        provideRouter([]),
         { provide: ActivatedRoute, useValue: makeRoute(queryParams) },
         { provide: AuthService, useValue: mockAuthService },
       ],
     });
-    return TestBed.createComponent(OAuthCallbackComponent);
+    const fixture = TestBed.createComponent(OAuthCallbackComponent);
+    routerNavigateSpy = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    return fixture;
   }
 
   /** Creates and initialises the component with an optional hash fragment. */
@@ -118,9 +87,8 @@ describe('OAuthCallbackComponent', () => {
 
   it('redirects to "/" after storing the hash token', () => {
     setup({}, '#token=my-jwt-token');
-    expect(navigateSpy).toHaveBeenCalledTimes(1);
-    const [parsedUrl] = navigateSpy.mock.calls[0];
-    expect(isRootPath(parsedUrl)).toBe(true);
+    expect(routerNavigateSpy).toHaveBeenCalledTimes(1);
+    expect(routerNavigateSpy).toHaveBeenCalledWith(['/']);
   });
 
   it('stores the token before redirecting', () => {
@@ -130,7 +98,7 @@ describe('OAuthCallbackComponent', () => {
 
     const order: string[] = [];
     mockAuthService.storeToken.mockImplementation(() => order.push('storeToken'));
-    navigateSpy.mockImplementation(() => order.push('redirect'));
+    routerNavigateSpy.mockImplementation(() => { order.push('redirect'); return Promise.resolve(true); });
 
     fixture.detectChanges(); // triggers ngOnInit
 
@@ -146,16 +114,14 @@ describe('OAuthCallbackComponent', () => {
 
   it('redirects to "/" when there is no hash token', () => {
     setup({ error: 'access_denied' });
-    expect(navigateSpy).toHaveBeenCalledTimes(1);
-    const [parsedUrl] = navigateSpy.mock.calls[0];
-    expect(isRootPath(parsedUrl)).toBe(true);
+    expect(routerNavigateSpy).toHaveBeenCalledTimes(1);
+    expect(routerNavigateSpy).toHaveBeenCalledWith(['/']);
   });
 
   it('redirects to "/" when both hash token and error are absent', () => {
     setup({});
-    expect(navigateSpy).toHaveBeenCalledTimes(1);
-    const [parsedUrl] = navigateSpy.mock.calls[0];
-    expect(isRootPath(parsedUrl)).toBe(true);
+    expect(routerNavigateSpy).toHaveBeenCalledTimes(1);
+    expect(routerNavigateSpy).toHaveBeenCalledWith(['/']);
     expect(mockAuthService.storeToken).not.toHaveBeenCalled();
   });
 
@@ -178,26 +144,22 @@ describe('OAuthCallbackComponent', () => {
   it('redirects to a valid relative returnUrl from sessionStorage', () => {
     sessionStorage.setItem('auth_return_url', '/events/42');
     setup({}, '#token=my-jwt');
-    expect(navigateSpy).toHaveBeenCalledTimes(1);
-    const [parsedUrl] = navigateSpy.mock.calls[0];
-    // /events/42 should parse to a path with segments ['events', '42']
-    expect(parsedUrl?.path).toEqual(['events', '42']);
+    expect(routerNavigateSpy).toHaveBeenCalledTimes(1);
+    expect(routerNavigateSpy).toHaveBeenCalledWith(['/events/42']);
   });
 
   it('falls back to "/" when returnUrl is an absolute external URL', () => {
     sessionStorage.setItem('auth_return_url', 'https://evil.com/steal');
     setup({}, '#token=my-jwt');
-    expect(navigateSpy).toHaveBeenCalledTimes(1);
-    const [parsedUrl] = navigateSpy.mock.calls[0];
-    expect(isRootPath(parsedUrl)).toBe(true);
+    expect(routerNavigateSpy).toHaveBeenCalledTimes(1);
+    expect(routerNavigateSpy).toHaveBeenCalledWith(['/']);
   });
 
   it('falls back to "/" when returnUrl starts with //', () => {
     sessionStorage.setItem('auth_return_url', '//evil.com/steal');
     setup({}, '#token=my-jwt');
-    expect(navigateSpy).toHaveBeenCalledTimes(1);
-    const [parsedUrl] = navigateSpy.mock.calls[0];
-    expect(isRootPath(parsedUrl)).toBe(true);
+    expect(routerNavigateSpy).toHaveBeenCalledTimes(1);
+    expect(routerNavigateSpy).toHaveBeenCalledWith(['/']);
   });
 
   it('removes returnUrl from sessionStorage after redirect', () => {

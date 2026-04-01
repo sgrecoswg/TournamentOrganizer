@@ -1,12 +1,14 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { AuthService } from './auth.service';
 
 // ─── JWT helpers ─────────────────────────────────────────────────────────────
 
 /** Build a minimal JWT with the given payload (header + body + stub signature). */
 function makeJwt(payload: Record<string, unknown>): string {
-  const header  = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const body    = btoa(JSON.stringify(payload));
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const body   = btoa(JSON.stringify(payload));
   return `${header}.${body}.stub-signature`;
 }
 
@@ -16,7 +18,6 @@ function nowSec(offsetSeconds = 0): number {
 }
 
 // ─── window.location.href mock (login() navigation) ──────────────────────────
-// Uses the Symbol(impl) pattern — see MEMORY.md for explanation.
 
 function getLocationImpl(): any {
   const sym = Object.getOwnPropertySymbols(window.location)
@@ -38,77 +39,83 @@ afterEach(() => {
 
 // ─── Suite ───────────────────────────────────────────────────────────────────
 
-describe('AuthService', () => {
-  beforeEach(() => localStorage.clear());
-  afterEach(() => localStorage.clear());
+const REFRESH_URL = '/api/auth/refresh';
 
-  /** Create a fresh service instance (constructor runs after localStorage is set up). */
-  function createService(): AuthService {
-    TestBed.configureTestingModule({});
-    return TestBed.inject(AuthService);
+describe('AuthService', () => {
+  let httpController: HttpTestingController;
+
+  /**
+   * Create a fresh service instance.
+   * Always flushes (or errors) the constructor's silentRefresh request.
+   *   flushWith = 'error'       → 401 response (no active session)
+   *   flushWith = <token>       → 200 response with { token }
+   *   flushWith = 'pending'     → does NOT flush; request stays pending
+   */
+  function createService(flushWith: string | 'error' | 'pending' = 'error'): AuthService {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    httpController = TestBed.inject(HttpTestingController);
+    const service = TestBed.inject(AuthService);
+
+    if (flushWith !== 'pending') {
+      const req = httpController.expectOne(r => r.url.includes(REFRESH_URL));
+      if (flushWith === 'error') {
+        req.flush('', { status: 401, statusText: 'Unauthorized' });
+      } else {
+        req.flush({ token: flushWith });
+      }
+    }
+
+    return service;
   }
 
-  // ─── Constructor / loadFromStorage ──────────────────────────────────────
+  afterEach(() => {
+    // Consume any remaining pending requests so verify() doesn't complain
+    // in tests that use flushWith='pending'.
+    httpController?.match(r => r.url.includes(REFRESH_URL));
+    httpController?.verify();
+  });
 
-  describe('constructor (loadFromStorage)', () => {
-    it('emits null when no token in localStorage', () => {
-      const service = createService();
+  // ─── Constructor / silentRefresh ──────────────────────────────────────
+
+  describe('constructor (silentRefresh)', () => {
+    it('emits null immediately before refresh response arrives', () => {
+      const service = createService('pending');
       expect(service.currentUser).toBeNull();
     });
 
-    it('emits the decoded user when a valid token is stored', () => {
+    it('emits the decoded user when refresh succeeds', () => {
       const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'Alice', role: 'User' });
-      localStorage.setItem('auth_token', token);
-      const service = createService();
+      const service = createService(token);
       expect(service.currentUser).toEqual({
         id: 1, email: 'a@b.com', name: 'Alice', role: 'User',
-        playerId: undefined, storeId: undefined,
+        playerId: undefined, storeId: undefined, licenseTier: undefined,
       });
     });
 
-    it('maps numeric playerId and storeId from JWT claims', () => {
-      const token = makeJwt({ sub: '5', email: 'b@c.com', name: 'Bob', role: 'StoreEmployee', playerId: '3', storeId: '7' });
-      localStorage.setItem('auth_token', token);
-      const service = createService();
-      expect(service.currentUser?.playerId).toBe(3);
-      expect(service.currentUser?.storeId).toBe(7);
-    });
-
-    it('removes an expired token and emits null', () => {
-      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'Alice', role: 'User', exp: nowSec(-3600) });
-      localStorage.setItem('auth_token', token);
-      const service = createService();
+    it('remains null when refresh fails (no active session)', () => {
+      const service = createService('error');
       expect(service.currentUser).toBeNull();
-      expect(localStorage.getItem('auth_token')).toBeNull();
     });
 
-    it('accepts a token with no exp claim', () => {
-      const token = makeJwt({ sub: '2', email: 'c@d.com', name: 'Carol', role: 'User' });
-      localStorage.setItem('auth_token', token);
-      const service = createService();
-      expect(service.currentUser?.name).toBe('Carol');
-    });
-
-    it('removes a malformed token and emits null', () => {
-      localStorage.setItem('auth_token', 'not-a-jwt');
-      const service = createService();
-      expect(service.currentUser).toBeNull();
-      expect(localStorage.getItem('auth_token')).toBeNull();
+    it('makes exactly one POST to /api/auth/refresh on construction', () => {
+      TestBed.configureTestingModule({
+        providers: [provideHttpClient(), provideHttpClientTesting()],
+      });
+      httpController = TestBed.inject(HttpTestingController);
+      TestBed.inject(AuthService);
+      const reqs = httpController.match(r => r.url.includes(REFRESH_URL));
+      expect(reqs.length).toBe(1);
+      expect(reqs[0].request.method).toBe('POST');
     });
   });
 
   // ─── storeToken ─────────────────────────────────────────────────────────
 
   describe('storeToken()', () => {
-    it('saves the token to localStorage', () => {
-      const service = createService();
-      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'Alice', role: 'User' });
-      service.storeToken(token);
-      expect(localStorage.getItem('auth_token')).toBe(token);
-    });
-
     it('emits the decoded CurrentUser on currentUser$', () => {
-      const service = createService();
+      const service = createService('error');
       const token = makeJwt({ sub: '10', email: 'x@y.com', name: 'Xavier', role: 'Administrator' });
       const emitted: any[] = [];
       service.currentUser$.subscribe(u => emitted.push(u));
@@ -119,72 +126,87 @@ describe('AuthService', () => {
     });
 
     it('updates currentUser synchronously', () => {
-      const service = createService();
+      const service = createService('error');
       const token = makeJwt({ sub: '3', email: 'z@z.com', name: 'Zara', role: 'StoreManager' });
       service.storeToken(token);
       expect(service.currentUser?.name).toBe('Zara');
+    });
+
+    it('does NOT write to localStorage', () => {
+      const service = createService('error');
+      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'Alice', role: 'User' });
+
+      service.storeToken(token);
+
+      expect(localStorage.getItem('auth_token')).toBeNull();
     });
   });
 
   // ─── logout ─────────────────────────────────────────────────────────────
 
   describe('logout()', () => {
-    it('removes the token from localStorage', () => {
-      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'Alice', role: 'User' });
-      localStorage.setItem('auth_token', token);
-      const service = createService();
-
+    it('clears the in-memory token (getToken returns null)', () => {
+      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'Alice', role: 'User', exp: nowSec(3600) });
+      const service = createService(token);
       service.logout();
-
-      expect(localStorage.getItem('auth_token')).toBeNull();
+      expect(service.getToken()).toBeNull();
     });
 
     it('emits null on currentUser$', () => {
       const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'Alice', role: 'User' });
-      localStorage.setItem('auth_token', token);
-      const service = createService();
+      const service = createService(token);
+      service.logout();
+      expect(service.currentUser).toBeNull();
+    });
+
+    it('does NOT touch localStorage', () => {
+      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'Alice', role: 'User' });
+      const service = createService(token);
+      // Confirm logout doesn't write to or corrupt localStorage
+      localStorage.setItem('unrelated_key', 'some-value');
 
       service.logout();
 
-      expect(service.currentUser).toBeNull();
+      // auth_token was never written, unrelated key untouched
+      expect(localStorage.getItem('auth_token')).toBeNull();
+      expect(localStorage.getItem('unrelated_key')).toBe('some-value');
     });
   });
 
   // ─── getToken ───────────────────────────────────────────────────────────
 
   describe('getToken()', () => {
-    it('returns null when no token in localStorage', () => {
-      expect(createService().getToken()).toBeNull();
+    it('returns null when no token is stored', () => {
+      expect(createService('error').getToken()).toBeNull();
     });
 
     it('returns the token string when valid', () => {
       const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'Alice', role: 'User', exp: nowSec(3600) });
-      localStorage.setItem('auth_token', token);
-      expect(createService().getToken()).toBe(token);
+      const service = createService(token);
+      expect(service.getToken()).toBe(token);
     });
 
     it('returns null and clears state when token is expired', () => {
-      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'Alice', role: 'User', exp: nowSec(-3600) });
-      // loadFromStorage removes it, so storeToken directly for this edge case
-      const service = createService();
-      // Bypass loadFromStorage by directly writing to storage after init
-      localStorage.setItem('auth_token', token);
+      const validToken = makeJwt({ sub: '1', email: 'a@b.com', name: 'Alice', role: 'User', exp: nowSec(3600) });
+      const service = createService(validToken);
+      // Directly overwrite in-memory token with an expired one (bypassing expiry check in storeToken)
+      const expiredToken = makeJwt({ sub: '1', email: 'a@b.com', name: 'Alice', role: 'User', exp: nowSec(-3600) });
+      (service as any).token = expiredToken;
 
       const result = service.getToken();
 
       expect(result).toBeNull();
-      expect(localStorage.getItem('auth_token')).toBeNull();
       expect(service.currentUser).toBeNull();
     });
 
     it('returns null and clears state for a malformed token', () => {
-      const service = createService();
-      localStorage.setItem('auth_token', 'bad.token.here');
+      const validToken = makeJwt({ sub: '1', email: 'a@b.com', name: 'Alice', role: 'User', exp: nowSec(3600) });
+      const service = createService(validToken);
+      (service as any).token = 'bad.token.here';
 
       const result = service.getToken();
 
       expect(result).toBeNull();
-      expect(localStorage.getItem('auth_token')).toBeNull();
       expect(service.currentUser).toBeNull();
     });
   });
@@ -192,12 +214,12 @@ describe('AuthService', () => {
   // ─── currentUser getter ──────────────────────────────────────────────────
 
   describe('currentUser getter', () => {
-    it('returns null initially with no token', () => {
-      expect(createService().currentUser).toBeNull();
+    it('returns null initially with no active session', () => {
+      expect(createService('error').currentUser).toBeNull();
     });
 
     it('returns the user set by storeToken', () => {
-      const service = createService();
+      const service = createService('error');
       const token = makeJwt({ sub: '2', email: 'b@c.com', name: 'Bob', role: 'User' });
       service.storeToken(token);
       expect(service.currentUser?.email).toBe('b@c.com');
@@ -205,8 +227,7 @@ describe('AuthService', () => {
 
     it('returns null after logout', () => {
       const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'Alice', role: 'User' });
-      localStorage.setItem('auth_token', token);
-      const service = createService();
+      const service = createService(token);
       service.logout();
       expect(service.currentUser).toBeNull();
     });
@@ -218,23 +239,23 @@ describe('AuthService', () => {
     it.each(['StoreEmployee', 'StoreManager', 'Administrator'])(
       'returns true for role "%s"',
       (role) => {
-        const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role });
-        localStorage.setItem('auth_token', token);
-        expect(createService().isStoreEmployee).toBe(true);
+        const service = createService('error');
+        service.storeToken(makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role }));
+        expect(service.isStoreEmployee).toBe(true);
       }
     );
 
     it.each(['User', 'Player'])(
       'returns false for role "%s"',
       (role) => {
-        const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role });
-        localStorage.setItem('auth_token', token);
-        expect(createService().isStoreEmployee).toBe(false);
+        const service = createService('error');
+        service.storeToken(makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role }));
+        expect(service.isStoreEmployee).toBe(false);
       }
     );
 
     it('returns false when no user is logged in', () => {
-      expect(createService().isStoreEmployee).toBe(false);
+      expect(createService('error').isStoreEmployee).toBe(false);
     });
   });
 
@@ -244,23 +265,23 @@ describe('AuthService', () => {
     it.each(['StoreManager', 'Administrator'])(
       'returns true for role "%s"',
       (role) => {
-        const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role });
-        localStorage.setItem('auth_token', token);
-        expect(createService().isStoreManager).toBe(true);
+        const service = createService('error');
+        service.storeToken(makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role }));
+        expect(service.isStoreManager).toBe(true);
       }
     );
 
     it.each(['StoreEmployee', 'User'])(
       'returns false for role "%s"',
       (role) => {
-        const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role });
-        localStorage.setItem('auth_token', token);
-        expect(createService().isStoreManager).toBe(false);
+        const service = createService('error');
+        service.storeToken(makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role }));
+        expect(service.isStoreManager).toBe(false);
       }
     );
 
     it('returns false when no user is logged in', () => {
-      expect(createService().isStoreManager).toBe(false);
+      expect(createService('error').isStoreManager).toBe(false);
     });
   });
 
@@ -268,22 +289,22 @@ describe('AuthService', () => {
 
   describe('isAdmin getter', () => {
     it('returns true for role "Administrator"', () => {
-      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role: 'Administrator' });
-      localStorage.setItem('auth_token', token);
-      expect(createService().isAdmin).toBe(true);
+      const service = createService('error');
+      service.storeToken(makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role: 'Administrator' }));
+      expect(service.isAdmin).toBe(true);
     });
 
     it.each(['StoreManager', 'StoreEmployee', 'User'])(
       'returns false for role "%s"',
       (role) => {
-        const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role });
-        localStorage.setItem('auth_token', token);
-        expect(createService().isAdmin).toBe(false);
+        const service = createService('error');
+        service.storeToken(makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role }));
+        expect(service.isAdmin).toBe(false);
       }
     );
 
     it('returns false when no user is logged in', () => {
-      expect(createService().isAdmin).toBe(false);
+      expect(createService('error').isAdmin).toBe(false);
     });
   });
 
@@ -291,11 +312,8 @@ describe('AuthService', () => {
 
   describe('login()', () => {
     it('navigates to the Google OAuth login endpoint via relative URL (proxied in dev)', () => {
-      createService().login();
+      createService('error').login();
       expect(navigateSpy).toHaveBeenCalledTimes(1);
-      // With apiBase = '' the URL is relative: /api/auth/google-login
-      // JSDOM parses a relative path keeping the existing host (localhost from jsdom),
-      // NOT overriding to port 5021. Confirm no hardcoded port is present.
       const [parsedUrl] = navigateSpy.mock.calls[0];
       expect(parsedUrl?.path).toEqual(['api', 'auth', 'google-login']);
       expect(parsedUrl?.port).not.toBe(5021);
@@ -306,36 +324,32 @@ describe('AuthService', () => {
 
   describe('licenseTier / isTier1 / isTier2 getters', () => {
     it('JWT with licenseTier="Tier1" → isTier1=true, isTier2=false', () => {
-      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role: 'StoreEmployee', storeId: '1', licenseTier: 'Tier1' });
-      localStorage.setItem('auth_token', token);
-      const service = createService();
+      const service = createService('error');
+      service.storeToken(makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role: 'StoreEmployee', storeId: '1', licenseTier: 'Tier1' }));
       expect(service.isTier1).toBe(true);
       expect(service.isTier2).toBe(false);
       expect(service.licenseTier).toBe('Tier1');
     });
 
     it('JWT with licenseTier="Tier2" → isTier1=true, isTier2=true', () => {
-      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role: 'StoreEmployee', storeId: '1', licenseTier: 'Tier2' });
-      localStorage.setItem('auth_token', token);
-      const service = createService();
+      const service = createService('error');
+      service.storeToken(makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role: 'StoreEmployee', storeId: '1', licenseTier: 'Tier2' }));
       expect(service.isTier1).toBe(true);
       expect(service.isTier2).toBe(true);
       expect(service.licenseTier).toBe('Tier2');
     });
 
     it('JWT with no licenseTier → isTier1=false, isTier2=false, licenseTier==="Free"', () => {
-      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role: 'StoreEmployee', storeId: '1' });
-      localStorage.setItem('auth_token', token);
-      const service = createService();
+      const service = createService('error');
+      service.storeToken(makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role: 'StoreEmployee', storeId: '1' }));
       expect(service.isTier1).toBe(false);
       expect(service.isTier2).toBe(false);
       expect(service.licenseTier).toBe('Free');
     });
 
     it('Admin role → isTier1=true, isTier2=true regardless of licenseTier claim', () => {
-      const token = makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role: 'Administrator' });
-      localStorage.setItem('auth_token', token);
-      const service = createService();
+      const service = createService('error');
+      service.storeToken(makeJwt({ sub: '1', email: 'a@b.com', name: 'A', role: 'Administrator' }));
       expect(service.isTier1).toBe(true);
       expect(service.isTier2).toBe(true);
       expect(service.licenseTier).toBe('Tier2');

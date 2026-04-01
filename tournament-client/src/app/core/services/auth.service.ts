@@ -10,33 +10,34 @@ export class AuthService {
   private userSubject = new BehaviorSubject<CurrentUser | null>(null);
   currentUser$ = this.userSubject.asObservable();
 
+  private token: string | null = null; // in-memory only — never written to localStorage
+
   constructor(private http: HttpClient) {
-    this.loadFromStorage();
+    this.silentRefresh();
   }
 
-  private loadFromStorage(): void {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.exp && payload.exp * 1000 < Date.now()) {
-          localStorage.removeItem('auth_token');
-          return;
-        }
-        this.userSubject.next(this.decodeJwt(token));
-      } catch {
-        localStorage.removeItem('auth_token');
-      }
-    }
+  private silentRefresh(): void {
+    this.http.post<{ token: string }>(
+      `${environment.apiBase}/api/auth/refresh`,
+      {},
+      { withCredentials: true }
+    ).subscribe({
+      next: res => { this.setToken(res.token); },
+      error: () => {} // no active session — remain unauthenticated
+    });
   }
 
-  storeToken(token: string): void {
-    localStorage.setItem('auth_token', token);
+  private setToken(token: string): void {
+    this.token = token;
     this.userSubject.next(this.decodeJwt(token));
   }
 
+  storeToken(token: string): void {
+    this.setToken(token);
+  }
+
   logout(): void {
-    localStorage.removeItem('auth_token');
+    this.token = null;
     this.userSubject.next(null);
   }
 
@@ -48,21 +49,20 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    const token = localStorage.getItem('auth_token');
-    if (!token) return null;
+    if (!this.token) return null;
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = JSON.parse(atob(this.token.split('.')[1]));
       if (payload.exp && payload.exp * 1000 < Date.now()) {
-        localStorage.removeItem('auth_token');
+        this.token = null;
         this.userSubject.next(null);
         return null;
       }
     } catch {
-      localStorage.removeItem('auth_token');
+      this.token = null;
       this.userSubject.next(null);
       return null;
     }
-    return token;
+    return this.token;
   }
 
   /** Calls POST /api/auth/refresh (sends HttpOnly cookie), stores the returned JWT, returns it. */
@@ -96,7 +96,7 @@ export class AuthService {
   }
 
   get licenseTier(): LicenseTier {
-    if (this.isAdmin) return 'Tier2';  // admins always have full access
+    if (this.isAdmin) return 'Tier2'; // admins always have full access
     return this.currentUser?.licenseTier ?? 'Free';
   }
 
