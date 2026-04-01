@@ -42,6 +42,8 @@ public class WishlistController : ControllerBase
 
     [HttpPost("bulkupload")]
     [Authorize(Policy = "Tier2Required")]
+    [RequestFormLimits(MultipartBodyLengthLimit = 524_288)]
+    [RequestSizeLimit(524_288)]
     public async Task<ActionResult<BulkUploadResultDto>> BulkUpload(int playerId, IFormFile file)
     {
         if (!OwnsPlayer(playerId)) return Forbid();

@@ -344,6 +344,8 @@ public class EventsController : ControllerBase
 
     [HttpPost("{id}/background")]
     [Authorize(Policy = "StoreEmployee")]
+    [RequestFormLimits(MultipartBodyLengthLimit = 5_242_880)]
+    [RequestSizeLimit(5_242_880)]
     public async Task<ActionResult<EventDto>> UploadBackground(int id, IFormFile background)
     {
         if (!await UserCanManageEvent(id))

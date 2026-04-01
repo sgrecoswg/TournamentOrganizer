@@ -85,6 +85,8 @@ public class StoresController : ControllerBase
     [HttpPost("{id}/logo")]
     [Authorize(Policy = "StoreEmployee")]
     [Authorize(Policy = "Tier1Required")]
+    [RequestFormLimits(MultipartBodyLengthLimit = 5_242_880)]
+    [RequestSizeLimit(5_242_880)]
     public async Task<ActionResult<StoreDto>> UploadLogo(int id, IFormFile logo)
     {
         // Ownership check: Admin can update any store; StoreEmployee/Manager can only update their own.
@@ -119,6 +121,8 @@ public class StoresController : ControllerBase
 
     [HttpPost("{id}/background")]
     [Authorize(Policy = "StoreEmployee")]
+    [RequestFormLimits(MultipartBodyLengthLimit = 5_242_880)]
+    [RequestSizeLimit(5_242_880)]
     public async Task<ActionResult<StoreDto>> UploadBackground(int id, IFormFile background)
     {
         // Ownership check: Admin can update any store; StoreEmployee/Manager can only update their own.

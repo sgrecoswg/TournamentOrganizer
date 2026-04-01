@@ -81,6 +81,8 @@ public class PlayersController : ControllerBase
 
     [HttpPost("{id}/avatar")]
     [Authorize]
+    [RequestFormLimits(MultipartBodyLengthLimit = 5_242_880)]
+    [RequestSizeLimit(5_242_880)]
     public async Task<ActionResult<PlayerDto>> UploadAvatar(int id, IFormFile avatar)
     {
         if (!await UserCanManagePlayerAsync(id)) return Forbid();
