@@ -1,8 +1,13 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace TournamentOrganizer.Api.DTOs;
 
 public record PlayerBadgeDto(string BadgeKey, string DisplayName, DateTime AwardedAt, int? EventId);
 
-public record CreatePlayerDto(string Name, string Email);
+public record CreatePlayerDto(
+    string Name,
+    [EmailAddress][MaxLength(254)] string Email
+);
 
 public record UpdatePlayerDto(string Name, string Email, bool IsActive);
 
