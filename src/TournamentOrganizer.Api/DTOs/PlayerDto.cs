@@ -5,7 +5,7 @@ namespace TournamentOrganizer.Api.DTOs;
 public record PlayerBadgeDto(string BadgeKey, string DisplayName, DateTime AwardedAt, int? EventId);
 
 public record CreatePlayerDto(
-    string Name,
+    [Required(AllowEmptyStrings = false)][MinLength(1)] string Name,
     [EmailAddress][MaxLength(254)] string Email
 );
 
