@@ -126,6 +126,34 @@ public class PodService : IPodService
         // Remove empty pods
         pods = pods.Where(p => p.Count > 0).ToList();
 
+        // Handle single oversized pod: split if > 5 players
+        if (pods.Count == 1 && pods[0].Count > 5)
+        {
+            var singlePod = pods[0];
+            var newPods = new List<List<Player>>();
+
+            // For oversized single pod, split into valid sizes (3-5 players each)
+            // Strategy: fill pods with 4 players first, then handle remainder
+            int remaining = singlePod.Count;
+            int idx = 0;
+
+            while (remaining > 5)
+            {
+                // Take 4 players
+                newPods.Add(new List<Player>(singlePod.Skip(idx).Take(4)));
+                idx += 4;
+                remaining -= 4;
+            }
+
+            // Remaining players (3-5) go into final pod
+            if (remaining > 0)
+            {
+                newPods.Add(new List<Player>(singlePod.Skip(idx)));
+            }
+
+            return newPods;
+        }
+
         if (pods.Count <= 1) return pods;
 
         // If any pod has fewer than 3 players, merge into adjacent pods
