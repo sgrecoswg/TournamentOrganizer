@@ -62,7 +62,7 @@ Determine the next available prompt file number by listing `prompts/ignore/` and
 `max(existing NN prefixes) + 1`. Name the file `prompts/ignore/NN_<slug>.md` where `<slug>` is
 kebab-case derived from the issue title (strip "feat:", "fix:", etc.).
 
-Write the file, then run `/refine-prompt PROMPT_PATH` and apply any clear improvements before showing it to the user.
+Write the file. Then, **unless** the issue body was already a detailed spec AND the generated file is ≤ 50 lines, run `/refine-prompt PROMPT_PATH` and apply any clear improvements. Skip refine-prompt for trivial or already-detailed issues to save a round-trip.
 
 **Show the full contents to the user and ask for approval before continuing.**
 Wait for explicit confirmation ("looks good", "approved", "go ahead", etc.) or requested edits

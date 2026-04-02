@@ -4,7 +4,7 @@ Implement all unblocked Ready items in parallel, each in its own git worktree.
 
 ```bash
 gh project item-list 2 --owner SensibleProgramming --format json \
-  | jq '[.items[] | select(.status == "Ready") | {number: .content.number, title: .content.title, body: .content.body, itemId: .id}]'
+  --jq '[.items[] | select(.status == "Ready") | {number: .content.number, title: .content.title, body: .content.body, itemId: .id}]'
 ```
 
 If no Ready items exist → report "Nothing Ready" and stop.

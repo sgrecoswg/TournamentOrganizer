@@ -65,74 +65,19 @@ If the prompt file for the current task contains a `> **GitHub Issue:** [#N ...]
 
 | Step | Action |
 |---|---|
-| Starting work (steps 1–2) | Status → `In Progress`; assign current iteration; estimate story points |
+| Starting work | Status → `In Progress`; assign current iteration; estimate story points |
 | PR created | Status → `In Review` |
-| PR merged to `dev` | Status → `Done` (set manually **after** verifying on dev — do NOT auto-close) |
+| PR merged to `dev` | Status → `Done` (set manually after verifying — do NOT auto-close) |
 
-```bash
-# 1. Find the project item ID for issue #N (replace 99 with the actual issue number)
-# NOTE: jq and python3 are NOT available in this shell. Use gh's built-in --jq flag.
-ITEM_ID=$(gh project item-list 2 --owner SensibleProgramming --format json \
-  --jq '.items[] | select(.content.number == 99) | .id')
-
-# 2. Set Status — use the appropriate option ID:
-#   Backlog     → f75ad846
-#   Ready       → f8227f40
-#   In Progress → 47fc9ee4
-#   In Review   → 2d25f841
-#   Done        → 98236657
-gh project item-edit --project-id PVT_kwDOECHdcM4BSqCs \
-  --id "$ITEM_ID" \
-  --field-id PVTSSF_lADOECHdcM4BSqCszhAIG6Q \
-  --single-select-option-id 47fc9ee4   # ← swap option ID as needed
-
-# 3. Assign to the current iteration (determine by today's date vs startDate+duration):
-#   Iteration 1 → 449f6210  (2026-03-17, 14 days)
-#   Iteration 2 → 4ce1e9d2  (2026-03-31, 14 days)
-#   Iteration 3 → 17db6b27  (2026-04-14, 14 days)
-gh project item-edit --project-id PVT_kwDOECHdcM4BSqCs \
-  --id "$ITEM_ID" \
-  --field-id PVTIF_lADOECHdcM4BSqCszhAIG7A \
-  --iteration-id 449f6210   # ← use whichever iteration contains today's date
-
-# 4. Set story points (number field — estimate from table below):
-gh project item-edit --project-id PVT_kwDOECHdcM4BSqCs \
-  --id "$ITEM_ID" \
-  --field-id PVTF_lADOECHdcM4BSqCszhAIG60 \
-  --number 5   # ← replace with estimate
-
-# Story point guide:
-#   1 — single file, trivial change
-#   2 — 2–5 files, no new tests
-#   3 — small feature, one layer only (backend OR frontend)
-#   5 — full-stack feature, < 20 files, moderate tests
-#   8 — full-stack, 20–50 files, multiple services + E2E
-#  13 — architectural change or very large cross-cutting feature
-```
+Board update commands (field IDs, option IDs, iteration IDs) are defined in the implement command files (`implement-next.md`, `implement-story.md`). Use `gh`'s built-in `--jq` flag — `jq` and `python3` are not available.
 
 ### PR body convention
 
-Always include `References #N` (not `Closes #N`) in the PR body so the branch appears in the
-issue's Development section without auto-closing it. The issue is closed manually after
-verifying on `dev`.
-
-```
-References #N
-```
+Always include `References #N` (not `Closes #N`) in the PR body — the issue is closed manually after verifying on `dev`.
 
 ## Commands
 
-Several slash-command skills are available for common operations — prefer these over raw shell commands:
-
-| Skill | Purpose |
-|---|---|
-| `/build` | Build both the .NET API and Angular frontend |
-| `/run` | Start the .NET API server |
-| `/serve-frontend` | Start the Angular dev server with proxy |
-| `/migrate` | Create and apply an EF Core migration |
-| `/test-api` | Smoke-test API endpoints via curl |
-| `/check-zone` | Audit Angular components for missing `cdr.detectChanges()` calls |
-| `/e2e` | Run Playwright E2E tests (all, or a specific path/pattern) |
+Slash-command skills are listed in the session context. Raw equivalents:
 
 ### Backend (run from repo root)
 ```bash
@@ -248,32 +193,14 @@ Specifically, every method that assigns to `this.*` properties must call `this.c
 
 ## Frontend Workflow — Static Image Uploads (browser cache-busting)
 
-The API always overwrites the same file path on disk (e.g. `/logos/{id}.ext`, `/avatars/{id}.ext`).
-If the URL doesn't change, the browser serves the old image from cache even after a successful upload.
+The API always overwrites the same file path on disk. If the URL doesn't change, the browser serves stale cached images.
 
-**Rule:** every place a component receives an image URL from an API response must append `?t=<Date.now()>`.
+**Rule:** append `?t=<Date.now()>` every time a component receives an image URL from an API response:
+- Upload success handlers (`onLogoSelected`, `onAvatarFileSelected`, etc.)
+- `ngOnInit` load success
+- `save()` / settings-save success
 
-Apply in all of:
-1. Upload success handler (`onLogoSelected`, `onAvatarFileSelected`, etc.)
-2. `ngOnInit` load success (navigate-back re-fetches the original URL — must re-bust)
-3. `save()` / settings-save success (response URL is bare — apply timestamp again)
-
-For components that *display* the URL but don't upload (e.g. the toolbar `selectedStore` getter in `app.ts`,
-leaderboard rows, player list rows), use a **per-session constant** to avoid calling `Date.now()` on every
-change-detection cycle:
-
-```typescript
-private readonly sessionTs = Date.now();
-
-get someDisplayUrl(): string | null {
-  const url = this.someSource?.imageUrl;
-  if (!url) return null;
-  return url.includes('?t=') ? url : `${url}?t=${this.sessionTs}`;
-}
-```
-
-The upload-side timestamp is fresh each upload; the session-side constant ensures the initial load is
-also cache-busted without repeated `Date.now()` calls.
+**Display-only components** (toolbar, leaderboard rows, player list rows): use a `private readonly sessionTs = Date.now()` constant and append `?t=${this.sessionTs}` only when the URL doesn't already contain `?t=`. Never call `Date.now()` in a getter — it fires on every change-detection cycle.
 
 ## Workflow — Plan File Hygiene
 
