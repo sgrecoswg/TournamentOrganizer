@@ -65,7 +65,7 @@
             <span>Logout</span>
           </button>
         </mat-menu>
-      } @else if (!degraded) {
+      } @else if (authReady && !degraded) {
         <button mat-button (click)="login()">
           <mat-icon>login</mat-icon>
           Login with Google

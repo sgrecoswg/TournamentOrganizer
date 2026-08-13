@@ -79,6 +79,38 @@ test.describe('Side nav and toolbar when degraded', () => {
     await expect(page.locator('a[routerLink="/players"]')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Login with Google' })).toBeVisible();
   });
+
+  // On a real (unmocked) cold load, degraded starts false and only flips once the
+  // silent-refresh /api/auth/refresh call fails — so a slow-to-fail backend leaves
+  // a window where the Login button would render before disappearing. Delaying the
+  // mocked 404 (instead of resolving same-tick) reproduces that window.
+  test('toolbar never shows Login button, even during a slow-to-fail cold load', async ({ page }) => {
+    // LIFO route order: register the broad catch-all first so the more specific,
+    // delayed handler (registered after) takes priority for auth/refresh.
+    await page.route('**/api/**', route => route.fulfill({ status: 404, json: {} }));
+    await page.route('**/api/auth/refresh', async route => {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      await route.fulfill({ status: 404, json: {} });
+    });
+
+    // Race the button check against navigation itself, rather than awaiting goto first —
+    // Angular's dev-bundle load/bootstrap time can itself eat past a short delay, so by the
+    // time goto() resolves the window may have already closed. toHaveCount(0) is also a
+    // polling assertion (checks "is it absent right now"), so a flicker that appears then
+    // disappears between polls would slip through it. waitForSelector('attached') resolves
+    // the instant the element is added to the DOM, even if it's later removed, so racing it
+    // against goto actually catches a transient render.
+    const navigation = page.goto('/events');
+    let appeared = false;
+    try {
+      await page.waitForSelector('button:has-text("Login with Google")', { state: 'attached', timeout: 1400 });
+      appeared = true;
+    } catch {
+      appeared = false;
+    }
+    await navigation;
+    expect(appeared).toBe(false);
+  });
 });
 
 // ── authGuard redirect target when degraded ─────────────────────────────────────
