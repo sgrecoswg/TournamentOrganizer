@@ -66,7 +66,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
               — <span class="round-progress">{{ rounds.length }}/{{ event.plannedRounds }} rounds planned</span>
             }
           </p>
-          @if (authService.isStoreEmployee) {
+          @if (authService.isStoreEmployee || networkStatus.degraded) {
             <div class="status-actions">
               @if (event.status === 'Registration') {
                 @if (!showStartConfirm) {
@@ -252,10 +252,10 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
             <mat-tab-group class="player-sub-tabs">
               <mat-tab label="Registered ({{ displayedPlayers.length }})">
                 <div class="sub-tab-content">
-                  @if (event.status === 'Registration' && (authService.isStoreEmployee || authService.currentUser?.playerId != null)) {
+                  @if (event.status === 'Registration' && (authService.isStoreEmployee || authService.currentUser?.playerId != null || networkStatus.degraded)) {
                     <div class="checkin-section">
                       <span class="checkin-count">Check-In: {{ checkedInCount }} / {{ displayedPlayers.length }}</span>
-                      @if (authService.isStoreEmployee) {
+                      @if (authService.isStoreEmployee || networkStatus.degraded) {
                         <button mat-button (click)="checkAllIn()">Check In All</button>
                         <button mat-button (click)="uncheckAll()">Uncheck All</button>
                       }
@@ -349,7 +349,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                       <ng-container matColumnDef="actions">
                         <th mat-header-cell *matHeaderCellDef></th>
                         <td mat-cell *matCellDef="let row">
-                          @if (event!.status === 'Registration' && (authService.isStoreEmployee || row.playerId === authService.currentUser?.playerId)) {
+                          @if (event!.status === 'Registration' && (authService.isStoreEmployee || row.playerId === authService.currentUser?.playerId || networkStatus.degraded)) {
                             <mat-checkbox [checked]="row.isCheckedIn" (change)="toggleCheckIn(row)">
                               Checked In
                             </mat-checkbox>
@@ -413,7 +413,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
         @if (event.status !== 'Registration') {
         <mat-tab label="Rounds">
           <div class="tab-content">
-            @if (authService.isStoreEmployee) {
+            @if (authService.isStoreEmployee || networkStatus.degraded) {
               <div class="round-actions">
                 @if (rounds.length === 0 || isRoundComplete(rounds[rounds.length - 1])) {
                   <button mat-raised-button color="primary" (click)="generateRound()" class="action-btn"
@@ -439,7 +439,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                   </mat-panel-description>
                 </mat-expansion-panel-header>
 
-                @if (authService.isStoreEmployee) {
+                @if (authService.isStoreEmployee || networkStatus.degraded) {
                   <div class="round-controls">
                     <button mat-stroked-button (click)="startAllTimers(round)">
                       <mat-icon>play_arrow</mat-icon> Start All
@@ -466,7 +466,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                       [event]="event!"
                       [eventId]="eventId"
                       [podState]="getPodState(pod.podId)"
-                      [isStoreEmployee]="authService.isStoreEmployee"
+                      [isStoreEmployee]="authService.isStoreEmployee || networkStatus.degraded"
                       (stateChanged)="onPodStateChanged()">
                     </app-pod-card>
                   }

@@ -273,5 +273,34 @@ test.describe('Add players offline with no prior login (cold start)', () => {
     await page.getByRole('button', { name: 'Register Player' }).click();
     await expect(page.getByText('Player registered!')).toBeVisible();
     await expect(page.getByRole('cell', { name: 'Cold Start Carl' })).toBeVisible();
+
+    // Same anonymous, never-logged-in, degraded visitor must be able to check players
+    // in and start the event — isStoreEmployee can never become true offline. Register
+    // 3 more players inline (a pod needs 4) using the new-player fields the event-detail
+    // form exposes while degraded, then check everyone in and start.
+    for (const name of ['Cold Start Dana', 'Cold Start Eve', 'Cold Start Frank']) {
+      await page.getByLabel('Player Name').fill(name);
+      await page.getByLabel('Email (new player)').fill(`${name.toLowerCase().replace(/\s+/g, '.')}@example.com`);
+      await page.getByRole('button', { name: 'Register New Player' }).click();
+      await expect(page.getByText('Player registered!').last()).toBeVisible();
+    }
+    await expect(page.getByRole('cell', { name: 'Cold Start Frank' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Check In All' }).click();
+    await page.getByRole('button', { name: 'Start Event' }).click();
+    await page.getByRole('button', { name: 'Confirm Start' }).click();
+    await expect(page.getByText('Event started — Round 1 generated!')).toBeVisible();
+
+    // Same anonymous, never-logged-in, degraded visitor must be able to run
+    // Round 1 too — Generate Next Round / round timer controls / the pod card's
+    // Winner + Submit Results are all gated on isStoreEmployee || degraded, and
+    // isStoreEmployee can never become true offline.
+    await page.getByRole('tab', { name: 'Rounds' }).click();
+    await expect(page.getByText('Round 1')).toBeVisible();
+    await page.locator('app-pod-card').getByLabel('Winner').click();
+    await page.getByRole('option').first().click();
+    await page.locator('app-pod-card').getByRole('button', { name: 'Submit Results' }).click();
+    await expect(page.getByText('Results submitted!')).toBeVisible();
+    await expect(page.locator('app-pod-card').getByText('Results submitted', { exact: true })).toBeVisible();
   });
 });
