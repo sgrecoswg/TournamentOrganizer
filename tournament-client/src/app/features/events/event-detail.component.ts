@@ -141,7 +141,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
           <div class="tab-content">
             <!-- Registration controls sit above the sub-tabs -->
             @if (event.status === 'Registration') {
-              @if (authService.isStoreEmployee) {
+              @if (authService.isStoreEmployee || networkStatus.degraded) {
                 @if (!authService.isTier1) {
                   <p class="free-cap-notice">
                     <mat-icon>info</mat-icon> Free tier: up to {{ FREE_CAP }} players per event.

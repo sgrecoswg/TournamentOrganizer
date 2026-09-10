@@ -6,6 +6,7 @@ import { BehaviorSubject, of } from 'rxjs';
 import { PlayersComponent } from './players.component';
 import { PlayerService } from '../../core/services/player.service';
 import { AuthService } from '../../core/services/auth.service';
+import { NetworkStatusService } from '../../core/services/network-status.service';
 import { PlayerDto } from '../../core/models/api.models';
 
 describe('PlayersComponent', () => {
@@ -36,6 +37,7 @@ describe('PlayersComponent', () => {
   const mockSnackBar = { open: jest.fn() };
 
   let mockAuthService: { isStoreEmployee: boolean };
+  let mockNetworkStatus: { degraded: boolean };
 
   function createComponent(): ComponentFixture<PlayersComponent> {
     const fixture = TestBed.createComponent(PlayersComponent);
@@ -47,15 +49,17 @@ describe('PlayersComponent', () => {
     jest.clearAllMocks();
     playersSubject.next([]);
     mockAuthService = { isStoreEmployee: true };
+    mockNetworkStatus = { degraded: false };
 
     await TestBed.configureTestingModule({
       imports: [PlayersComponent],
       providers: [
         provideRouter([]),
         provideAnimationsAsync(),
-        { provide: PlayerService, useValue: mockPlayerService },
-        { provide: MatSnackBar,   useValue: mockSnackBar },
-        { provide: AuthService,   useValue: mockAuthService },
+        { provide: PlayerService,        useValue: mockPlayerService },
+        { provide: MatSnackBar,          useValue: mockSnackBar },
+        { provide: AuthService,          useValue: mockAuthService },
+        { provide: NetworkStatusService, useValue: mockNetworkStatus },
       ],
     }).compileComponents();
   });
@@ -237,6 +241,22 @@ describe('PlayersComponent', () => {
 
     it('register card is hidden when isStoreEmployee is false', () => {
       mockAuthService.isStoreEmployee = false;
+      playersSubject.next([alice]);
+      const fixture = createComponent();
+      expect(fixture.nativeElement.querySelector('.register-card')).toBeNull();
+    });
+
+    it('register card is visible offline (degraded) even with no auth session', () => {
+      mockAuthService.isStoreEmployee = false;
+      mockNetworkStatus.degraded = true;
+      playersSubject.next([alice]);
+      const fixture = createComponent();
+      expect(fixture.nativeElement.querySelector('.register-card')).not.toBeNull();
+    });
+
+    it('register card stays hidden when online and unauthenticated', () => {
+      mockAuthService.isStoreEmployee = false;
+      mockNetworkStatus.degraded = false;
       playersSubject.next([alice]);
       const fixture = createComponent();
       expect(fixture.nativeElement.querySelector('.register-card')).toBeNull();

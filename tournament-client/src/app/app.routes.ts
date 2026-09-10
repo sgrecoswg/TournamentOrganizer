@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { eventDetailAuthGuard } from './core/guards/event-detail-auth.guard';
 import { offlineRedirectGuard } from './core/guards/offline-redirect.guard';
 
 export const routes: Routes = [
@@ -31,7 +32,7 @@ export const routes: Routes = [
   },
   {
     path: 'events/:id',
-    canActivate: [authGuard],
+    canActivate: [eventDetailAuthGuard],
     loadComponent: () => import('./features/events/event-detail.component').then(m => m.EventDetailComponent)
   },
   {

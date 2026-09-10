@@ -14,6 +14,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { PlayerService } from '../../core/services/player.service';
 import { AuthService } from '../../core/services/auth.service';
+import { NetworkStatusService } from '../../core/services/network-status.service';
 import { PlacementBadgeComponent } from '../../shared/components/placement-badge.component';
 import { RatingBadgeComponent } from '../../shared/components/rating-badge.component';
 import { PlayerDto } from '../../core/models/api.models';
@@ -29,7 +30,7 @@ import { PlayerDto } from '../../core/models/api.models';
   template: `
     <h2>Players</h2>
 
-    @if (authService.isStoreEmployee) {
+    @if (authService.isStoreEmployee || networkStatus.degraded) {
       <mat-card class="register-card">
         <mat-card-header>
           <mat-card-title>Register New Player</mat-card-title>
@@ -187,6 +188,7 @@ export class PlayersComponent implements OnInit, AfterViewInit {
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef,
     public authService: AuthService,
+    public networkStatus: NetworkStatusService,
   ) {}
 
   ngOnInit() {

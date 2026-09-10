@@ -11,6 +11,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { MatDialog } from '@angular/material/dialog';
 import { Subject, of as observableOf } from 'rxjs';
 import { ScryfallService } from '../../core/services/scryfall.service';
+import { NetworkStatusService } from '../../core/services/network-status.service';
 import {
   EventDto, EventPlayerDto, PlayerDto, RoundDto, StandingsEntry,
 } from '../../core/models/api.models';
@@ -1405,6 +1406,56 @@ describe('EventDetailComponent', () => {
       comp.printQrCode();
 
       expect(appendedDivs[0].textContent).toContain('Check-In');
+    });
+  });
+
+  // ── Registration form visibility — offline (degraded, unauthenticated) ────
+
+  describe('registration form — offline degraded mode', () => {
+    const regEvent: EventDto = { ...eventStub, status: 'Registration' };
+
+    async function setupDegraded(authOverrides: object = {}) {
+      const mockAuth = { isStoreEmployee: false, isAdmin: false, currentUser: null, ...authOverrides };
+      await TestBed.configureTestingModule({
+        imports: [EventDetailComponent],
+        providers: [
+          provideRouter([]),
+          provideAnimationsAsync(),
+          {
+            provide: ActivatedRoute,
+            useValue: { snapshot: { paramMap: { get: jest.fn().mockReturnValue(String(EVENT_ID)) } } },
+          },
+          { provide: Router,               useValue: mockRouter },
+          { provide: EventService,         useValue: mockEventService },
+          { provide: PlayerService,        useValue: mockPlayerService },
+          { provide: AuthService,          useValue: mockAuth },
+          { provide: MatSnackBar,          useValue: mockSnackBar },
+          { provide: ApiService,           useValue: mockApiService },
+          { provide: NetworkStatusService, useValue: { degraded: true } },
+        ],
+      }).compileComponents();
+    }
+
+    it('shows the Register Player form when degraded, even with no auth session', async () => {
+      await setupDegraded();
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      currentEventSubject.next(regEvent);
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      const btn = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('Register Player'));
+      expect(btn).toBeTruthy();
+    });
+
+    it('hides the form when not degraded and not a store employee', async () => {
+      await setup({ isStoreEmployee: false });
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      currentEventSubject.next(regEvent);
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      const btn = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('Register Player'));
+      expect(btn).toBeFalsy();
     });
   });
 });
