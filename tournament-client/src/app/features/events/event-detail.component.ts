@@ -170,6 +170,12 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                       }
                     </mat-autocomplete>
                   </mat-form-field>
+                  @if (networkStatus.degraded && isNewPlayerName) {
+                    <mat-form-field>
+                      <mat-label>Email (new player)</mat-label>
+                      <input matInput [(ngModel)]="newPlayerEmail" placeholder="player@email.com" type="email">
+                    </mat-form-field>
+                  }
                   <mat-form-field>
                     <mat-label>Decklist URL (optional)</mat-label>
                     <input matInput [(ngModel)]="decklistUrl" placeholder="https://...">
@@ -200,8 +206,9 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                       }
                     </mat-autocomplete>
                   </mat-form-field>
-                  <button mat-raised-button color="primary" (click)="registerPlayer()" [disabled]="!playerIdToRegister">
-                    {{ isEventFull ? 'Add to Waitlist' : 'Register Player' }}
+                  <button mat-raised-button color="primary" (click)="registerPlayer()"
+                          [disabled]="(networkStatus.degraded && isNewPlayerName) ? (!playerSearchText.trim() || !newPlayerEmail.trim()) : !playerIdToRegister">
+                    {{ isEventFull ? 'Add to Waitlist' : ((networkStatus.degraded && isNewPlayerName) ? 'Register New Player' : 'Register Player') }}
                   </button>
                 </div>
                 @if (eventPlayers.length > 0) {
@@ -532,6 +539,7 @@ export class EventDetailComponent implements OnInit {
   standings: StandingsEntry[] = [];
   playerIdToRegister: number | null = null;
   playerSearchText: string = '';
+  newPlayerEmail: string = '';
   decklistUrl: string | null = null;
   commandersInput: string = '';
   commandersInput2: string = '';
@@ -847,6 +855,12 @@ export class EventDetailComponent implements OnInit {
       .filter(p => p.name.toLowerCase().includes(search) || p.email.toLowerCase().includes(search));
   }
 
+  get isNewPlayerName(): boolean {
+    const name = this.playerSearchText.trim().toLowerCase();
+    if (!name) return false;
+    return !this.allPlayers.some(p => p.name.trim().toLowerCase() === name);
+  }
+
   displayPlayerName(player: PlayerDto | string): string {
     return typeof player === 'string' ? player : player?.name ?? '';
   }
@@ -855,13 +869,35 @@ export class EventDetailComponent implements OnInit {
     const player: PlayerDto = event.option.value;
     this.playerIdToRegister = player.id;
     this.playerSearchText = player.name;
+    this.newPlayerEmail = '';
     this.cdr.detectChanges();
   }
 
   registerPlayer() {
+    if (this.networkStatus.degraded && this.isNewPlayerName) {
+      const name = this.playerSearchText.trim();
+      const email = this.newPlayerEmail.trim();
+      if (!name || !email) return;
+      this.playerService.registerPlayer({ name, email }).subscribe({
+        next: (player) => {
+          this.playerIdToRegister = player.id;
+          this.cdr.detectChanges();
+          this.enrollPlayerInEvent();
+        },
+        error: (err) => {
+          this.snackBar.open(err.error?.error || 'Failed to create player', 'OK', { duration: 3000 });
+          this.cdr.detectChanges();
+        }
+      });
+      return;
+    }
     if (!this.playerIdToRegister) return;
+    this.enrollPlayerInEvent();
+  }
+
+  private enrollPlayerInEvent(): void {
     this.eventService.registerPlayer(this.eventId, {
-      playerId: this.playerIdToRegister,
+      playerId: this.playerIdToRegister!,
       decklistUrl: this.decklistUrl || undefined,
       commanders: this.buildCommandersString(this.commandersInput, this.commandersInput2)
     }).subscribe({
@@ -871,6 +907,7 @@ export class EventDetailComponent implements OnInit {
         this.eventService.loadEventPlayers(this.eventId);
         this.playerIdToRegister = null;
         this.playerSearchText = '';
+        this.newPlayerEmail = '';
         this.decklistUrl = null;
         this.commandersInput = '';
         this.commandersInput2 = '';
@@ -878,6 +915,7 @@ export class EventDetailComponent implements OnInit {
       },
       error: (err) => {
         this.snackBar.open(err.error?.error || 'Failed to register player', 'OK', { duration: 3000 });
+        this.cdr.detectChanges();
       }
     });
   }

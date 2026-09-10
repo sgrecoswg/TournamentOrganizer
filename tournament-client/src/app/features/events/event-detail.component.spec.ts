@@ -74,6 +74,7 @@ describe('EventDetailComponent', () => {
   let mockPlayerService: {
     players$:       ReturnType<typeof jest.fn> | BehaviorSubject<PlayerDto[]>;
     loadAllPlayers: jest.Mock;
+    registerPlayer: jest.Mock;
   };
 
   let mockSnackBar:    { open: jest.Mock };
@@ -140,6 +141,7 @@ describe('EventDetailComponent', () => {
     mockPlayerService = {
       players$:       playersSubject.asObservable() as any,
       loadAllPlayers: jest.fn(),
+      registerPlayer: jest.fn().mockReturnValue(of({ ...playerStub, id: 99, name: 'Fresh Newbie', email: 'fresh@test.com' })),
     };
 
     mockSnackBar   = { open: jest.fn() };
@@ -382,6 +384,45 @@ describe('EventDetailComponent', () => {
     expect(comp.filteredPlayers).toContainEqual(playerStub);
   });
 
+  // ── isNewPlayerName getter ──────────────────────────────────────────────────
+
+  it('isNewPlayerName returns false when playerSearchText is empty', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(EventDetailComponent);
+    const comp = fixture.componentInstance;
+    comp.allPlayers = [playerStub];
+    comp.playerSearchText = '';
+    expect(comp.isNewPlayerName).toBe(false);
+  });
+
+  it('isNewPlayerName returns false for a case-insensitive match against allPlayers', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(EventDetailComponent);
+    const comp = fixture.componentInstance;
+    comp.allPlayers = [playerStub]; // name: 'Bob'
+    comp.playerSearchText = 'BOB';
+    expect(comp.isNewPlayerName).toBe(false);
+  });
+
+  it('isNewPlayerName returns false for a name that already matches an already-registered player', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(EventDetailComponent);
+    const comp = fixture.componentInstance;
+    comp.eventPlayers = [{ ...epStub, playerId: playerStub.id }]; // Bob registered
+    comp.allPlayers = [playerStub];
+    comp.playerSearchText = 'Bob';
+    expect(comp.isNewPlayerName).toBe(false);
+  });
+
+  it('isNewPlayerName returns true when no player matches the typed name', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(EventDetailComponent);
+    const comp = fixture.componentInstance;
+    comp.allPlayers = [playerStub];
+    comp.playerSearchText = 'Fresh Newbie';
+    expect(comp.isNewPlayerName).toBe(true);
+  });
+
   // ── displayPlayerName ───────────────────────────────────────────────────────
 
   it('displayPlayerName returns player.name for a PlayerDto', async () => {
@@ -405,6 +446,15 @@ describe('EventDetailComponent', () => {
     comp.onPlayerSelected({ option: { value: playerStub } } as any);
     expect(comp.playerIdToRegister).toBe(playerStub.id);
     expect(comp.playerSearchText).toBe(playerStub.name);
+  });
+
+  it('onPlayerSelected clears a stale newPlayerEmail', async () => {
+    await setup();
+    const fixture = TestBed.createComponent(EventDetailComponent);
+    const comp = fixture.componentInstance;
+    comp.newPlayerEmail = 'stale@test.com';
+    comp.onPlayerSelected({ option: { value: playerStub } } as any);
+    expect(comp.newPlayerEmail).toBe('');
   });
 
   // ── registerPlayer ──────────────────────────────────────────────────────────
@@ -1456,6 +1506,112 @@ describe('EventDetailComponent', () => {
       const el: HTMLElement = fixture.nativeElement;
       const btn = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('Register Player'));
       expect(btn).toBeFalsy();
+    });
+
+    // ── inline new-player registration ────────────────────────────────────────
+
+    it('reveals an email input and "Register New Player" label when degraded and the typed name is new', async () => {
+      await setupDegraded();
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      const comp = fixture.componentInstance;
+      fixture.detectChanges();
+      currentEventSubject.next(regEvent);
+      comp.playerSearchText = 'Fresh Newbie';
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.textContent).toContain('Email (new player)');
+      const btn = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('Register New Player'));
+      expect(btn).toBeTruthy();
+    });
+
+    it('keeps the Register button disabled when name is filled but email is not, when degraded and name is new', async () => {
+      await setupDegraded();
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      const comp = fixture.componentInstance;
+      fixture.detectChanges();
+      currentEventSubject.next(regEvent);
+      comp.playerSearchText = 'Fresh Newbie';
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      const btn = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('Register New Player')) as HTMLButtonElement;
+      expect(btn.disabled).toBe(true);
+    });
+
+    it('enables the Register button once both name and email are filled, when degraded and name is new', async () => {
+      await setupDegraded();
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      const comp = fixture.componentInstance;
+      fixture.detectChanges();
+      currentEventSubject.next(regEvent);
+      comp.playerSearchText = 'Fresh Newbie';
+      comp.newPlayerEmail = 'fresh@test.com';
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      const btn = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('Register New Player')) as HTMLButtonElement;
+      expect(btn.disabled).toBe(false);
+    });
+
+    it('does not reveal the email input for an online store employee, even with a non-matching name', async () => {
+      await setup({ isStoreEmployee: true });
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      const comp = fixture.componentInstance;
+      fixture.detectChanges();
+      currentEventSubject.next(regEvent);
+      comp.playerSearchText = 'Fresh Newbie';
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.textContent).not.toContain('Email (new player)');
+    });
+
+    it('registerPlayer creates the player then enrolls them, trimming name and email, when degraded and name is new', async () => {
+      await setupDegraded();
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      comp.playerSearchText = '  Fresh Newbie  ';
+      comp.newPlayerEmail = '  fresh@test.com  ';
+      comp.registerPlayer();
+      expect(mockPlayerService.registerPlayer).toHaveBeenCalledWith({ name: 'Fresh Newbie', email: 'fresh@test.com' });
+      expect(mockEventService.registerPlayer).toHaveBeenCalledWith(EVENT_ID, expect.objectContaining({ playerId: 99 }));
+    });
+
+    it('registerPlayer resets playerIdToRegister, playerSearchText and newPlayerEmail after creating and enrolling a new player', async () => {
+      await setupDegraded();
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      comp.playerSearchText = 'Fresh Newbie';
+      comp.newPlayerEmail = 'fresh@test.com';
+      comp.registerPlayer();
+      expect(comp.playerIdToRegister).toBeNull();
+      expect(comp.playerSearchText).toBe('');
+      expect(comp.newPlayerEmail).toBe('');
+    });
+
+    it('registerPlayer does nothing when degraded, name is new, but email is blank', async () => {
+      await setupDegraded();
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      fixture.detectChanges();
+      const comp = fixture.componentInstance;
+      comp.playerSearchText = 'Fresh Newbie';
+      comp.newPlayerEmail = '   ';
+      comp.registerPlayer();
+      expect(mockPlayerService.registerPlayer).not.toHaveBeenCalled();
+      expect(mockEventService.registerPlayer).not.toHaveBeenCalled();
+    });
+
+    it('registerPlayer shows an error snackbar and does not enroll, when creating the new player fails', async () => {
+      mockPlayerService.registerPlayer.mockReturnValue(throwError(() => ({ error: { error: 'Email already taken' } })));
+      await setupDegraded();
+      const fixture = TestBed.createComponent(EventDetailComponent);
+      const comp = fixture.componentInstance;
+      const snackBarOpenSpy = jest.spyOn((comp as any).snackBar, 'open').mockReturnValue({} as any);
+      fixture.detectChanges();
+      comp.playerSearchText = 'Fresh Newbie';
+      comp.newPlayerEmail = 'fresh@test.com';
+      comp.registerPlayer();
+      expect(snackBarOpenSpy).toHaveBeenCalledWith('Email already taken', 'OK', { duration: 3000 });
+      expect(mockEventService.registerPlayer).not.toHaveBeenCalled();
     });
   });
 });

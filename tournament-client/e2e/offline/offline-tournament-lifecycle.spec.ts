@@ -105,3 +105,40 @@ test('run a full tournament — create, register, 2 rounds, standings, complete 
   await expect(page.getByText('Event status: Completed')).toBeVisible();
   await expect(page.locator('mat-chip').filter({ hasText: 'Completed' })).toBeVisible();
 });
+
+test('register a brand-new player directly from event-detail while offline, without pre-creating via /players', async ({ page }) => {
+  await mockBackendUnreachable(page);
+  await loginAs(page, 'StoreEmployee', { storeId: 1 });
+
+  await page.goto('/events');
+  await page.getByLabel('Event Name').fill('Inline New Player Test');
+  await page.getByLabel('Date').fill('3/15/2026');
+  await page.getByLabel('Date').press('Tab');
+  await page.getByRole('button', { name: /Create Event/ }).click();
+  await expect(page.getByText('Event created!')).toBeVisible();
+
+  const card = page.locator('mat-card.event-card').filter({ hasText: 'Inline New Player Test' });
+  await card.click();
+  await expect(page.getByRole('heading', { name: 'Inline New Player Test' })).toBeVisible();
+
+  // Type a name that has never been registered anywhere — no /players detour.
+  await page.getByLabel('Player Name').fill('Fresh Newbie');
+
+  const registerBtn = page.getByRole('button', { name: 'Register New Player' });
+  await expect(registerBtn).toBeVisible();
+  await expect(registerBtn).toBeDisabled();
+
+  await page.getByLabel('Email (new player)').fill('fresh.newbie@example.com');
+  await expect(registerBtn).toBeEnabled();
+  await registerBtn.click();
+
+  await expect(page.getByText('Player registered!')).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Fresh Newbie' })).toBeVisible();
+
+  // Form resets — the email field disappears again.
+  await expect(page.getByLabel('Email (new player)')).toHaveCount(0);
+
+  // The local write actually landed in the player store.
+  await page.goto('/players');
+  await expect(page.getByRole('link', { name: 'Fresh Newbie' })).toBeVisible();
+});
