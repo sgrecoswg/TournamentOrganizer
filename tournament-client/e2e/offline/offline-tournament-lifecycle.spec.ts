@@ -106,6 +106,99 @@ test('run a full tournament — create, register, 2 rounds, standings, complete 
   await expect(page.locator('mat-chip').filter({ hasText: 'Completed' })).toBeVisible();
 });
 
+test('submitting one pod\'s winner offline does not disturb a sibling pod\'s running timer (anonymous visitor)', async ({ page }) => {
+  test.setTimeout(60_000);
+
+  // Reproduces with an anonymous, never-logged-in visitor specifically:
+  // isStoreEmployee is permanently false offline, so every gate the Rounds tab
+  // uses (`authService.isStoreEmployee || networkStatus.degraded`) — including
+  // pod-card's own [isStoreEmployee] input that controls whether <app-pod-timer>
+  // is even rendered — depends entirely on networkStatus.degraded. A StoreEmployee
+  // session never surfaces this, since isStoreEmployee alone already keeps those
+  // gates true regardless of what degraded does.
+  await mockBackendUnreachable(page);
+
+  const EIGHT_PLAYERS = [
+    'Timer Alice', 'Timer Bob', 'Timer Carol', 'Timer Dave',
+    'Timer Erin', 'Timer Frank', 'Timer Grace', 'Timer Heidi',
+  ];
+
+  await page.goto('/events');
+  await expect(page.getByText(/Backend unreachable/i)).toBeVisible();
+  await page.locator('a[routerLink="/players"]').click();
+  await expect(page).toHaveURL(/\/players$/);
+  for (const name of EIGHT_PLAYERS) {
+    await page.getByLabel('Name').fill(name);
+    await page.getByLabel('Email').fill(`${name.toLowerCase().replace(/\s+/g, '.')}@example.com`);
+    await page.getByRole('button', { name: 'Register' }).click();
+    await expect(page.getByText(`${name} registered!`)).toBeVisible();
+  }
+
+  await page.locator('a[routerLink="/events"]').click();
+  await expect(page).toHaveURL(/\/events$/);
+  await page.getByLabel('Event Name').fill('Offline Timer Isolation Test');
+  await page.getByLabel('Date').fill('3/15/2026');
+  await page.getByLabel('Date').press('Tab');
+  await page.getByRole('button', { name: /Create Event/ }).click();
+  await expect(page.getByText('Event created!')).toBeVisible();
+
+  const card = page.locator('mat-card.event-card').filter({ hasText: 'Offline Timer Isolation Test' });
+  await card.click();
+  await expect(page.getByRole('heading', { name: 'Offline Timer Isolation Test' })).toBeVisible();
+
+  for (const name of EIGHT_PLAYERS) {
+    await page.getByLabel('Player Name').fill(name);
+    await page.getByRole('option', { name: new RegExp(name) }).click();
+    await page.getByRole('button', { name: 'Register Player' }).click();
+    await expect(page.getByText('Player registered!').last()).toBeVisible();
+  }
+  for (const name of EIGHT_PLAYERS) {
+    await expect(page.getByRole('cell', { name })).toBeVisible();
+  }
+
+  await page.getByRole('button', { name: 'Check In All' }).click();
+  await page.getByRole('button', { name: 'Start Event' }).click();
+  await page.getByRole('button', { name: 'Confirm Start' }).click();
+  await expect(page.getByText('Event started — Round 1 generated!')).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Rounds' }).click();
+  await expect(page.getByRole('button', { name: /Round 1/ })).toBeVisible();
+
+  const pod1 = page.locator('app-pod-card').filter({ hasText: 'Pod 1' });
+  const pod2 = page.locator('app-pod-card').filter({ hasText: 'Pod 2' });
+  await expect(pod1).toBeVisible();
+  await expect(pod2).toBeVisible();
+
+  const parseSeconds = async (loc: typeof pod2) => {
+    const text = (await loc.locator('.timer-display').innerText()).trim();
+    const [m, s] = text.split(':').map(Number);
+    return m * 60 + s;
+  };
+
+  // Start both pods' timers together via the round-level control.
+  await page.getByRole('button', { name: 'Start All' }).click();
+  await expect(pod1.getByRole('button', { name: 'Start Timer', exact: false })).toHaveCount(0);
+  await expect(pod2.getByRole('button', { name: 'Start Timer', exact: false })).toHaveCount(0);
+
+  await page.waitForTimeout(2200);
+  const pod2SecondsBeforeSubmit = await parseSeconds(pod2);
+
+  // Submit Pod 1's winner only.
+  await pod1.getByLabel('Winner').click();
+  await page.getByRole('option').first().click();
+  await pod1.getByRole('button', { name: 'Submit Results' }).click();
+  await expect(pod1.getByText('Results submitted', { exact: true })).toBeVisible();
+
+  await page.waitForTimeout(2200);
+  const pod2SecondsAfterSubmit = await parseSeconds(pod2);
+
+  // Pod 2 was never touched — its timer must still be running (ticking down),
+  // not frozen and not reset back to the full default duration.
+  await expect(pod2.getByRole('button', { name: 'Start Timer', exact: false })).toHaveCount(0);
+  expect(pod2SecondsAfterSubmit).toBeLessThan(pod2SecondsBeforeSubmit);
+  expect(pod2SecondsBeforeSubmit - pod2SecondsAfterSubmit).toBeGreaterThanOrEqual(1);
+});
+
 test('register a brand-new player directly from event-detail while offline, without pre-creating via /players', async ({ page }) => {
   await mockBackendUnreachable(page);
   await loginAs(page, 'StoreEmployee', { storeId: 1 });
