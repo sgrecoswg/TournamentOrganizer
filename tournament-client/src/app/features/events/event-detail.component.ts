@@ -66,7 +66,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
               — <span class="round-progress">{{ rounds.length }}/{{ event.plannedRounds }} rounds planned</span>
             }
           </p>
-          @if (authService.isStoreEmployee) {
+          @if (authService.isStoreEmployee || networkStatus.degraded) {
             <div class="status-actions">
               @if (event.status === 'Registration') {
                 @if (!showStartConfirm) {
@@ -141,7 +141,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
           <div class="tab-content">
             <!-- Registration controls sit above the sub-tabs -->
             @if (event.status === 'Registration') {
-              @if (authService.isStoreEmployee) {
+              @if (authService.isStoreEmployee || networkStatus.degraded) {
                 @if (!authService.isTier1) {
                   <p class="free-cap-notice">
                     <mat-icon>info</mat-icon> Free tier: up to {{ FREE_CAP }} players per event.
@@ -170,6 +170,12 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                       }
                     </mat-autocomplete>
                   </mat-form-field>
+                  @if (networkStatus.degraded && isNewPlayerName) {
+                    <mat-form-field>
+                      <mat-label>Email (new player)</mat-label>
+                      <input matInput [(ngModel)]="newPlayerEmail" placeholder="player@email.com" type="email">
+                    </mat-form-field>
+                  }
                   <mat-form-field>
                     <mat-label>Decklist URL (optional)</mat-label>
                     <input matInput [(ngModel)]="decklistUrl" placeholder="https://...">
@@ -200,8 +206,9 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                       }
                     </mat-autocomplete>
                   </mat-form-field>
-                  <button mat-raised-button color="primary" (click)="registerPlayer()" [disabled]="!playerIdToRegister">
-                    {{ isEventFull ? 'Add to Waitlist' : 'Register Player' }}
+                  <button mat-raised-button color="primary" (click)="registerPlayer()"
+                          [disabled]="(networkStatus.degraded && isNewPlayerName) ? (!playerSearchText.trim() || !newPlayerEmail.trim()) : !playerIdToRegister">
+                    {{ isEventFull ? 'Add to Waitlist' : ((networkStatus.degraded && isNewPlayerName) ? 'Register New Player' : 'Register Player') }}
                   </button>
                 </div>
                 @if (eventPlayers.length > 0) {
@@ -245,10 +252,10 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
             <mat-tab-group class="player-sub-tabs">
               <mat-tab label="Registered ({{ displayedPlayers.length }})">
                 <div class="sub-tab-content">
-                  @if (event.status === 'Registration' && (authService.isStoreEmployee || authService.currentUser?.playerId != null)) {
+                  @if (event.status === 'Registration' && (authService.isStoreEmployee || authService.currentUser?.playerId != null || networkStatus.degraded)) {
                     <div class="checkin-section">
                       <span class="checkin-count">Check-In: {{ checkedInCount }} / {{ displayedPlayers.length }}</span>
-                      @if (authService.isStoreEmployee) {
+                      @if (authService.isStoreEmployee || networkStatus.degraded) {
                         <button mat-button (click)="checkAllIn()">Check In All</button>
                         <button mat-button (click)="uncheckAll()">Uncheck All</button>
                       }
@@ -342,7 +349,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                       <ng-container matColumnDef="actions">
                         <th mat-header-cell *matHeaderCellDef></th>
                         <td mat-cell *matCellDef="let row">
-                          @if (event!.status === 'Registration' && (authService.isStoreEmployee || row.playerId === authService.currentUser?.playerId)) {
+                          @if (event!.status === 'Registration' && (authService.isStoreEmployee || row.playerId === authService.currentUser?.playerId || networkStatus.degraded)) {
                             <mat-checkbox [checked]="row.isCheckedIn" (change)="toggleCheckIn(row)">
                               Checked In
                             </mat-checkbox>
@@ -406,7 +413,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
         @if (event.status !== 'Registration') {
         <mat-tab label="Rounds">
           <div class="tab-content">
-            @if (authService.isStoreEmployee) {
+            @if (authService.isStoreEmployee || networkStatus.degraded) {
               <div class="round-actions">
                 @if (rounds.length === 0 || isRoundComplete(rounds[rounds.length - 1])) {
                   <button mat-raised-button color="primary" (click)="generateRound()" class="action-btn"
@@ -432,7 +439,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                   </mat-panel-description>
                 </mat-expansion-panel-header>
 
-                @if (authService.isStoreEmployee) {
+                @if (authService.isStoreEmployee || networkStatus.degraded) {
                   <div class="round-controls">
                     <button mat-stroked-button (click)="startAllTimers(round)">
                       <mat-icon>play_arrow</mat-icon> Start All
@@ -459,7 +466,7 @@ import { BulkRegisterDialogComponent } from './dialogs/bulk-register-dialog.comp
                       [event]="event!"
                       [eventId]="eventId"
                       [podState]="getPodState(pod.podId)"
-                      [isStoreEmployee]="authService.isStoreEmployee"
+                      [isStoreEmployee]="authService.isStoreEmployee || networkStatus.degraded"
                       (stateChanged)="onPodStateChanged()">
                     </app-pod-card>
                   }
@@ -532,6 +539,7 @@ export class EventDetailComponent implements OnInit {
   standings: StandingsEntry[] = [];
   playerIdToRegister: number | null = null;
   playerSearchText: string = '';
+  newPlayerEmail: string = '';
   decklistUrl: string | null = null;
   commandersInput: string = '';
   commandersInput2: string = '';
@@ -604,11 +612,6 @@ export class EventDetailComponent implements OnInit {
   ngOnInit() {
     this.eventId = Number(this.route.snapshot.paramMap.get('id'));
     this.cdr.detectChanges();
-    if (this.eventId < 0) {
-      this.snackBar.open('This event was created offline and has not yet synced to the server.', 'OK', { duration: 5000 });
-      this.router.navigate(['/events']);
-      return;
-    }
     this.commanderQuery$.pipe(
       debounceTime(300),
       distinctUntilChanged(),
@@ -852,6 +855,12 @@ export class EventDetailComponent implements OnInit {
       .filter(p => p.name.toLowerCase().includes(search) || p.email.toLowerCase().includes(search));
   }
 
+  get isNewPlayerName(): boolean {
+    const name = this.playerSearchText.trim().toLowerCase();
+    if (!name) return false;
+    return !this.allPlayers.some(p => p.name.trim().toLowerCase() === name);
+  }
+
   displayPlayerName(player: PlayerDto | string): string {
     return typeof player === 'string' ? player : player?.name ?? '';
   }
@@ -860,13 +869,35 @@ export class EventDetailComponent implements OnInit {
     const player: PlayerDto = event.option.value;
     this.playerIdToRegister = player.id;
     this.playerSearchText = player.name;
+    this.newPlayerEmail = '';
     this.cdr.detectChanges();
   }
 
   registerPlayer() {
+    if (this.networkStatus.degraded && this.isNewPlayerName) {
+      const name = this.playerSearchText.trim();
+      const email = this.newPlayerEmail.trim();
+      if (!name || !email) return;
+      this.playerService.registerPlayer({ name, email }).subscribe({
+        next: (player) => {
+          this.playerIdToRegister = player.id;
+          this.cdr.detectChanges();
+          this.enrollPlayerInEvent();
+        },
+        error: (err) => {
+          this.snackBar.open(err.error?.error || 'Failed to create player', 'OK', { duration: 3000 });
+          this.cdr.detectChanges();
+        }
+      });
+      return;
+    }
     if (!this.playerIdToRegister) return;
+    this.enrollPlayerInEvent();
+  }
+
+  private enrollPlayerInEvent(): void {
     this.eventService.registerPlayer(this.eventId, {
-      playerId: this.playerIdToRegister,
+      playerId: this.playerIdToRegister!,
       decklistUrl: this.decklistUrl || undefined,
       commanders: this.buildCommandersString(this.commandersInput, this.commandersInput2)
     }).subscribe({
@@ -876,6 +907,7 @@ export class EventDetailComponent implements OnInit {
         this.eventService.loadEventPlayers(this.eventId);
         this.playerIdToRegister = null;
         this.playerSearchText = '';
+        this.newPlayerEmail = '';
         this.decklistUrl = null;
         this.commandersInput = '';
         this.commandersInput2 = '';
@@ -883,6 +915,7 @@ export class EventDetailComponent implements OnInit {
       },
       error: (err) => {
         this.snackBar.open(err.error?.error || 'Failed to register player', 'OK', { duration: 3000 });
+        this.cdr.detectChanges();
       }
     });
   }

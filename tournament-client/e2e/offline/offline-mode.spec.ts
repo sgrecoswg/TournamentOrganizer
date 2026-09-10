@@ -54,13 +54,15 @@ test.describe('Home and Login redirect to /events when backend is unreachable', 
 // ── Side nav + toolbar gating ───────────────────────────────────────────────────
 
 test.describe('Side nav and toolbar when degraded', () => {
-  test('nav shows only Events; Home/Leaderboard/Players/Stores are hidden', async ({ page }) => {
+  test('nav shows Events and Players; Home/Leaderboard/Stores are hidden', async ({ page }) => {
     await mockBackendUnreachable(page);
     await page.goto('/events');
     await expect(page.locator('a[routerLink="/events"]')).toBeVisible();
+    // Players stays reachable offline — it's the only way to add players to a
+    // locally-created event when there's no backend to authenticate against.
+    await expect(page.locator('a[routerLink="/players"]')).toBeVisible();
     await expect(page.locator('a[routerLink="/"]')).toHaveCount(0);
     await expect(page.locator('a[routerLink="/leaderboard"]')).toHaveCount(0);
-    await expect(page.locator('a[routerLink="/players"]')).toHaveCount(0);
     await expect(page.locator('a[routerLink="/stores"]')).toHaveCount(0);
   });
 
@@ -79,21 +81,61 @@ test.describe('Side nav and toolbar when degraded', () => {
     await expect(page.locator('a[routerLink="/players"]')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Login with Google' })).toBeVisible();
   });
+
+  // On a real (unmocked) cold load, degraded starts false and only flips once the
+  // silent-refresh /api/auth/refresh call fails — so a slow-to-fail backend leaves
+  // a window where the Login button would render before disappearing. Delaying the
+  // mocked 404 (instead of resolving same-tick) reproduces that window.
+  test('toolbar never shows Login button, even during a slow-to-fail cold load', async ({ page }) => {
+    // LIFO route order: register the broad catch-all first so the more specific,
+    // delayed handler (registered after) takes priority for auth/refresh.
+    await page.route('**/api/**', route => route.fulfill({ status: 404, json: {} }));
+    await page.route('**/api/auth/refresh', async route => {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      await route.fulfill({ status: 404, json: {} });
+    });
+
+    // Race the button check against navigation itself, rather than awaiting goto first —
+    // Angular's dev-bundle load/bootstrap time can itself eat past a short delay, so by the
+    // time goto() resolves the window may have already closed. toHaveCount(0) is also a
+    // polling assertion (checks "is it absent right now"), so a flicker that appears then
+    // disappears between polls would slip through it. waitForSelector('attached') resolves
+    // the instant the element is added to the DOM, even if it's later removed, so racing it
+    // against goto actually catches a transient render.
+    const navigation = page.goto('/events');
+    let appeared = false;
+    try {
+      await page.waitForSelector('button:has-text("Login with Google")', { state: 'attached', timeout: 1400 });
+      appeared = true;
+    } catch {
+      appeared = false;
+    }
+    await navigation;
+    expect(appeared).toBe(false);
+  });
 });
 
 // ── authGuard redirect target when degraded ─────────────────────────────────────
 
 test.describe('authGuard redirects to /events (not /login) when degraded and unauthenticated', () => {
-  test('navigating to a protected event-detail route bounces to /events', async ({ page }) => {
-    await mockBackendUnreachable(page);
-    await page.goto(`/events/${EVENT_ID}`);
-    await expect(page).toHaveURL(/\/events$/);
-  });
-
   test('navigating to a protected stores route bounces to /events', async ({ page }) => {
     await mockBackendUnreachable(page);
     await page.goto('/stores');
     await expect(page).toHaveURL(/\/events$/);
+  });
+});
+
+// ── eventDetailAuthGuard: event-detail stays reachable offline ─────────────────
+//
+// Unlike the shared authGuard (stores, pairings, game-result), event-detail uses
+// its own narrower guard so a degraded, unauthenticated visitor can still reach a
+// locally-created event to add players — there's no backend to log in against.
+
+test.describe('eventDetailAuthGuard lets a degraded, unauthenticated visitor reach event-detail', () => {
+  test('navigating to /events/:id does NOT bounce to /events when degraded', async ({ page }) => {
+    await mockBackendUnreachable(page);
+    await page.goto(`/events/${EVENT_ID}`);
+    await expect(page).toHaveURL(new RegExp(`/events/${EVENT_ID}$`));
   });
 });
 
@@ -190,5 +232,75 @@ test.describe('Event Detail — actions with no offline fallback are hidden when
     await page.goto(`/events/${EVENT_ID}`);
 
     await expect(page.getByRole('button', { name: 'Withdraw' })).toHaveCount(0);
+  });
+});
+
+// ── Add players offline with no prior login (cold start) ───────────────────────
+//
+// Unlike offline-tournament-lifecycle.spec.ts (which calls loginAs before going
+// degraded, simulating a user who authenticated before losing connectivity),
+// this never logs in at all — the backend is unreachable from the very first
+// request, matching a real absent-backend deploy. Proves a cold, unauthenticated
+// visitor can still reach Players via the sidenav (not a deep-link) and add
+// players, since isStoreEmployee can never become true without a backend.
+
+test.describe('Add players offline with no prior login (cold start)', () => {
+  test('anonymous visitor navigates to Players via sidenav, registers a new player, creates an event, and adds the player to it', async ({ page }) => {
+    await mockBackendUnreachable(page);
+    await page.goto('/events');
+
+    await page.locator('a[routerLink="/players"]').click();
+    await expect(page).toHaveURL(/\/players$/);
+
+    await page.getByLabel('Name').fill('Cold Start Carl');
+    await page.getByLabel('Email').fill('cold.start.carl@example.com');
+    await page.getByRole('button', { name: 'Register' }).click();
+    await expect(page.getByText('Cold Start Carl registered!')).toBeVisible();
+
+    await page.locator('a[routerLink="/events"]').click();
+    await page.getByLabel('Event Name').fill('Cold Start Event');
+    await page.getByLabel('Date').fill('3/20/2026');
+    await page.getByLabel('Date').press('Tab');
+    await page.getByRole('button', { name: /Create Event/ }).click();
+    await expect(page.getByText('Event created!')).toBeVisible();
+
+    const card = page.locator('mat-card.event-card').filter({ hasText: 'Cold Start Event' });
+    await card.click();
+    await expect(page.getByRole('heading', { name: 'Cold Start Event' })).toBeVisible();
+
+    await page.getByLabel('Player Name').fill('Cold Start Carl');
+    await page.getByRole('option', { name: /Cold Start Carl/ }).click();
+    await page.getByRole('button', { name: 'Register Player' }).click();
+    await expect(page.getByText('Player registered!')).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'Cold Start Carl' })).toBeVisible();
+
+    // Same anonymous, never-logged-in, degraded visitor must be able to check players
+    // in and start the event — isStoreEmployee can never become true offline. Register
+    // 3 more players inline (a pod needs 4) using the new-player fields the event-detail
+    // form exposes while degraded, then check everyone in and start.
+    for (const name of ['Cold Start Dana', 'Cold Start Eve', 'Cold Start Frank']) {
+      await page.getByLabel('Player Name').fill(name);
+      await page.getByLabel('Email (new player)').fill(`${name.toLowerCase().replace(/\s+/g, '.')}@example.com`);
+      await page.getByRole('button', { name: 'Register New Player' }).click();
+      await expect(page.getByText('Player registered!').last()).toBeVisible();
+    }
+    await expect(page.getByRole('cell', { name: 'Cold Start Frank' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Check In All' }).click();
+    await page.getByRole('button', { name: 'Start Event' }).click();
+    await page.getByRole('button', { name: 'Confirm Start' }).click();
+    await expect(page.getByText('Event started — Round 1 generated!')).toBeVisible();
+
+    // Same anonymous, never-logged-in, degraded visitor must be able to run
+    // Round 1 too — Generate Next Round / round timer controls / the pod card's
+    // Winner + Submit Results are all gated on isStoreEmployee || degraded, and
+    // isStoreEmployee can never become true offline.
+    await page.getByRole('tab', { name: 'Rounds' }).click();
+    await expect(page.getByText('Round 1')).toBeVisible();
+    await page.locator('app-pod-card').getByLabel('Winner').click();
+    await page.getByRole('option').first().click();
+    await page.locator('app-pod-card').getByRole('button', { name: 'Submit Results' }).click();
+    await expect(page.getByText('Results submitted!')).toBeVisible();
+    await expect(page.locator('app-pod-card').getByText('Results submitted', { exact: true })).toBeVisible();
   });
 });

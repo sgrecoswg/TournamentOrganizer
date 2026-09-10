@@ -51,10 +51,12 @@ export class App implements OnInit, OnDestroy {
   private userSub!: Subscription;
   private storeNameSub!: Subscription;
   private degradedSub!: Subscription;
+  private authReadySub!: Subscription;
 
   currentUser: CurrentUser | null = null;
   stores: StoreDto[] = [];
   degraded = false;
+  authReady = false;
   // Fixed per-session timestamp — applied to logo URLs that lack one so the browser
   // re-fetches the image on each app load without thrashing on every getter call.
   private readonly sessionTs = Date.now();
@@ -85,6 +87,14 @@ export class App implements OnInit, OnDestroy {
 
     this.degradedSub = this.networkStatus.degraded$.subscribe(degraded => {
       this.degraded = degraded;
+      this.cdr.detectChanges();
+    });
+
+    // Gates the toolbar's Login button — it must not render before the initial
+    // silent-refresh settles, or it flashes visible during the round trip while
+    // `degraded` still holds its default `false`.
+    this.authReadySub = this.authService.authReady$.subscribe(ready => {
+      this.authReady = ready;
       this.cdr.detectChanges();
     });
 
@@ -124,6 +134,7 @@ export class App implements OnInit, OnDestroy {
     this.userSub.unsubscribe();
     this.storeNameSub.unsubscribe();
     this.degradedSub.unsubscribe();
+    this.authReadySub.unsubscribe();
   }
 
   get selectedStore(): StoreDto | null {
